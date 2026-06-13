@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+{% block title %}Parent Dashboard — Martyrs' Memorial ERP{% endblock %}
+{% block page_title %}Parent Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="welcome-banner">
+        <div class="welcome-text">
+            <h4>Welcome, {{ current_user.full_name.split()[0] }}! 👨‍👧</h4>
+            <p>Monitoring: <strong>{{ student_user.full_name }}</strong> | Roll: {{ student.roll_no }}</p>
+        </div>
+        <div class="welcome-date">
+            <i class="fas fa-calendar-alt me-2"></i>
+            <span id="currentDate"></span>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-blue">
+                <div class="stat-icon"><i class="fas fa-clipboard-check"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ attendance_pct }}%</div>
+                    <div class="stat-label">Attendance</div>
+                    <div class="stat-change {{ 'positive' if attendance_pct >= 75 else 'negative' }}">
+                        {{ present_att }}/{{ total_att }} days present
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-green">
+                <div class="stat-icon"><i class="fas fa-star"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ avg_gpa }}</div>
+                    <div class="stat-label">GPA (NEB 4.0)</div>
+                    <div class="stat-change positive">{{ avg_marks }}% avg marks</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card {{ 'stat-red' if pending_fees > 0 else 'stat-purple' }}">
+                <div class="stat-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">NPR {{ "{:,.0f}".format(pending_fees) }}</div>
+                    <div class="stat-label">Pending Fees</div>
+                    <div class="stat-change {{ 'negative' if pending_fees > 0 else 'positive' }}">
+                        {{ 'Please clear dues' if pending_fees > 0 else 'All cleared!' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-purple">
+                <div class="stat-icon"><i class="fas fa-school"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ student.class_ref.name if student.class_ref else 'N/A' }}</div>
+                    <div class="stat-label">Current Class</div>
+                    <div class="stat-change">
+                        {% if student.class_ref %}Section {{ student.class_ref.section }}
+                        {% if student.class_ref.stream %} · {{ student.class_ref.stream.name }}{% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Child Profile -->
+        <div class="col-xl-3">
+            <div class="info-card h-100">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-user-graduate me-2 text-primary"></i>Child Profile</h6>
+                </div>
+                <div class="child-profile text-center p-3">
+                    <div class="child-avatar-lg mb-3">{{ student_user.full_name[0] }}</div>
+                    <div class="child-name mb-0">{{ student_user.full_name }}</div>
+                    <div class="child-roll text-muted small">{{ student.roll_no }}</div>
+                    {% if student.class_ref %}
+                    <div class="mt-2">
+                        <span class="badge bg-primary">{{ student.class_ref.full_name }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="child-stats-mini mt-3">
+                        <div class="cs-item">
+                            <span class="cs-val">{{ attendance_pct }}%</span>
+                            <span class="cs-key">Attendance</span>
+                        </div>
+                        <div class="cs-item">
+                            <span class="cs-val">{{ avg_gpa }}</span>
+                            <span class="cs-key">GPA</span>
+                        </div>
+                    </div>
+
+                    <div class="attendance-ring-wrap mt-3">
+                        <div class="ring-chart">
+                            <canvas id="attDonut" width="140" height="140"></canvas>
+                            <div class="ring-center">
+                                <span class="ring-pct">{{ attendance_pct }}%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="att-stats-row mt-2">
+                        <div class="att-stat present-stat">
+                            <span class="att-num">{{ present_att }}</span>
+                            <span class="att-label">Present</span>
+                        </div>
+                        <div class="att-stat absent-stat">
+                            <span class="att-num">{{ total_att - present_att }}</span>
+                            <span class="att-label">Absent</span>
+                        </div>
+                    </div>
+                    <table class="table table-sm table-borderless text-start mt-3 mb-0">
+                        <tr><td class="text-muted small">Gender</td><td class="fw-semibold small">{{ student.gender|title if student.gender else '—' }}</td></tr>
+                        <tr><td class="text-muted small">Blood</td><td class="fw-semibold small">{{ student.blood_group or '—' }}</td></tr>
+                        <tr><td class="text-muted small">Guardian</td><td class="fw-semibold small">{{ student.guardian_name or '—' }}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Attendance + Today Schedule -->
+        <div class="col-xl-4">
+            <div class="info-card mb-4">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-calendar-check me-2 text-success"></i>Recent Attendance</h6>
+                </div>
+                <div class="attendance-history">
+                    {% for att in recent_attendance %}
+                    <div class="att-history-item">
+                        <span class="att-date">{{ att.date.strftime('%b %d, %Y') }}</span>
+                        <span class="att-status-badge status-{{ att.status }}">
+                            <i class="fas fa-{{ 'check' if att.status == 'present' else 'times' if att.status == 'absent' else 'clock' }} me-1"></i>
+                            {{ att.status|title }}
+                        </span>
+                    </div>
+                    {% else %}
+                    <div class="empty-state-sm text-center py-4">
+                        <p class="text-muted">No attendance records</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% if timetable_today %}
+            <div class="info-card">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-calendar-day me-2 text-primary"></i>Today's Classes</h6>
+                    <span class="badge-date">{{ today.strftime('%A') }}</span>
+                </div>
+                <div class="schedule-list">
+                    {% for tt, subj in timetable_today %}
+                    <div class="schedule-item">
+                        <div class="schedule-time">
+                            <span>{{ tt.start_time.strftime('%I:%M') if tt.start_time else 'P'+loop.index|string }}</span>
+                            <span class="time-end">{{ tt.end_time.strftime('%I:%M %p') if tt.end_time else '' }}</span>
+                        </div>
+                        <div class="schedule-details">
+                            <div class="schedule-subject">{{ subj.name if subj else 'Free Period' }}</div>
+                            {% if tt.room_no %}<div class="schedule-room"><i class="fas fa-door-open me-1"></i>Room {{ tt.room_no }}</div>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Results + Fees -->
+        <div class="col-xl-5">
+            <div class="info-card mb-4">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-chart-bar me-2 text-danger"></i>Recent Results</h6>
+                </div>
+                {% for result, exam, subj in recent_results %}
+                {% set pct = (result.marks_obtained / exam.max_marks * 100)|round(1) if exam.max_marks else 0 %}
+                <div class="result-item">
+                    <div class="result-subject">
+                        <div class="fw-semibold small">{{ subj.name if subj else exam.name }}</div>
+                        <div class="text-muted" style="font-size:0.75rem;">{{ exam.exam_type.replace('_',' ').title() }}</div>
+                    </div>
+                    <div class="result-score">
+                        <div class="score-bar-wrap">
+                            <div class="score-bar {% if pct >= 60 %}score-good{% elif pct >= 40 %}score-ok{% else %}score-bad{% endif %}"
+                                style="width:{{ pct }}%"></div>
+                        </div>
+                        <span class="score-pct">{{ pct }}%</span>
+                    </div>
+                    <span class="badge neb-grade-{{ (result.grade or 'F').replace('+','p') }}">
+                        {{ result.grade or 'F' }}
+                    </span>
+                </div>
+                {% else %}
+                <div class="empty-state-sm text-center py-5">
+                    <p class="text-muted">No results yet</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="info-card">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-rupee-sign me-2 text-success"></i>Fee Details</h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover modern-table mb-0">
+                        <thead><tr><th>Type</th><th>Amount</th><th>Due</th><th>Status</th></tr></thead>
+                        <tbody>
+                            {% for fee in fees[:6] %}
+                            <tr>
+                                <td>{{ fee.fee_type }}</td>
+                                <td>NPR {{ "{:,.0f}".format(fee.amount) }}</td>
+                                <td>{{ fee.due_date.strftime('%b %d') if fee.due_date else '—' }}</td>
+                                <td>
+                                    <span class="badge {% if fee.status == 'paid' %}bg-success{% elif fee.status == 'overdue' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                        {{ fee.status|title }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center text-muted py-3">No fee records</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if pending_fees > 0 %}
+                <div class="alert alert-warning mx-3 mb-3 mt-0 py-2 small">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    <strong>NPR {{ "{:,.0f}".format(pending_fees) }}</strong> pending — visit accounts office
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Notices -->
+    <div class="row g-4 mt-0">
+        <div class="col-12">
+            <div class="info-card">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-bullhorn me-2 text-warning"></i>School Notices</h6>
+                </div>
+                <div class="notices-grid">
+                    {% for notice in notices %}
+                    <div class="notice-card priority-{{ notice.priority }}">
+                        <div class="notice-priority-dot"></div>
+                        <div class="notice-content">
+                            <div class="notice-title">{{ notice.title }}</div>
+                            <div class="notice-preview">{{ notice.content[:100] }}{% if notice.content|length > 100 %}...{% endif %}</div>
+                            <div class="notice-meta">
+                                <span><i class="fas fa-clock me-1"></i>{{ notice.created_at.strftime('%b %d, %Y') }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="empty-state-sm text-center w-100 py-3">
+                        <p class="text-muted">No notices</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+});
+new Chart(document.getElementById('attDonut'), {
+    type: 'doughnut',
+    data: {
+        datasets: [{ data: [{{ attendance_pct }}, {{ 100 - attendance_pct }}],
+            backgroundColor: ['#0D47A1', '#E8EAF6'], borderWidth: 0 }]
+    },
+    options: { cutout: '75%', plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+});
+</script>
+{% endblock %}

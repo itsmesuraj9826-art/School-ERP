@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% block title %}Timetable — ERP{% endblock %}
+{% block page_title %}Timetable Management{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="fw-bold mb-1">Class Timetable</h5>
+            <p class="text-muted small mb-0">Manage weekly schedules for all classes</p>
+        </div>
+        {% if class_filter %}
+        <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addPeriodModal">
+            <i class="fas fa-plus me-2"></i>Add Period
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Class Selector -->
+    <div class="info-card mb-4">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Select Class to View / Edit</label>
+                <select name="class_id" class="form-select" onchange="this.form.submit()">
+                    <option value="">Choose a class…</option>
+                    {% for cls in classes %}
+                    <option value="{{ cls.id }}" {% if class_filter == cls.id|string %}selected{% endif %}>
+                        {{ cls.full_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+
+    {% if selected_class %}
+    <div class="info-card">
+        <div class="card-head">
+            <h6 class="card-head-title">
+                <i class="fas fa-calendar-week me-2 text-primary"></i>
+                {{ selected_class.full_name }} — Weekly Timetable
+            </h6>
+        </div>
+        <div class="table-responsive p-2">
+            <table class="table table-bordered modern-table text-center mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:120px;">Period</th>
+                        {% for day in days %}
+                        <th>{{ day }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set periods = range(1, 7) %}
+                    {% for period in periods %}
+                    <tr>
+                        <td class="fw-semibold text-muted">P{{ period }}</td>
+                        {% for day_idx in range(days|length) %}
+                        <td>
+                            {% set found = [] %}
+                            {% if day_idx in timetable_data %}
+                                {% for entry in timetable_data[day_idx] %}
+                                    {% if entry.period_no == period %}
+                                        {% set _ = found.append(entry) %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                            {% if found %}
+                                {% for entry in found %}
+                                <div class="tt-cell">
+                                    <div class="tt-subject">{{ entry.subject.name if entry.subject else 'Free' }}</div>
+                                    {% if entry.start_time %}
+                                    <div class="tt-time">{{ entry.start_time.strftime('%I:%M') }}–{{ entry.end_time.strftime('%I:%M %p') if entry.end_time else '' }}</div>
+                                    {% endif %}
+                                    {% if entry.teacher %}
+                                    <div class="tt-teacher">{{ entry.teacher.user.full_name.split()[0] if entry.teacher.user else '' }}</div>
+                                    {% endif %}
+                                    <form method="POST" action="{{ url_for('admin.delete_timetable', tid=entry.id) }}" class="d-inline">
+                                        <button class="btn btn-xs btn-outline-danger tt-del" title="Remove">×</button>
+                                    </form>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                            <div class="tt-empty text-muted">—</div>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="info-card text-center py-5">
+        <i class="fas fa-calendar-week fa-4x text-muted mb-3"></i>
+        <p class="text-muted">Select a class above to view and manage its timetable.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add Period Modal -->
+{% if selected_class %}
+<div class="modal fade" id="addPeriodModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus me-2 text-primary"></i>Add Period — {{ selected_class.full_name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin.add_timetable') }}">
+                <input type="hidden" name="class_id" value="{{ selected_class.id }}">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Day *</label>
+                            <select name="day_of_week" class="form-select" required>
+                                {% for i, day in enumerate(days) %}
+                                <option value="{{ i }}">{{ day }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Period No</label>
+                            <select name="period_no" class="form-select">
+                                {% for p in range(1, 7) %}
+                                <option value="{{ p }}">Period {{ p }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Subject</label>
+                            <select name="subject_id" class="form-select">
+                                <option value="">Free / Break</option>
+                                {% for subj in subjects %}
+                                <option value="{{ subj.id }}">{{ subj.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Teacher</label>
+                            <select name="teacher_id" class="form-select">
+                                <option value="">Unassigned</option>
+                                {% for t, u in teachers %}
+                                <option value="{{ t.id }}">{{ u.full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Start Time</label>
+                            <input type="time" name="start_time" class="form-control" value="10:00">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">End Time</label>
+                            <input type="time" name="end_time" class="form-control" value="10:45">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Room No</label>
+                            <input type="text" name="room_no" class="form-control" placeholder="e.g. 201">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom"><i class="fas fa-save me-2"></i>Add Period</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+// Make enumerate available in jinja via a workaround
+</script>
+{% endblock %}

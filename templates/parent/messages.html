@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}Messages — Parent Portal{% endblock %}
+{% block page_title %}My Messages{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    {% if unread %}
+    <div class="alert alert-info">
+        <i class="fas fa-envelope me-2"></i>You have <strong>{{ unread }}</strong> unread message(s).
+    </div>
+    {% endif %}
+
+    <ul class="nav nav-tabs mb-3" id="msgTabs">
+        <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#received">
+                <i class="fas fa-inbox me-1"></i>Inbox
+                {% if unread %}<span class="badge bg-danger ms-1">{{ unread }}</span>{% endif %}
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#sentTab">
+                <i class="fas fa-paper-plane me-1"></i>Sent
+            </a>
+        </li>
+    </ul>
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="received">
+            <div class="info-card">
+                {% for msg in received %}
+                <div class="message-row {{ 'unread' if not msg.is_read }}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <div class="fw-600">{{ msg.sender.full_name if msg.sender else 'School Administration' }}</div>
+                                {% if not msg.is_read %}<span class="badge bg-primary">New</span>{% endif %}
+                            </div>
+                            <div class="text-primary fw-500" style="font-size:14px;">{{ msg.subject }}</div>
+                            <div class="mt-2" style="font-size:13px;color:#444;line-height:1.5;">{{ msg.body }}</div>
+                        </div>
+                        <div class="text-muted text-end ms-3" style="font-size:12px;white-space:nowrap;min-width:80px;">
+                            {{ msg.sent_at.strftime('%b %d') if msg.sent_at else '' }}<br>
+                            {{ msg.sent_at.strftime('%H:%M') if msg.sent_at else '' }}
+                            {% if not msg.is_read %}
+                            <form action="{{ url_for('parent.mark_message_read', mid=msg.id) }}" method="POST" class="mt-2">
+                                <button class="btn btn-xs btn-outline-primary w-100" type="submit" style="font-size:11px;padding:2px 8px;">Mark read</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-inbox fa-3x mb-3 text-muted"></i>
+                    <p>No messages yet. The school administration will send you updates here.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="tab-pane fade" id="sentTab">
+            <div class="info-card">
+                {% for msg in sent %}
+                <div class="message-row">
+                    <div class="fw-600">To: {{ msg.recipient.full_name if msg.recipient else 'School' }}</div>
+                    <div class="text-muted" style="font-size:13px;">{{ msg.subject }}</div>
+                    <div class="mt-1" style="font-size:13px;">{{ msg.body[:150] }}…</div>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-paper-plane fa-3x mb-3 text-muted"></i>
+                    <p>No sent messages</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.message-row { padding: 16px 18px; border-bottom: 1px solid #f0f0f0; }
+.message-row:last-child { border-bottom: none; }
+.message-row.unread { background: #e8f0fe; border-left: 4px solid #1a73e8; }
+</style>
+{% endblock %}

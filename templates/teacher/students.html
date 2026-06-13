@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% block title %}My Students — ERP{% endblock %}
+{% block page_title %}My Students{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="fw-bold mb-1">My Students</h5>
+            <p class="text-muted small mb-0">Students across all your classes</p>
+        </div>
+        <span class="badge bg-primary fs-6">{{ students_data|length }} students</span>
+    </div>
+
+    <!-- Filters -->
+    <div class="info-card mb-4">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold small">Class</label>
+                <select name="class_id" class="form-select form-select-sm">
+                    <option value="">All My Classes</option>
+                    {% for cls in my_classes %}
+                    <option value="{{ cls.id }}" {% if class_filter == cls.id|string %}selected{% endif %}>
+                        {{ cls.full_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label fw-semibold small">Search</label>
+                <input type="text" name="search" class="form-control form-control-sm"
+                    placeholder="Name or Roll No…" value="{{ search }}">
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary-custom btn-sm w-100">
+                    <i class="fas fa-search me-2"></i>Search
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="info-card">
+        <div class="card-head">
+            <h6 class="card-head-title"><i class="fas fa-users me-2 text-primary"></i>Student List</h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover modern-table data-table">
+                <thead>
+                    <tr>
+                        <th>Roll No</th>
+                        <th>Student Name</th>
+                        <th>Class</th>
+                        <th>Gender</th>
+                        <th>Phone</th>
+                        <th>Guardian</th>
+                        <th>Attendance</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student, user, cls in students_data %}
+                    <tr>
+                        <td><span class="badge bg-secondary">{{ student.roll_no }}</span></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="user-avatar-sm-table">
+                                    <i class="fas fa-user-circle text-muted fa-lg"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-semibold">{{ user.full_name }}</div>
+                                    <div class="text-muted small">{{ user.email }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ cls.full_name if cls else '—' }}</td>
+                        <td><span class="badge {% if student.gender == 'male' %}bg-info text-dark{% else %}bg-pink text-dark{% endif %}">{{ student.gender|title if student.gender else '—' }}</span></td>
+                        <td>{{ user.phone or '—' }}</td>
+                        <td>
+                            <div class="fw-semibold small">{{ student.guardian_name or '—' }}</div>
+                            <div class="text-muted small">{{ student.guardian_phone or '' }}</div>
+                        </td>
+                        <td>
+                            {% set pct = student.attendance_percentage %}
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height:6px; min-width:60px;">
+                                    <div class="progress-bar {% if pct >= 75 %}bg-success{% elif pct >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
+                                        style="width:{{ pct }}%"></div>
+                                </div>
+                                <small class="fw-semibold {% if pct >= 75 %}text-success{% elif pct >= 60 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ pct }}%
+                                </small>
+                            </div>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('teacher.attendance', class_id=student.class_id) }}"
+                                class="btn btn-sm btn-outline-primary" title="Mark Attendance">
+                                <i class="fas fa-clipboard-check"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="text-center text-muted py-4">No students found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

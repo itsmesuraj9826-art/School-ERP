@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% block title %}My Results — ERP{% endblock %}
+{% block page_title %}My Academic Results{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-blue">
+                <div class="stat-icon"><i class="fas fa-star"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ avg_gpa }}</div>
+                    <div class="stat-label">Overall GPA</div>
+                    <div class="stat-change">NEB 4.0 Scale</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-green">
+                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ passed }}</div>
+                    <div class="stat-label">Passed Exams</div>
+                    <div class="stat-change">out of {{ total_results }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-red">
+                <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ total_results - passed }}</div>
+                    <div class="stat-label">Failed / Absent</div>
+                    <div class="stat-change">Needs improvement</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-purple">
+                <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ total_results }}</div>
+                    <div class="stat-label">Total Exams</div>
+                    <div class="stat-change">{{ student.class_ref.full_name if student.class_ref else 'N/A' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEB Grade Reference -->
+    <div class="info-card mb-4">
+        <div class="card-head">
+            <h6 class="card-head-title"><i class="fas fa-info-circle me-2 text-primary"></i>NEB Grading Scale</h6>
+        </div>
+        <div class="d-flex flex-wrap gap-2 p-3">
+            {% for grade, gpa, range in [('A+','4.0','90–100'),('A','3.6','80–89'),('B+','3.2','70–79'),('B','2.8','60–69'),('C+','2.4','50–59'),('C','2.0','40–49'),('D','1.6','35–39'),('F','0.0','<35')] %}
+            <div class="grade-ref-pill grade-ref-{{ grade.replace('+','p') }}">
+                <span class="grade-ref-label">{{ grade }}</span>
+                <span class="grade-ref-gpa">{{ gpa }} GPA</span>
+                <span class="grade-ref-range">{{ range }}%</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="info-card mb-4">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label fw-semibold small">Filter by Exam Type</label>
+                <select name="exam_type" class="form-select form-select-sm">
+                    <option value="">All Exam Types</option>
+                    {% for val, label in exam_types %}
+                    <option value="{{ val }}" {% if exam_type_filter == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary-custom btn-sm w-100">
+                    <i class="fas fa-filter me-2"></i>Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results Table -->
+    <div class="info-card">
+        <div class="card-head">
+            <h6 class="card-head-title"><i class="fas fa-chart-bar me-2 text-primary"></i>Detailed Results</h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover modern-table data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Exam</th>
+                        <th>Type</th>
+                        <th>Subject</th>
+                        <th>Date</th>
+                        <th>Marks</th>
+                        <th>Max</th>
+                        <th>%</th>
+                        <th>Grade</th>
+                        <th>GPA</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result, exam, subj in all_results %}
+                    {% set pct = (result.marks_obtained / exam.max_marks * 100)|round(1) if exam.max_marks else 0 %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><strong>{{ exam.name }}</strong></td>
+                        <td><span class="badge exam-type-{{ exam.exam_type }}">{{ exam.exam_type.replace('_',' ').title() }}</span></td>
+                        <td>{{ subj.name if subj else '—' }}</td>
+                        <td>{{ exam.exam_date.strftime('%d %b %Y') if exam.exam_date else '—' }}</td>
+                        <td>
+                            <span class="fw-semibold">{{ result.marks_obtained }}</span>
+                            {% if result.practical_marks %}<span class="text-muted small">+{{ result.practical_marks }}(P)</span>{% endif %}
+                        </td>
+                        <td>{{ exam.max_marks }}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height:6px; min-width:50px;">
+                                    <div class="progress-bar {% if pct >= 60 %}bg-success{% elif pct >= 40 %}bg-warning{% else %}bg-danger{% endif %}"
+                                        style="width:{{ pct }}%"></div>
+                                </div>
+                                <small>{{ pct }}%</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge neb-grade-{{ (result.grade or 'F').replace('+','p') }}">
+                                {{ result.grade or '—' }}
+                            </span>
+                        </td>
+                        <td>{{ result.gpa or '—' }}</td>
+                        <td>
+                            {% if result.is_absent %}
+                            <span class="badge bg-secondary">Absent</span>
+                            {% elif result.grade == 'F' %}
+                            <span class="badge bg-danger">Failed</span>
+                            {% else %}
+                            <span class="badge bg-success">Passed</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="11" class="text-center text-muted py-4">No results found yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

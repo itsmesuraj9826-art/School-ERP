@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}My Timetable — ERP{% endblock %}
+{% block page_title %}My Timetable{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="fw-bold mb-1">My Weekly Schedule</h5>
+            <p class="text-muted small mb-0">{{ teacher.user.full_name }} — {{ teacher.department or 'Faculty' }}</p>
+        </div>
+        <div class="academic-year-badge">
+            <i class="fas fa-calendar-alt me-1"></i> 2081-2082
+        </div>
+    </div>
+
+    {% if timetable_data %}
+    <div class="row g-4">
+        {% for day_idx, day_name in enumerate(days) %}
+        {% if day_idx in timetable_data %}
+        <div class="col-xl-4 col-md-6">
+            <div class="info-card h-100">
+                <div class="card-head">
+                    <h6 class="card-head-title">
+                        <i class="fas fa-calendar-day me-2 text-primary"></i>{{ day_name }}
+                    </h6>
+                    <span class="badge bg-primary-light text-primary">{{ timetable_data[day_idx]|length }} periods</span>
+                </div>
+                <div class="schedule-list">
+                    {% for tt, cls, subj in timetable_data[day_idx] %}
+                    <div class="schedule-item">
+                        <div class="schedule-time">
+                            <span>{{ tt.start_time.strftime('%I:%M') if tt.start_time else 'P'+loop.index|string }}</span>
+                            <span class="time-end">{{ tt.end_time.strftime('%I:%M %p') if tt.end_time else '' }}</span>
+                        </div>
+                        <div class="schedule-details">
+                            <div class="schedule-subject">{{ subj.name if subj else 'Free Period' }}</div>
+                            <div class="schedule-class">
+                                <i class="fas fa-users me-1"></i>{{ cls.full_name }}
+                            </div>
+                            {% if tt.room_no %}
+                            <div class="schedule-room">
+                                <i class="fas fa-door-open me-1"></i>Room {{ tt.room_no }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="info-card text-center py-5">
+        <i class="fas fa-calendar-week fa-4x text-muted mb-3"></i>
+        <p class="text-muted">No timetable entries found. Ask the admin to add your schedule.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+// Jinja enumerate polyfill is handled server-side
+</script>
+{% endblock %}

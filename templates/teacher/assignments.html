@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block title %}Assignments — Teacher{% endblock %}
+{% block page_title %}Assignment Management{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="page-header-row">
+        <div>
+            <h5 class="page-sub-title">My Assignments</h5>
+            <p class="text-muted">Create and manage student assignments</p>
+        </div>
+        <button class="btn btn-primary btn-action" data-bs-toggle="modal" data-bs-target="#addAssignmentModal">
+            <i class="fas fa-plus me-2"></i>New Assignment
+        </button>
+    </div>
+
+    <div class="row g-4">
+        {% for assignment in assignments_data %}
+        <div class="col-xl-4 col-md-6">
+            <div class="assignment-card">
+                <div class="assignment-card-header">
+                    <span class="assignment-subject-tag">{{ assignment.subject_ref.name if assignment.subject_ref else 'General' }}</span>
+                    <span class="assignment-marks">{{ assignment.max_marks }} pts</span>
+                </div>
+                <div class="assignment-card-body">
+                    <h6 class="assignment-card-title">{{ assignment.title }}</h6>
+                    <p class="assignment-desc">{{ assignment.description[:100] if assignment.description else 'No description' }}{% if assignment.description and assignment.description|length > 100 %}...{% endif %}</p>
+                    <div class="assignment-footer">
+                        <div>
+                            <div class="assignment-class"><i class="fas fa-users me-1"></i>{{ assignment.class_ref.full_name if assignment.class_ref else '—' }}</div>
+                            <div class="assignment-date"><i class="fas fa-clock me-1"></i>Created {{ assignment.created_at.strftime('%b %d, %Y') }}</div>
+                        </div>
+                        {% if assignment.due_date %}
+                        <div class="due-chip {{ 'overdue-chip' if assignment.due_date < today }}">
+                            <i class="fas fa-calendar me-1"></i>Due {{ assignment.due_date.strftime('%b %d') }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center py-5">
+            <i class="fas fa-tasks fa-4x text-muted mb-3"></i>
+            <h5 class="text-muted">No assignments created yet</h5>
+            <button class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#addAssignmentModal">
+                Create First Assignment
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Add Assignment Modal -->
+<div class="modal fade" id="addAssignmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content modal-modern">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-tasks me-2"></i>New Assignment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('teacher.add_assignment') }}">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Assignment Title *</label>
+                            <input type="text" name="title" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Class *</label>
+                            <select name="class_id" class="form-select" required>
+                                <option value="">Select Class</option>
+                                {% for cls in my_classes %}
+                                <option value="{{ cls.id }}">{{ cls.full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Subject</label>
+                            <select name="subject_id" class="form-select">
+                                <option value="">Select Subject</option>
+                                {% for subj in my_subjects %}
+                                <option value="{{ subj.id }}">{{ subj.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Due Date</label>
+                            <input type="date" name="due_date" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Max Marks</label>
+                            <input type="number" name="max_marks" class="form-control" value="10" min="1">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control" rows="4" placeholder="Assignment instructions..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>Create Assignment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const now = new Date();
+</script>
+{% endblock %}

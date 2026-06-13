@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% block title %}Enter Marks — ERP{% endblock %}
+{% block page_title %}Enter Marks{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <!-- Header -->
+    <div class="info-card mb-4">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="stat-card stat-blue">
+                    <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-value" style="font-size:0.95rem;">{{ exam.name }}</div>
+                        <div class="stat-label">Exam</div>
+                        <div class="stat-change"><span class="badge exam-type-{{ exam.exam_type }}">{{ exam.exam_type.replace('_',' ').title() }}</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card stat-green">
+                    <div class="stat-icon"><i class="fas fa-users"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-value">{{ students_data|length }}</div>
+                        <div class="stat-label">Students</div>
+                        <div class="stat-change">{{ exam.class_ref.full_name if exam.class_ref else 'All' }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card stat-red">
+                    <div class="stat-icon"><i class="fas fa-star"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-value">{{ exam.max_marks }}</div>
+                        <div class="stat-label">Max Marks</div>
+                        <div class="stat-change">Pass: {{ exam.pass_marks }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-card">
+        <div class="card-head">
+            <h6 class="card-head-title"><i class="fas fa-pen me-2 text-primary"></i>Mark Sheet</h6>
+            <a href="{{ url_for('teacher.marks') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back
+            </a>
+        </div>
+        <div class="p-3">
+            {% if students_data %}
+            <form method="POST">
+                <div class="table-responsive">
+                    <table class="table table-hover modern-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Roll No</th>
+                                <th>Student</th>
+                                <th>Theory <small class="text-muted">/{{ exam.max_marks }}</small></th>
+                                <th>Practical</th>
+                                <th>Absent</th>
+                                <th>Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student, user in students_data %}
+                            {% set result = existing.get(student.id) %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td><span class="badge bg-secondary">{{ student.roll_no }}</span></td>
+                                <td><strong>{{ user.full_name }}</strong></td>
+                                <td>
+                                    <input type="number" name="marks_{{ student.id }}" id="marks_{{ student.id }}"
+                                        class="form-control form-control-sm marks-input" style="width:90px;"
+                                        min="0" max="{{ exam.max_marks }}" step="0.5"
+                                        value="{{ result.marks_obtained if result else '' }}"
+                                        oninput="updateGrade({{ student.id }}, {{ exam.max_marks }})">
+                                </td>
+                                <td>
+                                    <input type="number" name="practical_{{ student.id }}"
+                                        class="form-control form-control-sm" style="width:70px;"
+                                        min="0" step="0.5" value="{{ result.practical_marks if result else 0 }}">
+                                </td>
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input" name="absent_{{ student.id }}"
+                                        id="absent_{{ student.id }}"
+                                        {% if result and result.is_absent %}checked{% endif %}
+                                        onchange="toggleAbsent({{ student.id }})">
+                                </td>
+                                <td>
+                                    <span class="badge grade-badge" id="grade_{{ student.id }}">
+                                        {{ result.grade if result else '—' }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="d-flex gap-3 mt-3">
+                    <button type="submit" class="btn btn-primary-custom px-5">
+                        <i class="fas fa-save me-2"></i>Save Marks
+                    </button>
+                    <a href="{{ url_for('teacher.marks') }}" class="btn btn-outline-secondary px-4">Cancel</a>
+                </div>
+            </form>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No students found for this exam.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const gradeMap = [[90,'A+'],[80,'A'],[70,'B+'],[60,'B'],[50,'C+'],[40,'C'],[35,'D'],[0,'F']];
+const gradeBg = {'A+':'#1B5E20','A':'#2E7D32','B+':'#388E3C','B':'#558B2F','C+':'#F57F17','C':'#E65100','D':'#BF360C','F':'#B71C1C'};
+
+function updateGrade(sid, maxMarks) {
+    const marks = parseFloat(document.getElementById('marks_' + sid).value) || 0;
+    const pct = maxMarks > 0 ? (marks / maxMarks * 100) : 0;
+    let grade = 'F';
+    for (const [t, g] of gradeMap) { if (pct >= t) { grade = g; break; } }
+    const el = document.getElementById('grade_' + sid);
+    el.textContent = grade;
+    el.style.backgroundColor = gradeBg[grade] || '#6c757d';
+    el.style.color = '#fff';
+}
+function toggleAbsent(sid) {
+    const absent = document.getElementById('absent_' + sid).checked;
+    const inp = document.getElementById('marks_' + sid);
+    if (absent) { inp.value = 0; inp.disabled = true; } else { inp.disabled = false; }
+}
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.marks-input').forEach(inp => {
+        if (inp.value) { const sid = inp.name.replace('marks_', ''); updateGrade(parseInt(sid), parseInt(inp.max)); }
+    });
+});
+</script>
+{% endblock %}

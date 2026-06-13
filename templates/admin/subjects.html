@@ -1,0 +1,391 @@
+{% extends 'base.html' %}
+{% block title %}Subjects — ERP{% endblock %}
+{% block page_title %}Subject Management{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="fw-bold mb-1">Subjects</h5>
+            <p class="text-muted small mb-0">Manage all subjects across streams and classes</p>
+        </div>
+        <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addSubjectModal">
+            <i class="fas fa-plus me-2"></i>Add Subject
+        </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="info-card mb-4">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold small">Filter by Class</label>
+                <select name="class_id" class="form-select form-select-sm">
+                    <option value="">All Classes</option>
+                    {% for cls in classes %}
+                    <option value="{{ cls.id }}" {% if class_filter == cls.id|string %}selected{% endif %}>
+                        {{ cls.full_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold small">Filter by Stream</label>
+                <select name="stream_id" class="form-select form-select-sm">
+                    <option value="">All Streams</option>
+                    {% for stream in streams %}
+                    <option value="{{ stream.id }}" {% if stream_filter == stream.id|string %}selected{% endif %}>{{ stream.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary-custom btn-sm w-100">
+                    <i class="fas fa-filter me-2"></i>Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="info-card">
+        <div class="card-head">
+            <h6 class="card-head-title"><i class="fas fa-book me-2 text-primary"></i>Subjects ({{ subjects_data|length }})</h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover modern-table data-table">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Code</th>
+                        <th>Class</th>
+                        <th>Stream</th>
+                        <th>Teacher</th>
+                        <th>Type</th>
+                        <th>Marks</th>
+                        <th>Credit Hrs</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for subj in subjects_data %}
+                    <tr id="subject-row-{{ subj.id }}">
+                        <td><strong>{{ subj.name }}</strong></div>
+                        <td><span class="badge bg-secondary">{{ subj.code or '—' }}</span></div>
+                        <td>{{ subj.class_ref.full_name if subj.class_ref else '—' }}</div>
+                        <td>
+                            {% if subj.stream %}
+                            <span class="badge bg-primary-light text-primary">{{ subj.stream.name }}</span>
+                            {% else %}—{% endif %}
+                        </div>
+                        <td>
+                            {% if subj.teacher and subj.teacher.user %}
+                            {{ subj.teacher.user.full_name }}
+                            {% else %}
+                            <span class="text-muted">Not Assigned</span>
+                            {% endif %}
+                        </div>
+                        <td>
+                            <span class="badge {% if subj.subject_type == 'practical' %}bg-warning text-dark{% elif subj.subject_type == 'both' %}bg-info text-dark{% else %}bg-light text-dark{% endif %}">
+                                {{ subj.subject_type|title }}
+                            </span>
+                        </div>
+                        <td>{{ subj.max_marks }} / {{ subj.pass_marks }}</div>
+                        <td>{{ subj.credit_hours }}</div>
+                        <td>
+                            <div class="action-btns">
+                                <button type="button" class="btn-icon-sm edit" title="Edit Subject"
+                                        onclick='openEditModal({{ subj.id }}, "{{ subj.name }}", "{{ subj.code or '' }}",
+                                        {{ subj.class_id|default('null') }}, {{ subj.stream_id|default('null') }},
+                                        {{ subj.teacher_id|default('null') }}, "{{ subj.subject_type }}",
+                                        {{ subj.max_marks }}, {{ subj.pass_marks }}, {{ subj.credit_hours }},
+                                        {{ subj.practical_marks }})'>
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn-icon-sm danger" title="Delete Subject"
+                                        onclick="confirmDelete({{ subj.id }}, '{{ subj.name }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="9" class="text-center text-muted py-4">No subjects found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Subject Modal -->
+<div class="modal fade" id="addSubjectModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-book me-2 text-primary"></i>Add Subject</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin.add_subject') }}">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Subject Name *</label>
+                            <input type="text" name="name" class="form-control" required placeholder="e.g. Physics">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Code</label>
+                            <input type="text" name="code" class="form-control" placeholder="e.g. PHY11">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Class</label>
+                            <select name="class_id" class="form-select">
+                                <option value="">Select Class…</option>
+                                {% for cls in classes %}
+                                <option value="{{ cls.id }}">{{ cls.full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Stream</label>
+                            <select name="stream_id" class="form-select">
+                                <option value="">Select Stream…</option>
+                                {% for stream in streams %}
+                                <option value="{{ stream.id }}">{{ stream.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Teacher</label>
+                            <select name="teacher_id" class="form-select">
+                                <option value="">Unassigned</option>
+                                {% for t, u in teachers %}
+                                <option value="{{ t.id }}">{{ u.full_name }} ({{ t.subject or t.department }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Subject Type</label>
+                            <select name="subject_type" class="form-select">
+                                <option value="theory">Theory</option>
+                                <option value="practical">Practical</option>
+                                <option value="both">Theory + Practical</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Max Marks (Theory)</label>
+                            <input type="number" name="max_marks" class="form-control" value="100" min="1">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Pass Marks</label>
+                            <input type="number" name="pass_marks" class="form-control" value="40" min="1">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Credit Hours</label>
+                            <input type="number" name="credit_hours" class="form-control" value="4" min="1" max="10">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Practical Marks</label>
+                            <input type="number" name="practical_marks" class="form-control" value="0" min="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom"><i class="fas fa-save me-2"></i>Add Subject</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Subject Modal -->
+<div class="modal fade" id="editSubjectModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-edit me-2 text-warning"></i>Edit Subject</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="editSubjectForm">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Subject Name *</label>
+                            <input type="text" name="name" id="edit_name" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Code</label>
+                            <input type="text" name="code" id="edit_code" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Class</label>
+                            <select name="class_id" id="edit_class_id" class="form-select">
+                                <option value="">Select Class…</option>
+                                {% for cls in classes %}
+                                <option value="{{ cls.id }}">{{ cls.full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Stream</label>
+                            <select name="stream_id" id="edit_stream_id" class="form-select">
+                                <option value="">Select Stream…</option>
+                                {% for stream in streams %}
+                                <option value="{{ stream.id }}">{{ stream.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Teacher (Re-assign)</label>
+                            <select name="teacher_id" id="edit_teacher_id" class="form-select">
+                                <option value="">Unassigned</option>
+                                {% for t, u in teachers %}
+                                <option value="{{ t.id }}">{{ u.full_name }} ({{ t.subject or t.department }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Subject Type</label>
+                            <select name="subject_type" id="edit_subject_type" class="form-select">
+                                <option value="theory">Theory</option>
+                                <option value="practical">Practical</option>
+                                <option value="both">Theory + Practical</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Max Marks (Theory)</label>
+                            <input type="number" name="max_marks" id="edit_max_marks" class="form-control" min="1">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Pass Marks</label>
+                            <input type="number" name="pass_marks" id="edit_pass_marks" class="form-control" min="1">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Credit Hours</label>
+                            <input type="number" name="credit_hours" id="edit_credit_hours" class="form-control" min="1" max="10">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Practical Marks</label>
+                            <input type="number" name="practical_marks" id="edit_practical_marks" class="form-control" min="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning"><i class="fas fa-save me-2"></i>Update Subject</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteSubjectModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Delete Subject</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete subject: <strong id="deleteSubjectName"></strong>?</p>
+                <p class="text-muted small">This action cannot be undone. All related exam records will also be affected.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" id="deleteSubjectForm" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.action-btns {
+    display: flex;
+    gap: 6px;
+}
+.btn-icon-sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: none;
+    background: #f0f2f5;
+    color: #1e293b;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+.btn-icon-sm.edit:hover {
+    background: #fef3c7;
+    color: #d97706;
+}
+.btn-icon-sm.danger:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+.btn-primary-custom {
+    background: linear-gradient(135deg, #0D47A1, #1565C0);
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+}
+.btn-primary-custom:hover {
+    background: linear-gradient(135deg, #0a3880, #0D47A1);
+}
+.btn-warning {
+    background: #ffc107;
+    color: #212529;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-warning:hover {
+    background: #e0a800;
+}
+.badge {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.bg-primary-light {
+    background: rgba(13,71,161,0.1);
+    color: #0D47A1;
+}
+</style>
+
+<script>
+// Edit Subject Function - Using single quotes for outer string to avoid escaping issues
+function openEditModal(id, name, code, classId, streamId, teacherId, subjectType, maxMarks, passMarks, creditHours, practicalMarks) {
+    document.getElementById('edit_name').value = name;
+    document.getElementById('edit_code').value = code || '';
+    document.getElementById('edit_class_id').value = classId || '';
+    document.getElementById('edit_stream_id').value = streamId || '';
+    document.getElementById('edit_teacher_id').value = teacherId || '';
+    document.getElementById('edit_subject_type').value = subjectType || 'theory';
+    document.getElementById('edit_max_marks').value = maxMarks;
+    document.getElementById('edit_pass_marks').value = passMarks;
+    document.getElementById('edit_credit_hours').value = creditHours;
+    document.getElementById('edit_practical_marks').value = practicalMarks || 0;
+
+    document.getElementById('editSubjectForm').action = "/admin/subjects/" + id + "/edit";
+
+    new bootstrap.Modal(document.getElementById('editSubjectModal')).show();
+}
+
+// Delete Subject Function
+function confirmDelete(id, name) {
+    document.getElementById('deleteSubjectName').innerHTML = name;
+    document.getElementById('deleteSubjectForm').action = "/admin/subjects/" + id + "/delete";
+    new bootstrap.Modal(document.getElementById('deleteSubjectModal')).show();
+}
+</script>
+{% endblock %}

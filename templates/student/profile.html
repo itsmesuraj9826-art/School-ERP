@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile - Student{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="page-header-row mb-4">
+        <div>
+            <h5 class="page-sub-title">My Profile</h5>
+            <p class="text-muted">View your personal and academic information</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <!-- Profile Card -->
+            <div class="info-card mb-4">
+                <div class="text-center py-3">
+                    <div class="student-avatar-lg mx-auto">
+                        {{ user.full_name[0]|upper }}
+                    </div>
+                    <h4 class="mt-3">{{ user.full_name }}</h4>
+                    <p class="text-muted">{{ user.email }}</p>
+                    <span class="badge {% if student.status == 'active' %}bg-success{% else %}bg-secondary{% endif %}">
+                        {{ student.status|title }}
+                    </span>
+                </div>
+                <hr>
+                <div class="mt-3">
+                    <h6 class="section-title">Basic Information</h6>
+                    <table class="info-table">
+                        <tr>
+                            <th>Roll Number:</th>
+                            <td>{{ student.roll_no }}</div>
+                        </tr>
+                        <tr>
+                            <th>Class:</th>
+                            <td>{% if cls %}{{ cls.name }}-{{ cls.section }}{% else %}Not Assigned{% endif %}</div>
+                        </tr>
+                        <tr>
+                            <th>Phone:</th>
+                            <td>{{ user.phone or 'Not provided' }}</div>
+                        </tr>
+                        <tr>
+                            <th>Gender:</th>
+                            <td>{{ student.gender|title or 'Not specified' }}</div>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <!-- Personal Details -->
+            <div class="info-card mb-4">
+                <h6 class="section-title">Personal Details</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Date of Birth:</strong></p>
+                        <p class="text-muted">{{ student.date_of_birth.strftime('%d %b %Y') if student.date_of_birth else 'Not specified' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Blood Group:</strong></p>
+                        <p class="text-muted">{{ student.blood_group or 'Not specified' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Admission Date:</strong></p>
+                        <p class="text-muted">{{ student.admission_date.strftime('%d %b %Y') if student.admission_date else 'Not specified' }}</p>
+                    </div>
+                    <div class="col-md-12">
+                        <p><strong>Address:</strong></p>
+                        <p class="text-muted">{{ student.address or 'Not specified' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guardian Information -->
+            <div class="info-card">
+                <h6 class="section-title">Guardian Information</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Guardian Name:</strong></p>
+                        <p class="text-muted">{{ student.guardian_name or 'Not specified' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Guardian Phone:</strong></p>
+                        <p class="text-muted">{{ student.guardian_phone or 'Not specified' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.info-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border: 1px solid #e8eaed;
+}
+
+.student-avatar-lg {
+    width: 120px;
+    height: 120px;
+    background: linear-gradient(135deg, #0D47A1, #1565C0);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 48px;
+    margin: 0 auto;
+}
+
+.section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0D47A1;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e8eaed;
+}
+
+.info-table {
+    width: 100%;
+    font-size: 13px;
+}
+
+.info-table th {
+    width: 40%;
+    text-align: left;
+    font-weight: 600;
+    color: #555;
+    padding: 8px 0;
+}
+
+.info-table td {
+    padding: 8px 0;
+    color: #333;
+}
+
+.badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.bg-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.bg-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.text-muted {
+    color: #6c757d;
+    font-size: 13px;
+}
+
+.page-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.page-sub-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -12px;
+}
+
+.col-md-4, .col-md-8 {
+    padding: 0 12px;
+    box-sizing: border-box;
+}
+
+.col-md-4 {
+    width: 33.333%;
+}
+
+.col-md-8 {
+    width: 66.666%;
+}
+
+hr {
+    margin: 15px 0;
+    border-color: #e8eaed;
+}
+
+.mb-4 {
+    margin-bottom: 20px;
+}
+
+.mt-3 {
+    margin-top: 15px;
+}
+
+.text-center {
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .col-md-4, .col-md-8 {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Notices — Admin{% endblock %}
+{% block page_title %}Notice Management{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="page-header-row">
+        <div>
+            <h5 class="page-sub-title">All Notices</h5>
+            <p class="text-muted">Publish and manage school announcements</p>
+        </div>
+        <a href="{{ url_for('admin.add_notice') }}" class="btn btn-primary btn-action">
+            <i class="fas fa-plus me-2"></i>New Notice
+        </a>
+    </div>
+
+    <div class="notices-full-grid">
+        {% for notice in notices_data %}
+        <div class="notice-full-card priority-{{ notice.priority }}">
+            <div class="notice-priority-strip"></div>
+            <div class="notice-full-content">
+                <div class="notice-full-header">
+                    <div>
+                        <h6 class="notice-full-title">{{ notice.title }}</h6>
+                        <div class="notice-full-meta">
+                            <span class="me-3"><i class="fas fa-user me-1"></i>{{ notice.author.full_name if notice.author else 'Admin' }}</span>
+                            <span class="me-3"><i class="fas fa-clock me-1"></i>{{ notice.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+                            {% if notice.expiry_date %}<span><i class="fas fa-calendar-times me-1"></i>Expires: {{ notice.expiry_date.strftime('%b %d, %Y') }}</span>{% endif %}
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <span class="badge notice-target-badge">{{ notice.target_role | title }}</span>
+                        <span class="badge priority-badge-{{ notice.priority }}">{{ notice.priority | title }}</span>
+                        <span class="badge {{ 'bg-success' if notice.is_active else 'bg-secondary' }}">{{ 'Active' if notice.is_active else 'Inactive' }}</span>
+                    </div>
+                </div>
+                <div class="notice-body">{{ notice.content }}</div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-bullhorn fa-4x text-muted mb-3"></i>
+            <h5 class="text-muted">No notices yet</h5>
+            <a href="{{ url_for('admin.add_notice') }}" class="btn btn-primary mt-2">Publish First Notice</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

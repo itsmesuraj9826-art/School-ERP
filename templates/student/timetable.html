@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}My Timetable — ERP{% endblock %}
+{% block page_title %}My Timetable{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="fw-bold mb-1">Weekly Timetable</h5>
+            <p class="text-muted small mb-0">
+                {{ student.class_ref.full_name if student.class_ref else 'No class assigned' }}
+            </p>
+        </div>
+        <div class="academic-year-badge">
+            <i class="fas fa-calendar me-1"></i>2081-2082
+        </div>
+    </div>
+
+    {% if timetable_data %}
+    <div class="row g-4">
+        {% for day_idx, day_name in [('0','Monday'),('1','Tuesday'),('2','Wednesday'),('3','Thursday'),('4','Friday'),('5','Saturday')] %}
+        {% set day_int = day_idx|int %}
+        {% if day_int in timetable_data %}
+        <div class="col-xl-4 col-md-6">
+            <div class="info-card h-100">
+                <div class="card-head">
+                    <h6 class="card-head-title">
+                        <i class="fas fa-calendar-day me-2 {% if day_int == today_num %}text-success{% else %}text-primary{% endif %}"></i>
+                        {{ day_name }}
+                        {% if day_int == today_num %}<span class="badge bg-success ms-2">Today</span>{% endif %}
+                    </h6>
+                    <span class="badge bg-primary-light text-primary">{{ timetable_data[day_int]|length }} periods</span>
+                </div>
+                <div class="schedule-list">
+                    {% for tt, subj in timetable_data[day_int] %}
+                    <div class="schedule-item">
+                        <div class="schedule-time">
+                            <span>{{ tt.start_time.strftime('%I:%M') if tt.start_time else 'P'+loop.index|string }}</span>
+                            <span class="time-end">{{ tt.end_time.strftime('%I:%M %p') if tt.end_time else '' }}</span>
+                        </div>
+                        <div class="schedule-details">
+                            <div class="schedule-subject">{{ subj.name if subj else 'Free Period' }}</div>
+                            {% if tt.room_no %}
+                            <div class="schedule-room"><i class="fas fa-door-open me-1"></i>Room {{ tt.room_no }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="info-card text-center py-5">
+        <i class="fas fa-calendar-week fa-4x text-muted mb-3"></i>
+        <p class="text-muted">No timetable has been set up for your class yet.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const todayNum = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+</script>
+{% endblock %}

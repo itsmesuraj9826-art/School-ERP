@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}Fee Status — ERP{% endblock %}
+{% block page_title %}Fee Status{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <!-- Summary -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="stat-card stat-green">
+                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">NPR {{ "{:,.0f}".format(total_paid) }}</div>
+                    <div class="stat-label">Total Paid</div>
+                    <div class="stat-change">Cleared fees</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card stat-red">
+                <div class="stat-icon"><i class="fas fa-exclamation-circle"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">NPR {{ "{:,.0f}".format(total_pending) }}</div>
+                    <div class="stat-label">Total Pending</div>
+                    <div class="stat-change">Please clear at office</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card stat-blue">
+                <div class="stat-icon"><i class="fas fa-receipt"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ fees_list|length }}</div>
+                    <div class="stat-label">Fee Records</div>
+                    <div class="stat-change">Academic year 2081-2082</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-card">
+        <div class="card-head">
+            <h6 class="card-head-title"><i class="fas fa-receipt me-2 text-primary"></i>Fee Details</h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover modern-table data-table">
+                <thead>
+                    <tr>
+                        <th>Fee Type</th>
+                        <th>Amount</th>
+                        <th>Due Date</th>
+                        <th>Paid Date</th>
+                        <th>Method</th>
+                        <th>Receipt</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fee in fees_list %}
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">{{ fee.fee_type }}</div>
+                            <div class="text-muted small">{{ fee.academic_year }}</div>
+                        </td>
+                        <td><strong>NPR {{ "{:,.0f}".format(fee.amount) }}</strong></td>
+                        <td>{{ fee.due_date.strftime('%d %b %Y') if fee.due_date else '—' }}</td>
+                        <td>{{ fee.paid_date.strftime('%d %b %Y') if fee.paid_date else '—' }}</td>
+                        <td>{{ fee.payment_method|title if fee.payment_method else '—' }}</td>
+                        <td>
+                            {% if fee.receipt_no %}
+                            <span class="badge bg-secondary">{{ fee.receipt_no }}</span>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge {% if fee.status == 'paid' %}bg-success{% elif fee.status == 'overdue' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                {{ fee.status|title }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">No fee records found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if total_pending > 0 %}
+        <div class="alert alert-warning m-3 mb-0">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>NPR {{ "{:,.0f}".format(total_pending) }}</strong> is pending. Please visit the accounts office to clear your dues.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

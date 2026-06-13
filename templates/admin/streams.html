@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% block title %}Streams — ERP{% endblock %}
+{% block page_title %}NEB Stream Management{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="fw-bold mb-1">Academic Streams</h5>
+            <p class="text-muted small mb-0">Manage NEB +2 streams: Science, Management, Humanities, Education, Law</p>
+        </div>
+        <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addStreamModal">
+            <i class="fas fa-plus me-2"></i>Add Stream
+        </button>
+    </div>
+
+    <!-- Stream Cards -->
+    <div class="row g-4 mb-4">
+        {% set stream_icons = {'Science': 'fa-atom', 'Management': 'fa-briefcase', 'Humanities': 'fa-book-open', 'Education': 'fa-chalkboard-teacher', 'Law': 'fa-balance-scale'} %}
+        {% set stream_colors = {'Science': 'stat-blue', 'Management': 'stat-green', 'Humanities': 'stat-purple', 'Education': 'stat-red', 'Law': 'stat-orange'} %}
+        {% for stream in streams_data %}
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card {{ stream_colors.get(stream.name, 'stat-blue') }}">
+                <div class="stat-icon"><i class="fas {{ stream_icons.get(stream.name, 'fa-layer-group') }}"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ stream.classes|length }}</div>
+                    <div class="stat-label">{{ stream.name }}</div>
+                    <div class="stat-change">
+                        <span class="badge {% if stream.is_active %}bg-success{% else %}bg-secondary{% endif %} me-2">
+                            {{ 'Active' if stream.is_active else 'Inactive' }}
+                        </span>
+                        {{ stream.code or '' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Streams Table -->
+    <div class="info-card">
+        <div class="card-head">
+            <h6 class="card-head-title"><i class="fas fa-stream me-2 text-primary"></i>All Streams</h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover modern-table data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Stream Name</th>
+                        <th>Code</th>
+                        <th>Classes</th>
+                        <th>Subjects</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stream in streams_data %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="subject-icon-sm bg-primary-light">
+                                    <i class="fas {{ stream_icons.get(stream.name, 'fa-layer-group') }} text-primary"></i>
+                                </div>
+                                <strong>{{ stream.name }}</strong>
+                            </div>
+                        </td>
+                        <td><span class="badge bg-secondary">{{ stream.code or '—' }}</span></td>
+                        <td>{{ stream.classes|length }}</td>
+                        <td>{{ stream.subjects|length }}</td>
+                        <td class="text-muted small">{{ (stream.description or '')[:60] }}{% if stream.description and stream.description|length > 60 %}...{% endif %}</td>
+                        <td>
+                            <span class="badge {% if stream.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ 'Active' if stream.is_active else 'Inactive' }}
+                            </span>
+                        </td>
+                        <td>
+                            <form method="POST" action="{{ url_for('admin.toggle_stream', sid=stream.id) }}" class="d-inline">
+                                <button class="btn btn-sm {% if stream.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                                    <i class="fas fa-{{ 'pause' if stream.is_active else 'play' }}"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="text-center text-muted py-4">No streams yet. Add the NEB streams above.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Stream Modal -->
+<div class="modal fade" id="addStreamModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus-circle me-2 text-primary"></i>Add NEB Stream</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin.add_stream') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Stream Name *</label>
+                        <select name="name" class="form-select" required>
+                            <option value="">Select stream…</option>
+                            <option value="Science">Science</option>
+                            <option value="Management">Management</option>
+                            <option value="Humanities">Humanities</option>
+                            <option value="Education">Education</option>
+                            <option value="Law">Law</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Code (e.g. SCI, MGT)</label>
+                        <input type="text" name="code" class="form-control" placeholder="SCI" maxlength="10">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Description</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="Brief description…"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom"><i class="fas fa-save me-2"></i>Add Stream</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

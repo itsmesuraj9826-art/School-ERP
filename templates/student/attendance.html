@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block title %}Attendance — ERP{% endblock %}
+{% block page_title %}My Attendance{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <!-- Summary -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-blue">
+                <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ pct }}%</div>
+                    <div class="stat-label">Attendance Rate</div>
+                    <div class="stat-change">
+                        <span class="{{ 'text-success' if pct >= 75 else 'text-danger' }}">
+                            {% if pct >= 75 %}✓ Eligible{% else %}⚠ Below 75%{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-green">
+                <div class="stat-icon"><i class="fas fa-user-check"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ present }}</div>
+                    <div class="stat-label">Days Present</div>
+                    <div class="stat-change">out of {{ total }} days</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-red">
+                <div class="stat-icon"><i class="fas fa-user-times"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ absent }}</div>
+                    <div class="stat-label">Days Absent</div>
+                    <div class="stat-change">{{ ((absent/total)*100)|round(1) if total else 0 }}% absence rate</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-purple">
+                <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ late }}</div>
+                    <div class="stat-label">Late Arrivals</div>
+                    <div class="stat-change">Counted as present</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Breakdown -->
+    {% if monthly %}
+    <div class="info-card mb-4">
+        <div class="card-head">
+            <h6 class="card-head-title"><i class="fas fa-chart-bar me-2 text-primary"></i>Monthly Breakdown</h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover modern-table">
+                <thead>
+                    <tr><th>Month</th><th>Total Days</th><th>Present</th><th>Absent</th><th>Late</th><th>%</th></tr>
+                </thead>
+                <tbody>
+                    {% for month, data in monthly.items() %}
+                    {% set mpct = (data.present / data.total * 100)|round(1) if data.total else 0 %}
+                    <tr>
+                        <td><strong>{{ month }}</strong></td>
+                        <td>{{ data.total }}</td>
+                        <td><span class="text-success fw-semibold">{{ data.present }}</span></td>
+                        <td><span class="text-danger fw-semibold">{{ data.absent }}</span></td>
+                        <td><span class="text-warning fw-semibold">{{ data.late }}</span></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height:6px; min-width:60px;">
+                                    <div class="progress-bar {% if mpct >= 75 %}bg-success{% elif mpct >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
+                                        style="width:{{ mpct }}%"></div>
+                                </div>
+                                <small class="fw-semibold {% if mpct >= 75 %}text-success{% else %}text-danger{% endif %}">{{ mpct }}%</small>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Attendance Log -->
+    <div class="info-card">
+        <div class="card-head">
+            <h6 class="card-head-title"><i class="fas fa-list me-2 text-primary"></i>Recent Attendance (Last 60 Days)</h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover modern-table data-table">
+                <thead>
+                    <tr><th>#</th><th>Date</th><th>Day</th><th>Status</th><th>Remarks</th></tr>
+                </thead>
+                <tbody>
+                    {% for att in all_att %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ att.date.strftime('%d %B %Y') }}</td>
+                        <td>{{ att.date.strftime('%A') }}</td>
+                        <td>
+                            <span class="badge {% if att.status == 'present' %}bg-success{% elif att.status == 'absent' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                <i class="fas fa-{{ 'check' if att.status == 'present' else 'times' if att.status == 'absent' else 'clock' }} me-1"></i>
+                                {{ att.status|title }}
+                            </span>
+                        </td>
+                        <td class="text-muted small">{{ att.remarks or '—' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="text-center text-muted py-4">No attendance records found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

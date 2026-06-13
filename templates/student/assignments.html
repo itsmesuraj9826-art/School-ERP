@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}Assignments — ERP{% endblock %}
+{% block page_title %}My Assignments{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="fw-bold mb-1">Assignments</h5>
+            <p class="text-muted small mb-0">Track all pending and completed assignments</p>
+        </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="d-flex gap-2 mb-4">
+        <a href="{{ url_for('student.assignments', status='active') }}"
+            class="btn btn-sm {% if status_filter == 'active' %}btn-primary-custom{% else %}btn-outline-secondary{% endif %}">
+            <i class="fas fa-clock me-1"></i>Active
+        </a>
+        <a href="{{ url_for('student.assignments', status='overdue') }}"
+            class="btn btn-sm {% if status_filter == 'overdue' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+            <i class="fas fa-exclamation-triangle me-1"></i>Overdue
+        </a>
+        <a href="{{ url_for('student.assignments', status='all') }}"
+            class="btn btn-sm {% if status_filter == 'all' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+            <i class="fas fa-list me-1"></i>All
+        </a>
+    </div>
+
+    {% if assignments_list %}
+    <div class="row g-4">
+        {% for assignment in assignments_list %}
+        {% set is_overdue = assignment.due_date and assignment.due_date < today %}
+        <div class="col-xl-6">
+            <div class="info-card assignment-card {{ 'border-danger' if is_overdue else '' }}">
+                <div class="d-flex justify-content-between align-items-start p-3 pb-0">
+                    <div>
+                        <h6 class="fw-bold mb-1">{{ assignment.title }}</h6>
+                        <div class="d-flex gap-2 flex-wrap">
+                            {% if assignment.subject_ref %}
+                            <span class="badge bg-primary-light text-primary">
+                                <i class="fas fa-book me-1"></i>{{ assignment.subject_ref.name }}
+                            </span>
+                            {% endif %}
+                            {% if assignment.class_ref %}
+                            <span class="badge bg-secondary">{{ assignment.class_ref.full_name }}</span>
+                            {% endif %}
+                            {% if assignment.max_marks %}
+                            <span class="badge bg-success">{{ assignment.max_marks }} marks</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        {% if is_overdue %}
+                        <span class="badge bg-danger">
+                            <i class="fas fa-exclamation-triangle me-1"></i>Overdue
+                        </span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">
+                            <i class="fas fa-clock me-1"></i>Pending
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="p-3 pt-2">
+                    {% if assignment.description %}
+                    <p class="text-muted small mb-2">{{ assignment.description[:200] }}{% if assignment.description|length > 200 %}…{% endif %}</p>
+                    {% endif %}
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <div class="text-muted small">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            Due: <strong class="{{ 'text-danger' if is_overdue else 'text-primary' }}">
+                                {{ assignment.due_date.strftime('%d %B %Y') if assignment.due_date else 'No deadline' }}
+                            </strong>
+                        </div>
+                        <div class="text-muted small">
+                            <i class="fas fa-clock me-1"></i>
+                            Posted: {{ assignment.created_at.strftime('%d %b') }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="info-card text-center py-5">
+        <i class="fas fa-tasks fa-4x text-muted mb-3"></i>
+        <p class="text-muted mb-0">
+            {% if status_filter == 'active' %}No active assignments right now. 🎉{% 
+            elif status_filter == 'overdue' %}No overdue assignments. Keep it up!
+            {% else %}No assignments found.{% endif %}
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

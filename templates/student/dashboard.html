@@ -1,0 +1,305 @@
+{% extends 'base.html' %}
+{% block title %}Student Dashboard — Martyrs' Memorial ERP{% endblock %}
+{% block page_title %}Student Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="welcome-banner">
+        <div class="welcome-text">
+            <h4>Welcome, {{ current_user.full_name.split()[0] }}! 🎓</h4>
+            <p>
+                Roll No: <strong>{{ student.roll_no }}</strong>
+                {% if student.class_ref %} | Class: <strong>{{ student.class_ref.full_name }}</strong>{% endif %}
+            </p>
+        </div>
+        <div class="welcome-date">
+            <i class="fas fa-calendar-alt me-2"></i>
+            <span id="currentDate"></span>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-blue">
+                <div class="stat-icon"><i class="fas fa-clipboard-check"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ attendance_pct }}%</div>
+                    <div class="stat-label">Attendance</div>
+                    <div class="stat-change {{ 'positive' if attendance_pct >= 75 else 'negative' }}">
+                        <i class="fas fa-{{ 'check' if attendance_pct >= 75 else 'exclamation-triangle' }} me-1"></i>
+                        {{ present_att }}/{{ total_att }} days
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-green">
+                <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ avg_marks }}%</div>
+                    <div class="stat-label">Average Score</div>
+                    <div class="stat-change positive"><i class="fas fa-trophy me-1"></i>Academic performance</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card {{ 'stat-red' if pending_fee_count > 0 else 'stat-purple' }}">
+                <div class="stat-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ pending_fee_count }}</div>
+                    <div class="stat-label">Pending Fees</div>
+                    <div class="stat-change {{ 'negative' if pending_fee_count > 0 else '' }}">
+                        <i class="fas fa-rupee-sign me-1"></i>NPR {{ "{:,.0f}".format(pending_fees) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-purple">
+                <div class="stat-icon"><i class="fas fa-tasks"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ assignments|length }}</div>
+                    <div class="stat-label">Due Assignments</div>
+                    <div class="stat-change"><i class="fas fa-calendar me-1"></i>Upcoming</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Attendance Visual -->
+        <div class="col-xl-4">
+            <div class="info-card h-100">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-chart-pie me-2 text-primary"></i>My Attendance</h6>
+                </div>
+                <div class="attendance-ring-wrap">
+                    <div class="ring-chart">
+                        <canvas id="attendanceDonut" width="160" height="160"></canvas>
+                        <div class="ring-center">
+                            <span class="ring-pct">{{ attendance_pct }}%</span>
+                            <span class="ring-sub">Present</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="att-stats-row">
+                    <div class="att-stat present-stat">
+                        <span class="att-num">{{ present_att }}</span>
+                        <span class="att-label">Present</span>
+                    </div>
+                    <div class="att-stat absent-stat">
+                        <span class="att-num">{{ total_att - present_att }}</span>
+                        <span class="att-label">Absent</span>
+                    </div>
+                    <div class="att-stat total-stat">
+                        <span class="att-num">{{ total_att }}</span>
+                        <span class="att-label">Total</span>
+                    </div>
+                </div>
+                {% if attendance_pct < 75 %}
+                <div class="alert alert-warning alert-sm mt-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Attendance below 75%. Please improve attendance.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Today's Timetable -->
+        <div class="col-xl-4">
+            <div class="info-card h-100">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-clock me-2 text-success"></i>Today's Classes</h6>
+                </div>
+                {% if timetable_today %}
+                <div class="schedule-list">
+                    {% for tt, subj in timetable_today %}
+                    <div class="schedule-item">
+                        <div class="schedule-time">
+                            <span>{{ tt.start_time.strftime('%I:%M') if tt.start_time else 'TBD' }}</span>
+                            <span class="time-end">{{ tt.end_time.strftime('%I:%M %p') if tt.end_time else '' }}</span>
+                        </div>
+                        <div class="schedule-details">
+                            <div class="schedule-subject">{{ subj.name if subj else 'Period' }}</div>
+                            {% if tt.room_no %}<div class="schedule-room"><i class="fas fa-door-open me-1"></i>Room {{ tt.room_no }}</div>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state-sm text-center py-5">
+                    <i class="fas fa-coffee fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No classes today</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Upcoming Exams -->
+        <div class="col-xl-4">
+            <div class="info-card h-100">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-file-alt me-2 text-danger"></i>Upcoming Exams</h6>
+                </div>
+                <div class="exam-list">
+                    {% for exam in upcoming_exams %}
+                    <div class="exam-item">
+                        <div class="exam-date-badge">
+                            <span class="exam-day">{{ exam.exam_date.strftime('%d') if exam.exam_date }}</span>
+                            <span class="exam-month">{{ exam.exam_date.strftime('%b') if exam.exam_date }}</span>
+                        </div>
+                        <div class="exam-info">
+                            <div class="exam-name">{{ exam.name }}</div>
+                            <div class="exam-meta">
+                                <span class="badge exam-type-{{ exam.exam_type }}">{{ exam.exam_type|title }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="empty-state-sm text-center py-4">
+                        <i class="fas fa-calendar-check fa-2x text-muted mb-2"></i>
+                        <p class="text-muted">No upcoming exams</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Results + Assignments -->
+    <div class="row g-4 mt-0">
+        <div class="col-xl-7">
+            <div class="info-card">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-chart-bar me-2 text-primary"></i>Recent Results</h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover modern-table mb-0">
+                        <thead>
+                            <tr><th>Subject</th><th>Exam</th><th>Marks</th><th>%</th><th>Grade</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for result, exam, subj in results %}
+                            <tr>
+                                <td>{{ subj.name if subj else '—' }}</td>
+                                <td>{{ exam.name }}</td>
+                                <td>{{ result.marks_obtained }}/{{ exam.max_marks }}</td>
+                                <td>{{ ((result.marks_obtained / exam.max_marks * 100) | round(1)) if exam.max_marks else 0 }}%</td>
+                                <td>
+                                    <span class="grade-badge grade-{{ result.grade[0] if result.grade else 'F' }}">
+                                        {{ result.grade or 'N/A' }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center text-muted py-4">No results yet</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-5">
+            <!-- Assignments -->
+            <div class="info-card mb-4">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-tasks me-2 text-warning"></i>Due Assignments</h6>
+                </div>
+                {% for assignment in assignments %}
+                <div class="assignment-item">
+                    <div class="assignment-icon"><i class="fas fa-file-alt"></i></div>
+                    <div class="assignment-info">
+                        <div class="assignment-title">{{ assignment.title }}</div>
+                        <div class="assignment-meta">
+                            {% if assignment.subject_ref %}<span>{{ assignment.subject_ref.name }}</span>{% endif %}
+                        </div>
+                    </div>
+                    <div class="assignment-due">
+                        <span class="due-date">{{ assignment.due_date.strftime('%b %d') if assignment.due_date else 'No deadline' }}</span>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-state-sm text-center py-4">
+                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                    <p class="text-muted">No pending assignments!</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Fee Status -->
+            <div class="info-card">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-rupee-sign me-2 text-success"></i>Fee Status</h6>
+                </div>
+                {% for fee in fees[:5] %}
+                <div class="fee-row-item">
+                    <div class="fee-row-info">
+                        <span class="fee-type">{{ fee.fee_type }}</span>
+                        <span class="fee-amount-sm">NPR {{ "{:,.0f}".format(fee.amount) }}</span>
+                    </div>
+                    <span class="badge fee-status-{{ fee.status }}">{{ fee.status | title }}</span>
+                </div>
+                {% else %}
+                <div class="empty-state-sm text-center py-3">
+                    <p class="text-muted">No fee records</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Notices -->
+    <div class="row g-4 mt-0">
+        <div class="col-12">
+            <div class="info-card">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-bullhorn me-2 text-warning"></i>Notices</h6>
+                </div>
+                <div class="notices-grid">
+                    {% for notice in notices %}
+                    <div class="notice-card priority-{{ notice.priority }}">
+                        <div class="notice-priority-dot"></div>
+                        <div class="notice-content">
+                            <div class="notice-title">{{ notice.title }}</div>
+                            <div class="notice-preview">{{ notice.content[:100] }}...</div>
+                            <div class="notice-meta">
+                                <span><i class="fas fa-clock me-1"></i>{{ notice.created_at.strftime('%b %d, %Y') }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="empty-state-sm text-center w-100 py-3">
+                        <p class="text-muted">No notices</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+    new Chart(document.getElementById('attendanceDonut'), {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [{{ attendance_pct }}, {{ 100 - attendance_pct }}],
+                backgroundColor: ['#0D47A1', '#E8EAF6'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            cutout: '75%',
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            animation: { animateRotate: true, duration: 1500 }
+        }
+    });
+</script>
+{% endblock %}

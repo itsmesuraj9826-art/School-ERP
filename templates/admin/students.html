@@ -1,0 +1,329 @@
+{% extends 'base.html' %}
+{% block title %}Students — Admin{% endblock %}
+{% block page_title %}Students Management{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="page-header-row">
+        <div>
+            <h5 class="page-sub-title">All Students</h5>
+            <p class="text-muted">Manage student records, admissions, and profiles</p>
+        </div>
+        <a href="{{ url_for('admin.add_student') }}" class="btn btn-primary btn-action">
+            <i class="fas fa-plus me-2"></i>Add Student
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="info-card mb-4">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label">Search</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" name="search" class="form-control" placeholder="Name or Roll No..." value="{{ search }}">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Filter by Class</label>
+                <select name="class_id" class="form-select">
+                    <option value="">All Classes</option>
+                    {% for cls in classes %}
+                    <option value="{{ cls.id }}" {% if class_filter == cls.id|string %}selected{% endif %}>{{ cls.name }}-{{ cls.section }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Filter by Stream</label>
+                <select name="stream_id" class="form-select">
+                    <option value="">All Streams</option>
+                    {% for stream in streams %}
+                    <option value="{{ stream.id }}" {% if stream_filter == stream.id|string %}selected{% endif %}>{{ stream.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-12">
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-2"></i>Filter</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="info-card">
+        <div class="table-responsive">
+            <table class="table table-hover modern-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Student</th>
+                        <th>Roll No.</th>
+                        <th>Class</th>
+                        <th>Guardian</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student, user, cls in students_data.items %}
+                    <tr id="student-row-{{ student.id }}">
+                        <td>{{ loop.index + (students_data.page - 1) * students_data.per_page }}</td>
+                        <td>
+                            <div class="student-cell">
+                                <div class="student-avatar">{{ user.full_name[0]|upper }}</div>
+                                <div>
+                                    <div class="fw-600">{{ user.full_name }}</div>
+                                    <small class="text-muted">{{ user.email }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td><code>{{ student.roll_no }}</code></td>
+                        <td>
+                            {% if cls %}
+                                {{ cls.name }}-{{ cls.section }}
+                                {% if cls.stream %}
+                                    <br><small class="text-muted">{{ cls.stream.name }}</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">Not Assigned</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ student.guardian_name or '—' }}</td>
+                        <td>{{ student.guardian_phone or user.phone or '—' }}</td>
+                        <td>
+                            {% if student.status == 'active' %}
+                            <span class="status-badge active-badge">Active</span>
+                            {% else %}
+                            <span class="status-badge" style="background: rgba(229,57,53,0.1); color: #C62828;">{{ student.status|title }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="action-btns">
+                                <a href="{{ url_for('admin.view_student', sid=student.id) }}" class="btn-icon-sm" title="View Student">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('admin.edit_student', sid=student.id) }}" class="btn-icon-sm edit" title="Edit Student">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="btn-icon-sm danger" title="Delete Student" onclick="showDeleteModal({{ student.id }}, '{{ user.full_name }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-5">
+                            <i class="fas fa-user-graduate fa-3x mb-3 d-block"></i>
+                            No students found
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if students_data.pages > 1 %}
+        <div class="pagination-wrap mt-3">
+            <nav>
+                <ul class="pagination pagination-sm justify-content-center">
+                    {% if students_data.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.students', page=students_data.prev_num, search=search, class_id=class_filter, stream_id=stream_filter) }}">&laquo; Prev</a>
+                    </li>
+                    {% endif %}
+
+                    {% for page_num in students_data.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
+                        {% if page_num %}
+                            {% if page_num == students_data.page %}
+                            <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('admin.students', page=page_num, search=search, class_id=class_filter, stream_id=stream_filter) }}">{{ page_num }}</a>
+                            </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if students_data.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.students', page=students_data.next_num, search=search, class_id=class_filter, stream_id=stream_filter) }}">Next &raquo;</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteStudentModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white;">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete student: <strong id="deleteStudentName"></strong>?</p>
+                <div class="alert alert-danger mt-3">
+                    <i class="fas fa-warning me-2"></i>
+                    <strong>Warning:</strong> This action will also delete the user account and all associated data including fees, results, and attendance records. This cannot be undone!
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </button>
+                <form method="POST" id="deleteStudentForm" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Delete Permanently
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.action-btns {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.btn-icon-sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: none;
+    background: #f0f2f5;
+    color: #1e293b;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.btn-icon-sm:hover {
+    background: #e2e8f0;
+    transform: translateY(-1px);
+}
+
+.btn-icon-sm.edit:hover {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.btn-icon-sm.danger:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.student-avatar {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #0D47A1, #1565C0);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.student-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.active-badge {
+    background: #d4edda;
+    color: #155724;
+}
+
+.fw-600 {
+    font-weight: 600;
+}
+
+.modal-header .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+.pagination-wrap {
+    padding: 15px 0;
+}
+
+.pagination {
+    margin-bottom: 0;
+}
+
+.page-link {
+    padding: 0.375rem 0.75rem;
+    border-radius: 4px;
+    margin: 0 2px;
+}
+
+.page-item.active .page-link {
+    background: linear-gradient(135deg, #0D47A1, #1565C0);
+    border-color: #0D47A1;
+}
+
+.modern-table {
+    margin-bottom: 0;
+}
+
+.modern-table thead th {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    padding: 12px 16px;
+}
+
+.modern-table tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+}
+
+.modern-table tbody tr:hover {
+    background: #f8f9fa;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showDeleteModal(studentId, studentName) {
+    document.getElementById('deleteStudentName').innerHTML = studentName;
+    document.getElementById('deleteStudentForm').action = '/admin/students/' + studentId + '/delete';
+    var deleteModal = new bootstrap.Modal(document.getElementById('deleteStudentModal'));
+    deleteModal.show();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('.btn-icon-sm'));
+        tooltipTriggerList.forEach(function(tooltipTriggerEl) {
+            new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+});
+</script>
+{% endblock %}

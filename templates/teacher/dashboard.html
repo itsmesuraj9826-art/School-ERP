@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% block title %}Teacher Dashboard — Martyrs' Memorial ERP{% endblock %}
+{% block page_title %}Teacher Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="welcome-banner">
+        <div class="welcome-text">
+            <h4>Good day, {{ current_user.full_name.split()[0] }}! 👨‍🏫</h4>
+            <p>{{ teacher.department or 'Faculty' }} | {{ teacher.subject or 'Subject Teacher' }}</p>
+        </div>
+        <div class="welcome-date">
+            <i class="fas fa-calendar-alt me-2"></i>
+            <span id="currentDate"></span>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-blue">
+                <div class="stat-icon"><i class="fas fa-users"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ total_students }}</div>
+                    <div class="stat-label">My Students</div>
+                    <div class="stat-change"><i class="fas fa-layer-group me-1"></i>{{ my_classes|length }} classes</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-green">
+                <div class="stat-icon"><i class="fas fa-chalkboard"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ todays_classes|length }}</div>
+                    <div class="stat-label">Classes Today</div>
+                    <div class="stat-change"><i class="fas fa-clock me-1"></i>Scheduled</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-red">
+                <div class="stat-icon"><i class="fas fa-tasks"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ pending_assignments }}</div>
+                    <div class="stat-label">Active Assignments</div>
+                    <div class="stat-change"><i class="fas fa-calendar me-1"></i>Due upcoming</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-purple">
+                <div class="stat-icon"><i class="fas fa-book-open"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ my_subjects|length }}</div>
+                    <div class="stat-label">Subjects</div>
+                    <div class="stat-change"><i class="fas fa-graduation-cap me-1"></i>Teaching</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Today's Schedule -->
+        <div class="col-xl-5">
+            <div class="info-card h-100">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-calendar-day me-2 text-primary"></i>Today's Schedule</h6>
+                    <span class="badge-date">{{ today.strftime('%A') }}</span>
+                </div>
+                {% if todays_classes %}
+                <div class="schedule-list">
+                    {% for tt, cls, subj in todays_classes %}
+                    <div class="schedule-item">
+                        <div class="schedule-time">
+                            <span>{{ tt.start_time.strftime('%I:%M %p') if tt.start_time else 'TBD' }}</span>
+                            <span class="time-end">{{ tt.end_time.strftime('%I:%M %p') if tt.end_time else '' }}</span>
+                        </div>
+                        <div class="schedule-details">
+                            <div class="schedule-subject">{{ subj.name if subj else 'Free Period' }}</div>
+                            <div class="schedule-class"><i class="fas fa-users me-1"></i>{{ cls.full_name }}</div>
+                            {% if tt.room_no %}<div class="schedule-room"><i class="fas fa-door-open me-1"></i>Room {{ tt.room_no }}</div>{% endif %}
+                        </div>
+                        <div class="schedule-status ongoing"></div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state-sm text-center py-5">
+                    <i class="fas fa-coffee fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No classes scheduled today</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- My Classes -->
+        <div class="col-xl-7">
+            <div class="info-card">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-school me-2 text-success"></i>My Classes</h6>
+                </div>
+                <div class="classes-grid">
+                    {% for cls in my_classes %}
+                    <div class="class-mini-card">
+                        <div class="class-badge">{{ cls.name }}</div>
+                        <div class="class-section">Section {{ cls.section }}</div>
+                        <div class="class-count"><i class="fas fa-users me-1"></i>{{ cls.students|length }} students</div>
+                        <a href="{{ url_for('teacher.attendance', class_id=cls.id) }}" class="class-action-btn">
+                            <i class="fas fa-clipboard-check me-1"></i>Mark Attendance
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="empty-state-sm text-center py-3 w-100">
+                        <p class="text-muted">No classes assigned yet</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Upcoming Exams -->
+            <div class="info-card mt-4">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-file-alt me-2 text-danger"></i>Upcoming Exams</h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover modern-table mb-0">
+                        <thead>
+                            <tr><th>Exam</th><th>Class</th><th>Date</th><th>Type</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for exam in upcoming_exams %}
+                            <tr>
+                                <td><strong>{{ exam.name }}</strong></td>
+                                <td>{% if exam.class_ref %}{{ exam.class_ref.full_name }}{% else %}—{% endif %}</td>
+                                <td>{{ exam.exam_date.strftime('%b %d, %Y') if exam.exam_date else '—' }}</td>
+                                <td><span class="badge exam-type-{{ exam.exam_type }}">{{ exam.exam_type|title }}</span></td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center text-muted py-3">No upcoming exams</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notices -->
+    <div class="row g-4 mt-0">
+        <div class="col-12">
+            <div class="info-card">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-bullhorn me-2 text-warning"></i>Recent Notices</h6>
+                </div>
+                <div class="notices-grid">
+                    {% for notice in recent_notices %}
+                    <div class="notice-card priority-{{ notice.priority }}">
+                        <div class="notice-priority-dot"></div>
+                        <div class="notice-content">
+                            <div class="notice-title">{{ notice.title }}</div>
+                            <div class="notice-preview">{{ notice.content[:100] }}{% if notice.content|length > 100 %}...{% endif %}</div>
+                            <div class="notice-meta">
+                                <span><i class="fas fa-clock me-1"></i>{{ notice.created_at.strftime('%b %d, %Y') }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="empty-state-sm text-center w-100 py-3">
+                        <p class="text-muted">No notices at this time</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+</script>
+{% endblock %}

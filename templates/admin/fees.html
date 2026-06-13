@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block title %}Fees — Admin{% endblock %}
+{% block page_title %}Fee Management{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="page-header-row">
+        <div>
+            <h5 class="page-sub-title">Fee Records</h5>
+            <p class="text-muted">Track and manage student fee payments</p>
+        </div>
+        <form action="{{ url_for('admin.send_fee_reminders') }}" method="POST" class="d-inline">
+            <button type="submit" class="btn btn-warning btn-action"
+                    onclick="return confirm('Send fee reminder emails to all parents with pending/overdue fees?')">
+                <i class="fas fa-bell me-2"></i>Send Fee Reminders
+            </button>
+        </form>
+    </div>
+
+    <!-- Fee Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="stat-card stat-green">
+                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">NPR {{ "{:,.0f}".format(total_collected) }}</div>
+                    <div class="stat-label">Total Collected</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card stat-blue">
+                <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">NPR {{ "{:,.0f}".format(total_pending) }}</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card stat-red">
+                <div class="stat-icon"><i class="fas fa-exclamation-circle"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">NPR {{ "{:,.0f}".format(total_overdue) }}</div>
+                    <div class="stat-label">Overdue</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter + Table -->
+    <div class="info-card">
+        <div class="d-flex gap-2 mb-3">
+            <a href="{{ url_for('admin.fees') }}" class="btn btn-sm {{ 'btn-primary' if not status_filter else 'btn-outline-secondary' }}">All</a>
+            <a href="{{ url_for('admin.fees', status='pending') }}" class="btn btn-sm {{ 'btn-primary' if status_filter == 'pending' else 'btn-outline-secondary' }}">Pending</a>
+            <a href="{{ url_for('admin.fees', status='paid') }}" class="btn btn-sm {{ 'btn-primary' if status_filter == 'paid' else 'btn-outline-secondary' }}">Paid</a>
+            <a href="{{ url_for('admin.fees', status='overdue') }}" class="btn btn-sm {{ 'btn-primary' if status_filter == 'overdue' else 'btn-outline-secondary' }}">Overdue</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover modern-table">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Fee Type</th>
+                        <th>Amount</th>
+                        <th>Due Date</th>
+                        <th>Paid Date</th>
+                        <th>Method</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fee, student, user in fees_data.items %}
+                    <tr>
+                        <td>
+                            <div class="student-cell">
+                                <div class="student-avatar">{{ user.full_name[0] }}</div>
+                                <div>
+                                    <div class="fw-600">{{ user.full_name }}</div>
+                                    <small class="text-muted">{{ student.roll_no }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ fee.fee_type }}</td>
+                        <td class="fw-600">NPR {{ "{:,.0f}".format(fee.amount) }}</td>
+                        <td>{{ fee.due_date.strftime('%b %d, %Y') if fee.due_date else '—' }}</td>
+                        <td>{{ fee.paid_date.strftime('%b %d, %Y') if fee.paid_date else '—' }}</td>
+                        <td>{{ fee.payment_method or '—' }}</td>
+                        <td><span class="badge fee-status-{{ fee.status }}">{{ fee.status | title }}</span></td>
+                        <td>
+                            {% if fee.status == 'paid' %}
+                            <a href="{{ url_for('admin.fee_receipt', fid=fee.id) }}" target="_blank"
+                               class="btn btn-xs btn-outline-success" style="font-size:11px;padding:3px 8px;">
+                                <i class="fas fa-receipt me-1"></i>Receipt
+                            </a>
+                            {% else %}
+                            <form action="{{ url_for('admin.mark_paid', fid=fee.id) }}" method="POST" class="d-inline">
+                                <select name="payment_method" class="form-select form-select-sm d-inline" style="width:90px;font-size:11px;">
+                                    <option value="cash">Cash</option>
+                                    <option value="cheque">Cheque</option>
+                                    <option value="online">Online</option>
+                                </select>
+                                <button type="submit" class="btn btn-xs btn-outline-primary" style="font-size:11px;padding:3px 8px;">
+                                    Mark Paid
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="text-center text-muted py-5">No fee records found</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

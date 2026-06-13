@@ -1,0 +1,601 @@
+{% extends 'base.html' %}
+{% block title %}Edit Teacher - {{ user.full_name }}{% endblock %}
+{% block page_title %}Edit Teacher{% endblock %}
+
+{% block content %}
+<div class="et-wrapper">
+
+    <div class="et-page-header">
+        <div class="et-page-header__left">
+            <div class="et-page-header__icon">
+                <i class="fas fa-chalkboard-teacher"></i>
+            </div>
+            <div>
+                <h4 class="et-page-header__title">Edit Teacher</h4>
+                <p class="et-page-header__sub">Update teacher information and profile</p>
+            </div>
+        </div>
+        <div class="et-page-header__actions">
+            <a href="{{ url_for('admin.view_teacher', tid=teacher.id) }}" class="et-btn et-btn--ghost">
+                <i class="fas fa-eye"></i> View Profile
+            </a>
+            <a href="{{ url_for('admin.teachers') }}" class="et-btn et-btn--outline">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+
+    <!-- IMPORTANT: enctype is required for file uploads -->
+    <form method="POST" class="et-form" enctype="multipart/form-data">
+
+        <!-- ── SECTION 1: PERSONAL INFORMATION ── -->
+        <div class="et-card">
+            <div class="et-card__header">
+                <div class="et-card__header-icon et-card__header-icon--blue">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div>
+                    <p class="et-card__header-label">Section 1 of 5</p>
+                    <h5 class="et-card__header-title">Personal Information</h5>
+                </div>
+            </div>
+            <div class="et-card__body">
+                <div class="et-grid et-grid--2">
+                    <div class="et-field">
+                        <label class="et-label">Full Name <span class="et-required">*</span></label>
+                        <input type="text" name="full_name" class="et-input" value="{{ user.full_name }}" required>
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">Email Address <span class="et-required">*</span></label>
+                        <input type="email" name="email" class="et-input" value="{{ user.email }}" required>
+                    </div>
+                </div>
+                <div class="et-grid et-grid--2">
+                    <div class="et-field">
+                        <label class="et-label">Phone</label>
+                        <input type="text" name="phone" class="et-input" value="{{ user.phone | default('') }}">
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">Emergency Contact</label>
+                        <input type="text" name="emergency_contact" class="et-input" value="{{ teacher.emergency_contact | default('') }}">
+                    </div>
+                </div>
+                <div class="et-grid et-grid--3">
+                    <div class="et-field">
+                        <label class="et-label">Date of Birth</label>
+                        <input type="date" name="date_of_birth" class="et-input" value="{{ teacher.date_of_birth.strftime('%Y-%m-%d') if teacher.date_of_birth else '' }}">
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">Gender</label>
+                        <select name="gender" class="et-select">
+                            <option value="">Select gender</option>
+                            <option value="male" {{ 'selected' if teacher.gender == 'male' else '' }}>Male</option>
+                            <option value="female" {{ 'selected' if teacher.gender == 'female' else '' }}>Female</option>
+                            <option value="other" {{ 'selected' if teacher.gender == 'other' else '' }}>Other</option>
+                        </select>
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">Blood Group</label>
+                        <select name="blood_group" class="et-select">
+                            <option value="">Select blood group</option>
+                            <option value="A+" {{ 'selected' if teacher.blood_group == 'A+' else '' }}>A+</option>
+                            <option value="A-" {{ 'selected' if teacher.blood_group == 'A-' else '' }}>A-</option>
+                            <option value="B+" {{ 'selected' if teacher.blood_group == 'B+' else '' }}>B+</option>
+                            <option value="B-" {{ 'selected' if teacher.blood_group == 'B-' else '' }}>B-</option>
+                            <option value="O+" {{ 'selected' if teacher.blood_group == 'O+' else '' }}>O+</option>
+                            <option value="O-" {{ 'selected' if teacher.blood_group == 'O-' else '' }}>O-</option>
+                            <option value="AB+" {{ 'selected' if teacher.blood_group == 'AB+' else '' }}>AB+</option>
+                            <option value="AB-" {{ 'selected' if teacher.blood_group == 'AB-' else '' }}>AB-</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="et-grid et-grid--2">
+                    <div class="et-field">
+                        <label class="et-label">Address</label>
+                        <textarea name="address" class="et-textarea" rows="2">{{ teacher.address | default('') }}</textarea>
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">Account Status</label>
+                        <label class="et-toggle">
+                            <input type="checkbox" name="is_active" {{ 'checked' if user.is_active else '' }}>
+                            <span class="et-toggle__slider"></span>
+                        </label>
+                        <span class="et-hint">Allow this teacher to log into the system</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── SECTION 2: EMPLOYMENT DETAILS ── -->
+        <div class="et-card">
+            <div class="et-card__header">
+                <div class="et-card__header-icon et-card__header-icon--green">
+                    <i class="fas fa-briefcase"></i>
+                </div>
+                <div>
+                    <p class="et-card__header-label">Section 2 of 5</p>
+                    <h5 class="et-card__header-title">Employment Details</h5>
+                </div>
+            </div>
+            <div class="et-card__body">
+                <div class="et-grid et-grid--3">
+                    <div class="et-field">
+                        <label class="et-label">Employee ID <span class="et-required">*</span></label>
+                        <input type="text" name="employee_id" class="et-input" value="{{ teacher.employee_id }}" required>
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">Employment Type</label>
+                        <select name="employment_type" class="et-select">
+                            <option value="Full-time" {{ 'selected' if teacher.employment_type == 'Full-time' else '' }}>Full-time</option>
+                            <option value="Part-time" {{ 'selected' if teacher.employment_type == 'Part-time' else '' }}>Part-time</option>
+                            <option value="Contract" {{ 'selected' if teacher.employment_type == 'Contract' else '' }}>Contract</option>
+                            <option value="Visiting" {{ 'selected' if teacher.employment_type == 'Visiting' else '' }}>Visiting</option>
+                        </select>
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">Salary Grade</label>
+                        <input type="text" name="salary_grade" class="et-input" value="{{ teacher.salary_grade | default('') }}">
+                    </div>
+                </div>
+                <div class="et-grid et-grid--3">
+                    <div class="et-field">
+                        <label class="et-label">Monthly Salary (NPR)</label>
+                        <input type="number" name="salary" class="et-input" value="{{ teacher.salary | default('') }}">
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">Bank Account Number</label>
+                        <input type="text" name="bank_account" class="et-input" value="{{ teacher.bank_account | default('') }}">
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">PAN Number</label>
+                        <input type="text" name="pan_number" class="et-input" value="{{ teacher.pan_number | default('') }}">
+                    </div>
+                </div>
+                <div class="et-grid et-grid--3">
+                    <div class="et-field">
+                        <label class="et-label">Joining Date</label>
+                        <input type="date" name="joining_date" class="et-input" value="{{ teacher.joining_date.strftime('%Y-%m-%d') if teacher.joining_date else '' }}">
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">Experience (Years)</label>
+                        <input type="number" name="experience_years" class="et-input" value="{{ teacher.experience_years | default(0) }}">
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">Previous Institution</label>
+                        <input type="text" name="previous_institution" class="et-input" value="{{ teacher.previous_institution | default('') }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── SECTION 3: PROFESSIONAL DETAILS ── -->
+        <div class="et-card">
+            <div class="et-card__header">
+                <div class="et-card__header-icon et-card__header-icon--amber">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                </div>
+                <div>
+                    <p class="et-card__header-label">Section 3 of 5</p>
+                    <h5 class="et-card__header-title">Professional Details</h5>
+                </div>
+            </div>
+            <div class="et-card__body">
+                <div class="et-grid et-grid--3">
+                    <div class="et-field">
+                        <label class="et-label">Subject Specialty</label>
+                        <input type="text" name="subject" class="et-input" value="{{ teacher.subject | default('') }}">
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">Specialization</label>
+                        <input type="text" name="specialization" class="et-input" value="{{ teacher.specialization | default('') }}">
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">Department</label>
+                        <select name="department" class="et-select">
+                            <option value="">Select department</option>
+                            <option value="Science" {{ 'selected' if teacher.department == 'Science' else '' }}>Science</option>
+                            <option value="Management" {{ 'selected' if teacher.department == 'Management' else '' }}>Management</option>
+                            <option value="Humanities" {{ 'selected' if teacher.department == 'Humanities' else '' }}>Humanities</option>
+                            <option value="Education" {{ 'selected' if teacher.department == 'Education' else '' }}>Education</option>
+                            <option value="Law" {{ 'selected' if teacher.department == 'Law' else '' }}>Law</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="et-grid et-grid--2">
+                    <div class="et-field">
+                        <label class="et-label">Qualification</label>
+                        <input type="text" name="qualification" class="et-input" value="{{ teacher.qualification | default('') }}">
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">Status</label>
+                        <select name="status" class="et-select">
+                            <option value="active" {{ 'selected' if teacher.status == 'active' else '' }}>Active</option>
+                            <option value="inactive" {{ 'selected' if teacher.status == 'inactive' else '' }}>Inactive</option>
+                            <option value="on_leave" {{ 'selected' if teacher.status == 'on_leave' else '' }}>On Leave</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── SECTION 4: DOCUMENTS & FILES (FILE UPLOADS) ── -->
+        <div class="et-card">
+            <div class="et-card__header">
+                <div class="et-card__header-icon et-card__header-icon--green">
+                    <i class="fas fa-file-upload"></i>
+                </div>
+                <div>
+                    <p class="et-card__header-label">Section 4 of 5</p>
+                    <h5 class="et-card__header-title">Documents & Files</h5>
+                </div>
+            </div>
+            <div class="et-card__body">
+                <div class="et-grid et-grid--2">
+                    <div class="et-field">
+                        <label class="et-label">Profile Picture</label>
+                        {% if teacher.profile_image and teacher.profile_image != 'default_teacher.png' %}
+                        <div class="et-current-file">
+                            <img src="{{ url_for('static', filename=teacher.profile_image) }}" class="et-thumbnail">
+                            <a href="{{ url_for('static', filename=teacher.profile_image) }}" target="_blank">View Current</a>
+                        </div>
+                        {% endif %}
+                        <input type="file" name="profile_image" class="et-input" accept="image/jpeg,image/png,image/jpg">
+                        <small class="et-hint">Allowed: JPG, PNG. Max 5MB</small>
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">CV / Resume</label>
+                        {% if teacher.cv_file %}
+                        <div class="et-current-file">
+                            <a href="{{ url_for('static', filename=teacher.cv_file) }}" target="_blank">View Current CV</a>
+                        </div>
+                        {% endif %}
+                        <input type="file" name="cv_file" class="et-input" accept=".pdf,.doc,.docx">
+                        <small class="et-hint">Allowed: PDF, DOC, DOCX. Max 5MB</small>
+                    </div>
+                </div>
+                <div class="et-grid et-grid--2">
+                    <div class="et-field">
+                        <label class="et-label">Educational Certificates</label>
+                        {% if teacher.certificate_file %}
+                        <div class="et-current-file">
+                            <a href="{{ url_for('static', filename=teacher.certificate_file) }}" target="_blank">View Certificate</a>
+                        </div>
+                        {% endif %}
+                        <input type="file" name="certificate_file" class="et-input" accept=".pdf,.jpg,.jpeg,.png">
+                        <small class="et-hint">Allowed: PDF, JPG, PNG. Max 5MB</small>
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">Employment Contract</label>
+                        {% if teacher.contract_file %}
+                        <div class="et-current-file">
+                            <a href="{{ url_for('static', filename=teacher.contract_file) }}" target="_blank">View Contract</a>
+                        </div>
+                        {% endif %}
+                        <input type="file" name="contract_file" class="et-input" accept=".pdf">
+                        <small class="et-hint">Allowed: PDF. Max 5MB</small>
+                    </div>
+                </div>
+                <div class="et-grid et-grid--2">
+                    <div class="et-field">
+                        <label class="et-label">ID Proof (Citizenship/Passport)</label>
+                        {% if teacher.id_proof %}
+                        <div class="et-current-file">
+                            <a href="{{ url_for('static', filename=teacher.id_proof) }}" target="_blank">View ID Proof</a>
+                        </div>
+                        {% endif %}
+                        <input type="file" name="id_proof" class="et-input" accept=".pdf,.jpg,.jpeg,.png">
+                        <small class="et-hint">Allowed: PDF, JPG, PNG. Max 5MB</small>
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">Teaching License</label>
+                        {% if teacher.teaching_license %}
+                        <div class="et-current-file">
+                            <a href="{{ url_for('static', filename=teacher.teaching_license) }}" target="_blank">View License</a>
+                        </div>
+                        {% endif %}
+                        <input type="file" name="teaching_license" class="et-input" accept=".pdf">
+                        <small class="et-hint">Allowed: PDF. Max 5MB</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── SECTION 5: PASSWORD RESET ── -->
+        <div class="et-card">
+            <div class="et-card__header">
+                <div class="et-card__header-icon et-card__header-icon--red">
+                    <i class="fas fa-key"></i>
+                </div>
+                <div>
+                    <p class="et-card__header-label">Section 5 of 5</p>
+                    <h5 class="et-card__header-title">Password Reset</h5>
+                </div>
+            </div>
+            <div class="et-card__body">
+                <div class="et-notice">
+                    <i class="fas fa-info-circle"></i>
+                    <p>Leave blank to keep current password. Only fill if you want to reset it.</p>
+                </div>
+                <div class="et-grid et-grid--2">
+                    <div class="et-field">
+                        <label class="et-label">New Password</label>
+                        <input type="password" name="new_password" class="et-input" placeholder="Enter new password">
+                    </div>
+                    <div class="et-field">
+                        <label class="et-label">Confirm Password</label>
+                        <input type="password" name="confirm_password" class="et-input" placeholder="Confirm new password">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── FORM ACTIONS ── -->
+        <div class="et-form-footer">
+            <span class="et-form-footer__note"><span class="et-required">*</span> Required fields</span>
+            <div class="et-form-footer__actions">
+                <a href="{{ url_for('admin.view_teacher', tid=teacher.id) }}" class="et-btn et-btn--outline">Cancel</a>
+                <button type="submit" class="et-btn et-btn--primary">
+                    <i class="fas fa-save"></i> Update Teacher
+                </button>
+            </div>
+        </div>
+
+    </form>
+</div>
+
+<style>
+.et-wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
+.et-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+.et-page-header__left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.et-page-header__icon {
+    width: 48px;
+    height: 48px;
+    background: #EFF4FF;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: #1A56DB;
+}
+.et-page-header__title {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 4px;
+}
+.et-page-header__sub {
+    font-size: 13px;
+    color: #6B7280;
+    margin: 0;
+}
+.et-page-header__actions {
+    display: flex;
+    gap: 10px;
+}
+.et-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #E5E7EB;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+.et-card__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: #FAFAFA;
+    border-bottom: 1px solid #F0F0F0;
+}
+.et-card__header-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+.et-card__header-icon--blue { background: #EFF4FF; color: #1A56DB; }
+.et-card__header-icon--green { background: #ECFDF5; color: #059669; }
+.et-card__header-icon--amber { background: #FFFBEB; color: #D97706; }
+.et-card__header-icon--red { background: #FEF2F2; color: #DC2626; }
+.et-card__header-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9CA3AF;
+    text-transform: uppercase;
+    margin: 0 0 2px;
+}
+.et-card__header-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0;
+}
+.et-card__body {
+    padding: 20px;
+}
+.et-grid {
+    display: grid;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+.et-grid--2 { grid-template-columns: 1fr 1fr; }
+.et-grid--3 { grid-template-columns: 1fr 1fr 1fr; }
+.et-field {
+    display: flex;
+    flex-direction: column;
+}
+.et-label {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+.et-required { color: #EF4444; }
+.et-input, .et-select, .et-textarea {
+    padding: 10px 12px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+}
+.et-input:focus, .et-select:focus, .et-textarea:focus {
+    outline: none;
+    border-color: #1A56DB;
+    box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
+}
+.et-textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+.et-current-file {
+    background: #F3F4F6;
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.et-current-file a {
+    color: #1A56DB;
+    text-decoration: none;
+    font-size: 13px;
+}
+.et-thumbnail {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.et-hint {
+    font-size: 11px;
+    color: #6B7280;
+    margin-top: 5px;
+}
+.et-toggle {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+}
+.et-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.et-toggle__slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    border-radius: 34px;
+    transition: 0.3s;
+}
+.et-toggle__slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.3s;
+}
+.et-toggle input:checked + .et-toggle__slider {
+    background-color: #1A56DB;
+}
+.et-toggle input:checked + .et-toggle__slider:before {
+    transform: translateX(24px);
+}
+.et-notice {
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.et-notice i {
+    color: #1A56DB;
+}
+.et-notice p {
+    margin: 0;
+    font-size: 13px;
+    color: #1E40AF;
+}
+.et-form-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: white;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+}
+.et-form-footer__actions {
+    display: flex;
+    gap: 10px;
+}
+.et-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+}
+.et-btn--primary {
+    background: #1A56DB;
+    color: white;
+}
+.et-btn--primary:hover {
+    background: #1648C0;
+}
+.et-btn--outline {
+    background: white;
+    border: 1.5px solid #D1D5DB;
+    color: #374151;
+}
+.et-btn--outline:hover {
+    background: #F9FAFB;
+}
+.et-btn--ghost {
+    background: #EFF4FF;
+    color: #1A56DB;
+}
+@media (max-width: 768px) {
+    .et-grid--2, .et-grid--3 {
+        grid-template-columns: 1fr;
+    }
+    .et-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+</style>
+{% endblock %}

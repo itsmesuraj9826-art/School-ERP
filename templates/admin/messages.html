@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block title %}Messages — Admin{% endblock %}
+{% block page_title %}Messages{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="row g-4">
+        <!-- Compose -->
+        <div class="col-xl-4">
+            <div class="info-card">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-pen me-2 text-primary"></i>Compose Message</h6>
+                </div>
+                <form action="{{ url_for('admin.send_message') }}" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label fw-600">Send To</label>
+                        <select name="recipient_type" class="form-select" id="recipientTypeSelect" onchange="toggleRecipient(this.value)">
+                            <option value="specific">Specific Person</option>
+                            <option value="all_parents">All Parents</option>
+                            <option value="all_teachers">All Teachers</option>
+                            <option value="all_students">All Students</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="specificRecipient">
+                        <label class="form-label fw-600">Select Recipient</label>
+                        <select name="recipient_id" class="form-select">
+                            <optgroup label="Parents">
+                                {% for pu, parent in parents %}
+                                <option value="{{ pu.id }}">{{ pu.full_name }} (Parent)</option>
+                                {% endfor %}
+                            </optgroup>
+                            <optgroup label="Teachers">
+                                {% for tu, teacher in teachers %}
+                                <option value="{{ tu.id }}">{{ tu.full_name }} (Teacher)</option>
+                                {% endfor %}
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-600">Subject</label>
+                        <input type="text" name="subject" class="form-control" placeholder="Message subject" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-600">Message</label>
+                        <textarea name="body" class="form-control" rows="5" placeholder="Type your message here..." required></textarea>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="send_email" id="sendEmail" checked>
+                        <label class="form-check-label" for="sendEmail">Also send via email</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-paper-plane me-2"></i>Send Message
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Inbox + Sent -->
+        <div class="col-xl-8">
+            <ul class="nav nav-tabs mb-3" id="msgTabs">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#received">
+                        <i class="fas fa-inbox me-1"></i>Received
+                        {% set unread = received|selectattr('is_read','eq',false)|list|length %}
+                        {% if unread %}<span class="badge bg-danger ms-1">{{ unread }}</span>{% endif %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#sentTab">
+                        <i class="fas fa-paper-plane me-1"></i>Sent ({{ sent|length }})
+                    </a>
+                </li>
+            </ul>
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="received">
+                    <div class="info-card">
+                        {% for msg in received %}
+                        <div class="message-row {{ 'unread' if not msg.is_read }}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="fw-600">{{ msg.sender.full_name if msg.sender else 'System' }}
+                                        {% if not msg.is_read %}<span class="badge bg-primary ms-1">New</span>{% endif %}
+                                    </div>
+                                    <div class="text-muted" style="font-size:13px;">{{ msg.subject }}</div>
+                                    <div class="mt-1" style="font-size:13px;">{{ msg.body[:120] }}{% if msg.body|length > 120 %}…{% endif %}</div>
+                                </div>
+                                <div class="text-muted text-end" style="font-size:12px;white-space:nowrap;min-width:90px;">
+                                    {{ msg.sent_at.strftime('%b %d, %H:%M') if msg.sent_at else '' }}
+                                    {% if not msg.is_read %}
+                                    <form action="{{ url_for('admin.mark_message_read', mid=msg.id) }}" method="POST" class="mt-1">
+                                        <button class="btn btn-xs btn-outline-primary" type="submit" style="font-size:11px;padding:2px 8px;">Mark read</button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-inbox fa-3x mb-3"></i>
+                            <p>No messages received</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="sentTab">
+                    <div class="info-card">
+                        {% for msg in sent %}
+                        <div class="message-row">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="fw-600">To: {{ msg.recipient.full_name if msg.recipient else msg.recipient_type | replace('_',' ') | title }}</div>
+                                    <div class="text-muted" style="font-size:13px;">{{ msg.subject }}</div>
+                                    <div class="mt-1" style="font-size:13px;">{{ msg.body[:120] }}{% if msg.body|length > 120 %}…{% endif %}</div>
+                                </div>
+                                <div class="text-muted text-end" style="font-size:12px;white-space:nowrap;min-width:90px;">
+                                    {{ msg.sent_at.strftime('%b %d, %H:%M') if msg.sent_at else '' }}
+                                    {% if msg.email_sent %}<div><i class="fas fa-envelope-open text-success" title="Email sent"></i></div>{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-paper-plane fa-3x mb-3"></i>
+                            <p>No messages sent yet</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.message-row { padding: 14px 16px; border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
+.message-row:hover { background: #f8f9fa; }
+.message-row.unread { background: #e8f0fe; border-left: 3px solid #1a73e8; }
+.message-row.unread:hover { background: #d2e3fc; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleRecipient(val) {
+    document.getElementById('specificRecipient').style.display = (val === 'specific') ? '' : 'none';
+}
+</script>
+{% endblock %}

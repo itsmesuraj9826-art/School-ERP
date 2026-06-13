@@ -1,0 +1,318 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard — Martyrs' Memorial ERP{% endblock %}
+{% block page_title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <!-- Welcome Banner -->
+    <div class="welcome-banner">
+        <div class="welcome-text">
+            <h4>Welcome back, {{ current_user.full_name.split()[0] }}! 👋</h4>
+            <p>Here's what's happening at Martyrs' Memorial College today.</p>
+        </div>
+        <div class="welcome-date">
+            <i class="fas fa-calendar-alt me-2"></i>
+            <span id="currentDate"></span>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-blue">
+                <div class="stat-icon"><i class="fas fa-user-graduate"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value counter" data-target="{{ total_students }}">0</div>
+                    <div class="stat-label">Total Students</div>
+                    <div class="stat-change positive"><i class="fas fa-arrow-up me-1"></i>Active enrolled</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-red">
+                <div class="stat-icon"><i class="fas fa-chalkboard-teacher"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value counter" data-target="{{ total_teachers }}">0</div>
+                    <div class="stat-label">Total Teachers</div>
+                    <div class="stat-change positive"><i class="fas fa-arrow-up me-1"></i>Active faculty</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-green">
+                <div class="stat-icon"><i class="fas fa-users"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value counter" data-target="{{ total_parents }}">0</div>
+                    <div class="stat-label">Total Parents</div>
+                    <div class="stat-change"><i class="fas fa-link me-1"></i>Registered</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-purple">
+                <div class="stat-icon"><i class="fas fa-school"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value counter" data-target="{{ total_classes }}">0</div>
+                    <div class="stat-label">Active Classes</div>
+                    <div class="stat-change"><i class="fas fa-layer-group me-1"></i>Academic year</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 2: Attendance + Fee + Charts -->
+    <div class="row g-4 mb-4">
+        <!-- Attendance Card -->
+        <div class="col-xl-4 col-md-6">
+            <div class="info-card h-100">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-clipboard-check me-2 text-primary"></i>Today's Attendance</h6>
+                    <span class="badge-date">Today</span>
+                </div>
+                <div class="attendance-ring-wrap">
+                    <div class="ring-chart">
+                        <canvas id="attendanceDonut" width="160" height="160"></canvas>
+                        <div class="ring-center">
+                            <span class="ring-pct">{{ attendance_pct }}%</span>
+                            <span class="ring-sub">Present</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="att-stats-row">
+                    <div class="att-stat present-stat">
+                        <span class="att-num">{{ present_today }}</span>
+                        <span class="att-label">Present</span>
+                    </div>
+                    <div class="att-stat absent-stat">
+                        <span class="att-num">{{ total_today - present_today }}</span>
+                        <span class="att-label">Absent</span>
+                    </div>
+                    <div class="att-stat total-stat">
+                        <span class="att-num">{{ total_today }}</span>
+                        <span class="att-label">Total</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fee Collection -->
+        <div class="col-xl-4 col-md-6">
+            <div class="info-card h-100">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-rupee-sign me-2 text-success"></i>Fee Collection</h6>
+                    <span class="badge-date">2024-25</span>
+                </div>
+                <canvas id="feeChart" height="200"></canvas>
+                <div class="fee-summary mt-3">
+                    <div class="fee-item collected">
+                        <div class="fee-dot"></div>
+                        <div>
+                            <div class="fee-amount">NPR {{ "{:,.0f}".format(paid_fees) }}</div>
+                            <div class="fee-type-label">Collected</div>
+                        </div>
+                    </div>
+                    <div class="fee-item pending">
+                        <div class="fee-dot"></div>
+                        <div>
+                            <div class="fee-amount">NPR {{ "{:,.0f}".format(pending_fees) }}</div>
+                            <div class="fee-type-label">Pending</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Admissions -->
+        <div class="col-xl-4">
+            <div class="info-card h-100">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-chart-bar me-2 text-warning"></i>Monthly Admissions</h6>
+                </div>
+                <canvas id="admissionsChart" height="220"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 3: Tables -->
+    <div class="row g-4">
+        <!-- Recent Admissions -->
+        <div class="col-xl-6">
+            <div class="info-card">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-user-plus me-2 text-primary"></i>Recent Admissions</h6>
+                    <a href="{{ url_for('admin.students') }}" class="view-all-link">View All</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover modern-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Roll No.</th>
+                                <th>Class</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student, user in recent_students %}
+                            <tr>
+                                <td>
+                                    <div class="student-cell">
+                                        <div class="student-avatar">{{ user.full_name[0] }}</div>
+                                        <span>{{ user.full_name }}</span>
+                                    </div>
+                                </td>
+                                <td><code>{{ student.roll_no }}</code></td>
+                                <td>{% if student.class_ref %}{{ student.class_ref.full_name }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                                <td><span class="badge status-badge active-badge">Active</span></td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center text-muted py-4">No students yet</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Exams -->
+        <div class="col-xl-6">
+            <div class="info-card">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-file-alt me-2 text-danger"></i>Upcoming Exams</h6>
+                </div>
+                <div class="exam-list">
+                    {% for exam in upcoming_exams %}
+                    <div class="exam-item">
+                        <div class="exam-date-badge">
+                            <span class="exam-day">{{ exam.exam_date.strftime('%d') if exam.exam_date }}</span>
+                            <span class="exam-month">{{ exam.exam_date.strftime('%b') if exam.exam_date }}</span>
+                        </div>
+                        <div class="exam-info">
+                            <div class="exam-name">{{ exam.name }}</div>
+                            <div class="exam-meta">
+                                {% if exam.class_ref %}<span class="me-2"><i class="fas fa-users me-1"></i>{{ exam.class_ref.full_name }}</span>{% endif %}
+                                <span class="badge exam-type-{{ exam.exam_type }}">{{ exam.exam_type | title }}</span>
+                            </div>
+                        </div>
+                        <div class="exam-marks">{{ exam.max_marks }} Marks</div>
+                    </div>
+                    {% else %}
+                    <div class="empty-state-sm">
+                        <i class="fas fa-calendar-check fa-2x text-muted mb-2"></i>
+                        <p class="text-muted">No upcoming exams</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notices Row -->
+    <div class="row g-4 mt-0">
+        <div class="col-12">
+            <div class="info-card">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-bullhorn me-2 text-warning"></i>Latest Notices</h6>
+                    <a href="{{ url_for('admin.notices') }}" class="view-all-link">Manage Notices</a>
+                </div>
+                <div class="notices-grid">
+                    {% for notice in recent_notices %}
+                    <div class="notice-card priority-{{ notice.priority }}">
+                        <div class="notice-priority-dot"></div>
+                        <div class="notice-content">
+                            <div class="notice-title">{{ notice.title }}</div>
+                            <div class="notice-preview">{{ notice.content[:120] }}{% if notice.content|length > 120 %}...{% endif %}</div>
+                            <div class="notice-meta">
+                                <span><i class="fas fa-clock me-1"></i>{{ notice.created_at.strftime('%b %d, %Y') }}</span>
+                                <span class="badge notice-target-badge">{{ notice.target_role | title }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="empty-state-sm text-center w-100 py-3">
+                        <i class="fas fa-bullhorn fa-2x text-muted mb-2"></i>
+                        <p class="text-muted">No notices published</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    // Attendance Donut
+    new Chart(document.getElementById('attendanceDonut'), {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [{{ attendance_pct }}, {{ 100 - attendance_pct }}],
+                backgroundColor: ['#0D47A1', '#E8EAF6'],
+                borderWidth: 0,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            cutout: '75%',
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            animation: { animateRotate: true, duration: 1500 }
+        }
+    });
+
+    // Fee Chart
+    new Chart(document.getElementById('feeChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Collected', 'Pending'],
+            datasets: [{
+                data: [{{ paid_fees }}, {{ pending_fees }}],
+                backgroundColor: ['rgba(13, 71, 161, 0.85)', 'rgba(229, 57, 53, 0.75)'],
+                borderRadius: 8,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' },
+                     ticks: { callback: v => 'NPR ' + (v/1000).toFixed(0) + 'k' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // Monthly Admissions
+    const admData = {{ monthly_admissions | tojson }};
+    new Chart(document.getElementById('admissionsChart'), {
+        type: 'line',
+        data: {
+            labels: admData.map(d => d.month),
+            datasets: [{
+                label: 'Admissions',
+                data: admData.map(d => d.count),
+                borderColor: '#0D47A1',
+                backgroundColor: 'rgba(13, 71, 161, 0.1)',
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#0D47A1',
+                pointRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+</script>
+{% endblock %}

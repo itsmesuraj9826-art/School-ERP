@@ -1,0 +1,575 @@
+{% extends 'base.html' %}
+
+{% block title %}View Teacher - {{ user.full_name }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="fw-bold mb-1">Teacher Profile</h5>
+            <p class="text-muted small mb-0">View complete teacher information</p>
+        </div>
+        <div>
+            <a href="{{ url_for('admin.edit_teacher', tid=teacher.id) }}" class="btn btn-warning">
+                <i class="fas fa-edit me-2"></i>Edit Teacher
+            </a>
+            <a href="{{ url_for('admin.teachers') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Teachers
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <!-- Profile Card with Image -->
+            <div class="info-card mb-4">
+                <div class="text-center py-3">
+                    <!-- Profile Image Display - UPDATED -->
+                    <div class="teacher-avatar-lg mx-auto">
+                        {% if teacher.profile_image and teacher.profile_image != 'default_teacher.png' %}
+                        <img src="{{ url_for('static', filename=teacher.profile_image) }}"
+                             alt="{{ user.full_name }}"
+                             style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                        {% else %}
+                        {{ user.full_name[0]|upper }}
+                        {% endif %}
+                    </div>
+                    <h4 class="mt-3">{{ user.full_name }}</h4>
+                    <p class="text-muted">{{ user.email }}</p>
+                    <span class="badge {% if teacher.status == 'active' %}bg-success{% else %}bg-secondary{% endif %}">
+                        {{ teacher.status|title }}
+                    </span>
+                </div>
+                <hr>
+                <div class="mt-3">
+                    <h6 class="section-title">Basic Information</h6>
+                    <table class="info-table">
+                        <tr>
+                            <th>Employee ID:</th>
+                            <td>{{ teacher.employee_id }}</div>
+                        </tr>
+                        <tr>
+                            <th>Phone:</th>
+                            <td>{{ user.phone or 'Not provided' }}</div>
+                        </tr>
+                        <tr>
+                            <th>Joining Date:</th>
+                            <td>{{ teacher.joining_date.strftime('%d %b %Y') if teacher.joining_date else 'Not specified' }}</div>
+                        </tr>
+                        <tr>
+                            <th>Account Status:</th>
+                            <td>
+                                {% if user.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                            </div>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Contact Information Card -->
+            <div class="info-card mb-4">
+                <h6 class="section-title">Contact Information</h6>
+                <table class="info-table">
+                    <tr>
+                        <th>Email Address:</th>
+                        <td>{{ user.email }}</div>
+                    </tr>
+                    <tr>
+                        <th>Phone Number:</th>
+                        <td>{{ user.phone or 'Not provided' }}</div>
+                    </tr>
+                    <tr>
+                        <th>Emergency Contact:</th>
+                        <td>{{ teacher.emergency_contact or 'Not provided' }}</div>
+                    </tr>
+                    <tr>
+                        <th>Address:</th>
+                        <td>{{ teacher.address or 'Not provided' }}</div>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Employment Details Card -->
+            <div class="info-card">
+                <h6 class="section-title">Employment Details</h6>
+                <table class="info-table">
+                    <tr>
+                        <th>Employment Type:</th>
+                        <td>{{ teacher.employment_type or 'Full-time' }}</div>
+                    </tr>
+                    <tr>
+                        <th>Salary Grade:</th>
+                        <td>{{ teacher.salary_grade or 'Not specified' }}</div>
+                    </tr>
+                    <tr>
+                        <th>Monthly Salary:</th>
+                        <td>रु {{ teacher.salary|string if teacher.salary else 'Not specified' }}</div>
+                    </tr>
+                    <tr>
+                        <th>Bank Account:</th>
+                        <td>{{ teacher.bank_account or 'Not provided' }}</div>
+                    </tr>
+                    <tr>
+                        <th>PAN Number:</th>
+                        <td>{{ teacher.pan_number or 'Not provided' }}</div>
+                    </tr>
+                    <tr>
+                        <th>Experience:</th>
+                        <td>{{ teacher.experience_years or '0' }} years</div>
+                    </tr>
+                    <tr>
+                        <th>Previous Institution:</th>
+                        <td>{{ teacher.previous_institution or 'Not specified' }}</div>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <!-- Personal Details Card -->
+            <div class="info-card mb-4">
+                <h6 class="section-title">Personal Details</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Date of Birth:</strong></p>
+                        <p class="text-muted">{{ teacher.date_of_birth.strftime('%d %b %Y') if teacher.date_of_birth else 'Not specified' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Gender:</strong></p>
+                        <p class="text-muted">{{ teacher.gender|title or 'Not specified' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Blood Group:</strong></p>
+                        <p class="text-muted">{{ teacher.blood_group or 'Not specified' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Professional Information Card -->
+            <div class="info-card mb-4">
+                <h6 class="section-title">Professional Information</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Subject Specialty:</strong></p>
+                        <p class="text-muted">{{ teacher.subject or 'Not specified' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Department:</strong></p>
+                        <p class="text-muted">{{ teacher.department or 'Not specified' }}</p>
+                    </div>
+                    <div class="col-md-12">
+                        <p><strong>Qualification:</strong></p>
+                        <p class="text-muted">{{ teacher.qualification or 'Not specified' }}</p>
+                    </div>
+                    <div class="col-md-12">
+                        <p><strong>Specialization:</strong></p>
+                        <p class="text-muted">{{ teacher.specialization or 'Not specified' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subjects Teaching Card -->
+            <div class="info-card mb-4">
+                <h6 class="section-title">Subjects Teaching</h6>
+                {% if subjects %}
+                <div class="subjects-grid">
+                    {% for subject in subjects %}
+                    <div class="subject-tag">
+                        <strong>{{ subject.name }}</strong>
+                        <small class="text-muted">({{ subject.code }})</small>
+                        {% if subject.subject_type %}
+                        <span class="badge-subject">{{ subject.subject_type|title }}</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No subjects assigned</p>
+                {% endif %}
+            </div>
+
+            <!-- Class Teacher For Card -->
+            <div class="info-card mb-4">
+                <h6 class="section-title">Class Teacher For</h6>
+                {% if classes %}
+                <div class="classes-list">
+                    {% for class_obj in classes %}
+                    <div class="class-tag">
+                        <i class="fas fa-chalkboard"></i>
+                        Class {{ class_obj.name }}-{{ class_obj.section }}
+                        {% if class_obj.stream %}
+                        <span class="badge-stream">{{ class_obj.stream.name }}</span>
+                        {% endif %}
+                        <small class="text-muted">(Room: {{ class_obj.room_no or 'N/A' }})</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No classes assigned as class teacher</p>
+                {% endif %}
+            </div>
+
+            <!-- Documents & Files Card - NEW SECTION -->
+            <div class="info-card mb-4">
+                <h6 class="section-title"><i class="fas fa-folder-open me-2"></i>Documents & Files</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Profile Picture:</strong></p>
+                        {% if teacher.profile_image and teacher.profile_image != 'default_teacher.png' %}
+                        <a href="{{ url_for('static', filename=teacher.profile_image) }}" target="_blank" class="file-link">
+                            <i class="fas fa-image"></i> View Profile Picture
+                        </a>
+                        {% else %}
+                        <span class="text-muted">Not uploaded</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>CV/Resume:</strong></p>
+                        {% if teacher.cv_file %}
+                        <a href="{{ url_for('static', filename=teacher.cv_file) }}" target="_blank" class="file-link">
+                            <i class="fas fa-file-pdf"></i> Download CV
+                        </a>
+                        {% else %}
+                        <span class="text-muted">Not uploaded</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Educational Certificates:</strong></p>
+                        {% if teacher.certificate_file %}
+                        <a href="{{ url_for('static', filename=teacher.certificate_file) }}" target="_blank" class="file-link">
+                            <i class="fas fa-graduation-cap"></i> View Certificate
+                        </a>
+                        {% else %}
+                        <span class="text-muted">Not uploaded</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Employment Contract:</strong></p>
+                        {% if teacher.contract_file %}
+                        <a href="{{ url_for('static', filename=teacher.contract_file) }}" target="_blank" class="file-link">
+                            <i class="fas fa-file-contract"></i> View Contract
+                        </a>
+                        {% else %}
+                        <span class="text-muted">Not uploaded</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>ID Proof:</strong></p>
+                        {% if teacher.id_proof %}
+                        <a href="{{ url_for('static', filename=teacher.id_proof) }}" target="_blank" class="file-link">
+                            <i class="fas fa-id-card"></i> View ID Proof
+                        </a>
+                        {% else %}
+                        <span class="text-muted">Not uploaded</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Teaching License:</strong></p>
+                        {% if teacher.teaching_license %}
+                        <a href="{{ url_for('static', filename=teacher.teaching_license) }}" target="_blank" class="file-link">
+                            <i class="fas fa-certificate"></i> View License
+                        </a>
+                        {% else %}
+                        <span class="text-muted">Not uploaded</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assignments Card -->
+            <div class="info-card">
+                <h6 class="section-title">Recent Assignments</h6>
+                {% if assignments %}
+                <div class="assignments-list">
+                    {% for assignment in assignments %}
+                    <div class="assignment-item">
+                        <div class="assignment-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="assignment-info">
+                            <strong>{{ assignment.title }}</strong>
+                            <small class="text-muted">Due: {{ assignment.due_date.strftime('%d %b %Y') if assignment.due_date else 'No due date' }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No recent assignments</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.info-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border: 1px solid #e8eaed;
+}
+
+.teacher-avatar-lg {
+    width: 120px;
+    height: 120px;
+    background: linear-gradient(135deg, #0D47A1, #1565C0);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 48px;
+    margin: 0 auto;
+    overflow: hidden;
+}
+
+.section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0D47A1;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e8eaed;
+}
+
+.info-table {
+    width: 100%;
+    font-size: 13px;
+}
+
+.info-table th {
+    width: 40%;
+    text-align: left;
+    font-weight: 600;
+    color: #555;
+    padding: 8px 0;
+}
+
+.info-table td {
+    padding: 8px 0;
+    color: #333;
+}
+
+.badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.bg-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.bg-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.bg-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.subjects-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.subject-tag {
+    background: #f0f2f5;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.badge-subject {
+    background: #0D47A1;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+}
+
+.classes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.class-tag {
+    background: #e8f4fd;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    border-left: 3px solid #0D47A1;
+}
+
+.badge-stream {
+    background: #1565C0;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    margin-left: 8px;
+}
+
+.assignments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.assignment-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.assignment-item:hover {
+    background: #e9ecef;
+}
+
+.assignment-icon {
+    width: 36px;
+    height: 36px;
+    background: #0D47A1;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.assignment-info {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.file-link {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #0D47A1;
+    color: white;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.file-link:hover {
+    background: #1565C0;
+    color: white;
+    text-decoration: none;
+}
+
+.btn-warning {
+    background: #ffc107;
+    color: #212529;
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    display: inline-block;
+    margin-right: 8px;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-warning:hover {
+    background: #e0a800;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    display: inline-block;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -12px;
+}
+
+.col-md-4, .col-md-8 {
+    padding: 0 12px;
+    box-sizing: border-box;
+}
+
+.col-md-4 {
+    width: 33.333%;
+}
+
+.col-md-8 {
+    width: 66.666%;
+}
+
+.text-muted {
+    color: #6c757d;
+    font-size: 12px;
+}
+
+hr {
+    margin: 15px 0;
+    border-color: #e8eaed;
+}
+
+.mb-4 {
+    margin-bottom: 20px;
+}
+
+.mt-3 {
+    margin-top: 15px;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.fw-bold {
+    font-weight: 700;
+}
+
+@media (max-width: 768px) {
+    .col-md-4, .col-md-8 {
+        width: 100%;
+    }
+
+    .assignment-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+}
+</style>
+{% endblock %}

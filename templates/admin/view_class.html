@@ -1,0 +1,362 @@
+{% extends 'base.html' %}
+{% block title %}Class {{ class_obj.name }}-{{ class_obj.section }}{% endblock %}
+{% block page_title %}Class Details{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+
+  <!-- Header -->
+  <div class="page-header-row mb-4">
+    <div>
+      <h5 class="page-sub-title">
+        Class {{ class_obj.name }}-{{ class_obj.section }}
+        {% if class_obj.stream %}<span class="stream-pill">{{ class_obj.stream.name }}</span>{% endif %}
+      </h5>
+      <p class="text-muted small">
+        {% if class_obj.class_teacher %}Class Teacher: {{ class_obj.class_teacher.user.full_name }} &nbsp;|&nbsp;{% endif %}
+        Room: {{ class_obj.room_no or 'Not assigned' }} &nbsp;|&nbsp;
+        {{ class_obj.academic_year }}
+      </p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{{ url_for('admin.edit_class', cid=class_obj.id) }}" class="btn btn-sm btn-warning px-3">
+        <i class="fas fa-edit me-1"></i>Edit
+      </a>
+      <a href="{{ url_for('admin.classes') }}" class="btn btn-sm btn-light px-3">
+        <i class="fas fa-arrow-left me-1"></i>Back
+      </a>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="vc-stat vc-blue">
+        <div class="vc-stat-val">{{ students|length }}</div>
+        <div class="vc-stat-lbl">Students</div>
+        <i class="fas fa-users vc-stat-icon"></i>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="vc-stat vc-green">
+        <div class="vc-stat-val">{{ subjects|length }}</div>
+        <div class="vc-stat-lbl">Subjects</div>
+        <i class="fas fa-book-open vc-stat-icon"></i>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="vc-stat vc-orange">
+        <div class="vc-stat-val">{{ class_att_pct }}%</div>
+        <div class="vc-stat-lbl">Avg Attendance</div>
+        <i class="fas fa-calendar-check vc-stat-icon"></i>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="vc-stat vc-red">
+        <div class="vc-stat-val">{{ low_att_students|length }}</div>
+        <div class="vc-stat-lbl">Low Attendance</div>
+        <i class="fas fa-exclamation-triangle vc-stat-icon"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs mb-3" id="classTabs">
+    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tabStudents">
+      <i class="fas fa-users me-1"></i>Students <span class="tab-count">{{ students|length }}</span>
+    </a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabSubjects">
+      <i class="fas fa-book me-1"></i>Subjects <span class="tab-count">{{ subjects|length }}</span>
+    </a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabTimetable">
+      <i class="fas fa-calendar-alt me-1"></i>Timetable
+    </a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabExams">
+      <i class="fas fa-file-alt me-1"></i>Exams <span class="tab-count">{{ exams|length }}</span>
+    </a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabAttendance">
+      <i class="fas fa-exclamation-triangle me-1 text-warning"></i>Low Attendance
+      {% if low_att_students %}<span class="tab-count tab-count-red">{{ low_att_students|length }}</span>{% endif %}
+    </a></li>
+  </ul>
+
+  <div class="tab-content">
+
+    <!-- STUDENTS TAB -->
+    <div class="tab-pane fade show active" id="tabStudents">
+      <div class="vc-card p-0">
+        {% if students %}
+        <div class="table-search p-3 border-bottom">
+          <input type="text" id="studentSearch" class="form-control form-control-sm" placeholder="Search students..." style="max-width:260px">
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0" id="studentTable">
+            <thead class="table-light">
+              <tr>
+                <th>Roll No</th>
+                <th>Name</th>
+                <th>Gender</th>
+                <th>Contact</th>
+                <th>Attendance</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for student, user in students %}
+              {% set att = att_stats.get(student.id, {'total':0,'present':0,'pct':0}) %}
+              <tr class="student-row">
+                <td><code class="small">{{ student.roll_no }}</code></td>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    {% if student.profile_image and student.profile_image != 'default_student.png' %}
+                    <img src="{{ url_for('static', filename=student.profile_image) }}"
+                         style="width:30px;height:30px;object-fit:cover;border-radius:50%">
+                    {% else %}
+                    <div class="mini-avatar">{{ user.full_name[0]|upper }}</div>
+                    {% endif %}
+                    <span class="fw-500">{{ user.full_name }}</span>
+                  </div>
+                </td>
+                <td class="small">{{ student.gender|title if student.gender else '—' }}</td>
+                <td class="small">{{ user.phone or '—' }}</td>
+                <td style="min-width:130px">
+                  {% if att.total > 0 %}
+                  <div class="occ-track mb-1" style="height:5px">
+                    <div class="occ-fill {% if att.pct < 75 %}occ-red{% elif att.pct < 85 %}occ-orange{% else %}occ-green{% endif %}"
+                         style="width:{{ att.pct }}%"></div>
+                  </div>
+                  <span class="small {% if att.pct < 75 %}text-danger{% else %}text-muted{% endif %}">
+                    {{ att.pct }}% ({{ att.present }}/{{ att.total }})
+                  </span>
+                  {% else %}
+                  <span class="small text-muted">No data</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <a href="{{ url_for('admin.view_student', sid=student.id) }}" class="btn btn-xs btn-outline-primary">View</a>
+                  <a href="{{ url_for('admin.edit_student', sid=student.id) }}" class="btn btn-xs btn-outline-secondary ms-1">Edit</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fas fa-user-plus"></i><p>No students enrolled.</p></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- SUBJECTS TAB -->
+    <div class="tab-pane fade" id="tabSubjects">
+      <div class="vc-card p-0">
+        {% if subjects %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Code</th>
+                <th>Subject</th>
+                <th>Type</th>
+                <th>Teacher</th>
+                <th>Max Marks</th>
+                <th>Pass Marks</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for subject in subjects %}
+              <tr>
+                <td><code class="small">{{ subject.code or 'N/A' }}</code></td>
+                <td class="fw-500">{{ subject.name }}</td>
+                <td>
+                  <span class="badge" style="background:{% if subject.subject_type=='practical' %}#e8f5e9;color:#2e7d32{% elif subject.subject_type=='both' %}#fff3e0;color:#e65100{% else %}#e3f2fd;color:#0d47a1{% endif %}">
+                    {{ subject.subject_type|title if subject.subject_type else 'Theory' }}
+                  </span>
+                </td>
+                <td class="small">{{ subject.teacher.user.full_name if subject.teacher else '—' }}</td>
+                <td class="small">{{ subject.max_marks }}</td>
+                <td class="small">{{ subject.pass_marks }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fas fa-book-open"></i><p>No subjects assigned.</p></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- TIMETABLE TAB -->
+    <div class="tab-pane fade" id="tabTimetable">
+      <div class="vc-card">
+        {% if timetable %}
+        <div class="tt-grid">
+          {% for day_num, name in DAYS|enumerate %}
+          {% if day_num in timetable %}
+          <div class="tt-day-col">
+            <div class="tt-day-header">{{ name }}</div>
+            {% for entry in timetable[day_num] %}
+            <div class="tt-period">
+              <div class="tt-time">
+                {% if entry.tt.start_time %}{{ entry.tt.start_time.strftime('%H:%M') }}{% endif %}
+                {% if entry.tt.end_time %} – {{ entry.tt.end_time.strftime('%H:%M') }}{% endif %}
+              </div>
+              <div class="tt-subj">{{ entry.subject.name if entry.subject else 'Free Period' }}</div>
+              {% if entry.teacher_user %}
+              <div class="tt-teacher">{{ entry.teacher_user.full_name }}</div>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fas fa-calendar-alt"></i><p>No timetable set for this class.</p></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- EXAMS TAB -->
+    <div class="tab-pane fade" id="tabExams">
+      <div class="vc-card p-0">
+        {% if exams %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Exam</th>
+                <th>Type</th>
+                <th>Date</th>
+                <th>Max Marks</th>
+                <th>Pass Marks</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for exam in exams %}
+              <tr>
+                <td class="fw-500">{{ exam.name }}</td>
+                <td><span class="badge bg-light text-dark border">{{ exam.exam_type|replace('_',' ')|title }}</span></td>
+                <td class="small">{{ exam.exam_date.strftime('%d %b %Y') if exam.exam_date else '—' }}</td>
+                <td class="small">{{ exam.max_marks }}</td>
+                <td class="small">{{ exam.pass_marks }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fas fa-file-alt"></i><p>No exams scheduled.</p></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- LOW ATTENDANCE TAB -->
+    <div class="tab-pane fade" id="tabAttendance">
+      <div class="vc-card p-0">
+        {% if low_att_students %}
+        <div class="p-3 border-bottom bg-warning-subtle d-flex align-items-center gap-2">
+          <i class="fas fa-exclamation-triangle text-warning"></i>
+          <span class="small fw-semibold">{{ low_att_students|length }} student(s) below 75% attendance threshold</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr><th>Roll No</th><th>Name</th><th>Present</th><th>Total Days</th><th>Attendance %</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              {% for student, user, att in low_att_students %}
+              <tr>
+                <td><code class="small">{{ student.roll_no }}</code></td>
+                <td class="fw-500">{{ user.full_name }}</td>
+                <td>{{ att.present }}</td>
+                <td>{{ att.total }}</td>
+                <td>
+                  <span class="text-danger fw-semibold">{{ att.pct }}%</span>
+                  <div class="occ-track mt-1" style="height:4px;max-width:80px">
+                    <div class="occ-fill occ-red" style="width:{{ att.pct }}%"></div>
+                  </div>
+                </td>
+                <td><a href="{{ url_for('admin.view_student', sid=student.id) }}" class="btn btn-xs btn-outline-primary">View</a></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <i class="fas fa-check-circle text-success"></i>
+          <p class="text-success">All students are above 75% attendance.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div><!-- /tab-content -->
+</div>
+
+<style>
+.page-header-row{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px}
+.page-sub-title{font-size:20px;font-weight:700;margin-bottom:3px}
+.stream-pill{background:#e8eaf6;color:#3949ab;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:600;margin-left:8px;vertical-align:middle}
+
+/* Stat cards */
+.vc-stat{position:relative;overflow:hidden;background:#fff;border-radius:12px;padding:16px 20px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.vc-stat-val{font-size:28px;font-weight:700;line-height:1}
+.vc-stat-lbl{font-size:12px;color:#888;margin-top:2px}
+.vc-stat-icon{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:32px;opacity:.1}
+.vc-blue{border-left:4px solid #0D47A1}.vc-green{border-left:4px solid #2E7D32}.vc-orange{border-left:4px solid #E65100}.vc-red{border-left:4px solid #C62828}
+
+/* Tabs */
+.nav-tabs{border-bottom:2px solid #e8eaed}
+.nav-tabs .nav-link{color:#555;border:none;padding:8px 14px;font-size:13px;font-weight:500}
+.nav-tabs .nav-link.active{color:#0D47A1;border-bottom:2px solid #0D47A1;margin-bottom:-2px;background:none}
+.tab-count{background:#e3f2fd;color:#0D47A1;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px}
+.tab-count-red{background:#fce4ec;color:#c62828}
+
+/* Card */
+.vc-card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.07);overflow:hidden}
+
+/* Table */
+.table th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#666;padding:10px 12px}
+.table td{font-size:13px;padding:10px 12px;vertical-align:middle}
+.fw-500{font-weight:500}
+.btn-xs{padding:3px 8px;font-size:11px;border-radius:4px}
+.mini-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#0D47A1,#1565C0);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+
+/* Occupancy bars */
+.occ-track{background:#f0f0f0;border-radius:99px;overflow:hidden}
+.occ-fill{height:100%;border-radius:99px}
+.occ-green{background:linear-gradient(90deg,#43a047,#66bb6a)}
+.occ-orange{background:linear-gradient(90deg,#fb8c00,#ffa726)}
+.occ-red{background:linear-gradient(90deg,#e53935,#ef5350)}
+
+/* Timetable */
+.tt-grid{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px}
+.tt-day-col{min-width:140px;flex:1}
+.tt-day-header{background:#0D47A1;color:#fff;text-align:center;padding:8px;border-radius:8px 8px 0 0;font-size:12px;font-weight:700}
+.tt-period{background:#f8f9fa;border:1px solid #e8eaed;border-top:none;padding:10px;font-size:12px}
+.tt-period:last-child{border-radius:0 0 8px 8px}
+.tt-time{color:#888;font-size:10px;margin-bottom:2px}
+.tt-subj{font-weight:600;color:#333;margin-bottom:2px}
+.tt-teacher{color:#0D47A1;font-size:11px}
+
+/* Empty state */
+.empty-state{text-align:center;padding:40px 20px;color:#aaa}
+.empty-state i{font-size:36px;display:block;margin-bottom:10px;opacity:.4}
+.empty-state p{font-size:14px;margin:0}
+
+@media(max-width:600px){.page-header-row{flex-direction:column}}
+</style>
+
+<script>
+// Student search within tab
+document.getElementById('studentSearch').addEventListener('input', function(){
+  const q = this.value.toLowerCase();
+  document.querySelectorAll('#studentTable tbody .student-row').forEach(row=>{
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+});
+</script>
+{% endblock %}

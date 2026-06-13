@@ -1,0 +1,329 @@
+{% extends 'base.html' %}
+{% block title %}View Student - {{ user.full_name }}{% endblock %}
+{% block page_title %}Student Details{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="page-header-row mb-4">
+        <div>
+            <h5 class="page-sub-title">Student Profile</h5>
+            <p class="text-muted">View complete student information and records</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin.edit_student', sid=student.id) }}" class="btn btn-warning btn-action">
+                <i class="fas fa-edit me-2"></i>Edit Student
+            </a>
+            <a href="{{ url_for('admin.students') }}" class="btn btn-secondary btn-action">
+                <i class="fas fa-arrow-left me-2"></i>Back to List
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column - Personal Info -->
+        <div class="col-md-4">
+            <div class="info-card mb-4">
+                <div class="text-center py-3">
+                    <div class="student-avatar mx-auto" style="width: 100px; height: 100px; font-size: 40px; background: linear-gradient(135deg, #0D47A1, #1565C0); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                        {{ user.full_name[0]|upper }}
+                    </div>
+                    <h4 class="mt-3 mb-1">{{ user.full_name }}</h4>
+                    <p class="text-muted">{{ user.email }}</p>
+                    {% if student.status == 'active' %}
+                    <span class="status-badge active-badge">Active</span>
+                    {% else %}
+                    <span class="status-badge" style="background: rgba(229,57,53,0.1); color: #C62828;">{{ student.status|title }}</span>
+                    {% endif %}
+                </div>
+                <hr>
+                <div class="mt-3">
+                    <div class="mb-3">
+                        <label class="text-muted mb-1">Roll Number</label>
+                        <div><strong>{{ student.roll_no }}</strong></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted mb-1">Class</label>
+                        <div><strong>{% if cls %}{{ cls.name }}-{{ cls.section }}{% else %}Not Assigned{% endif %}</strong></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted mb-1">Gender</label>
+                        <div><strong>{{ student.gender|title or 'Not specified' }}</strong></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted mb-1">Date of Birth</label>
+                        <div><strong>{{ student.date_of_birth.strftime('%B %d, %Y') if student.date_of_birth else 'Not specified' }}</strong></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted mb-1">Blood Group</label>
+                        <div><strong>{{ student.blood_group or 'Not specified' }}</strong></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted mb-1">Admission Date</label>
+                        <div><strong>{{ student.admission_date.strftime('%B %d, %Y') if student.admission_date else 'Not specified' }}</strong></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted mb-1">Address</label>
+                        <div><strong>{{ student.address or 'Not specified' }}</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guardian Info -->
+            <div class="info-card mb-4">
+                <h6 class="card-head-title mb-3">Guardian Information</h6>
+                <div class="mb-3">
+                    <label class="text-muted mb-1">Guardian Name</label>
+                    <div><strong>{{ student.guardian_name or 'Not specified' }}</strong></div>
+                </div>
+                <div class="mb-3">
+                    <label class="text-muted mb-1">Guardian Phone</label>
+                    <div><strong>{{ student.guardian_phone or 'Not specified' }}</strong></div>
+                </div>
+                {% if parent %}
+                <hr>
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-user-friends me-2"></i>
+                    <strong>Linked Parent:</strong> {{ parent_user.full_name if parent_user else 'N/A' }}
+                    {% if parent.relationship %}<br><small>Relationship: {{ parent.relationship }}</small>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right Column - Academic Records -->
+        <div class="col-md-8">
+            <!-- Fee Records -->
+            <div class="info-card mb-4">
+                <div class="card-head">
+                    <h6 class="card-head-title">Fee Records</h6>
+                    <a href="{{ url_for('admin.fees') }}" class="view-all-link">Manage Fees</a>
+                </div>
+                {% if fees %}
+                <div class="table-responsive">
+                    <table class="table table-sm modern-table">
+                        <thead>
+                            <tr>
+                                <th>Fee Type</th>
+                                <th>Amount</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fee in fees[:5] %}
+                            <tr>
+                                <td>{{ fee.fee_type }}</td>
+                                <td>रु {{ "%.2f"|format(fee.amount) }}</td>
+                                <td>{{ fee.due_date.strftime('%Y-%m-%d') if fee.due_date else 'N/A' }}</td>
+                                <td>
+                                    {% if fee.status == 'paid' %}
+                                    <span class="badge bg-success">Paid</span>
+                                    {% elif fee.status == 'pending' %}
+                                    <span class="badge bg-warning">Pending</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Overdue</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if fees|length > 5 %}
+                <div class="text-center mt-2"><small class="text-muted">+ {{ fees|length - 5 }} more records</small></div>
+                {% endif %}
+                {% else %}
+                <p class="text-muted text-center py-3">No fee records found.</p>
+                {% endif %}
+            </div>
+
+            <!-- Exam Results -->
+            <div class="info-card mb-4">
+                <div class="card-head">
+                    <h6 class="card-head-title">Exam Results</h6>
+                    <a href="{{ url_for('admin.results') }}" class="view-all-link">View All Results</a>
+                </div>
+                {% if results %}
+                <div class="table-responsive">
+                    <table class="table table-sm modern-table">
+                        <thead>
+                            <tr>
+                                <th>Exam Name</th>
+                                <th>Marks</th>
+                                <th>Grade</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result, exam in results[:5] %}
+                            <tr>
+                                <td>{{ exam.name }}</td>
+                                <td>{{ result.marks_obtained }}/{{ exam.max_marks }}</td>
+                                <td>
+                                    <span class="grade-badge">{{ result.grade or 'N/A' }}</span>
+                                </td>
+                                <td>{{ exam.exam_date.strftime('%Y-%m-%d') if exam.exam_date else 'N/A' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3">No exam results found.</p>
+                {% endif %}
+            </div>
+
+            <!-- Recent Attendance -->
+            <div class="info-card">
+                <div class="card-head">
+                    <h6 class="card-head-title">Recent Attendance (Last 30 Days)</h6>
+                </div>
+                {% if attendances %}
+                <div class="attendance-history">
+                    {% for att in attendances[:10] %}
+                    <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+                        <span class="att-date">{{ att.date.strftime('%B %d, %Y') }}</span>
+                        <span class="att-status-badge status-{{ att.status }}">{{ att.status|title }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3">No attendance records found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.grade-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 11px;
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.att-status-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+}
+.status-present {
+    background: rgba(46,125,50,0.1);
+    color: #2E7D32;
+}
+.status-absent {
+    background: rgba(229,57,53,0.1);
+    color: #C62828;
+}
+.status-late {
+    background: rgba(245,127,23,0.1);
+    color: #E65100;
+}
+
+.badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.bg-success {
+    background: #d4edda !important;
+    color: #155724;
+}
+.bg-warning {
+    background: #fff3cd !important;
+    color: #856404;
+}
+.bg-danger {
+    background: #f8d7da !important;
+    color: #721c24;
+}
+
+.info-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(13,71,161,0.08);
+    border: 1px solid #e8eaed;
+}
+
+.card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e8eaed;
+}
+
+.card-head-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.view-all-link {
+    font-size: 12px;
+    color: #0D47A1;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.view-all-link:hover {
+    text-decoration: underline;
+}
+
+.student-avatar {
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(135deg, #0D47A1, #1565C0);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 40px;
+    text-transform: uppercase;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.active-badge {
+    background: #d4edda;
+    color: #155724;
+}
+
+.modern-table {
+    font-size: 13px;
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.modern-table thead th {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    padding: 10px 12px;
+}
+
+.modern-table tbody td {
+    padding: 10px 12px;
+    vertical-align: middle;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+</style>
+{% endblock %}
