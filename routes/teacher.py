@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from functools import wraps
-from models import db, Teacher, Student, User, Class, Subject, Attendance, Assignment, Exam, Result, Notice, TimeTable, Parent
+from models import db, Teacher, Student, User, Class, Subject, Attendance, Assignment, Exam, Result, Notice, TimeTable, Parent, LeaveRequest, Event, Notification
 from datetime import datetime, date
 from sqlalchemy import func
 from app import mail
@@ -470,4 +470,64 @@ def delete_assignment(aid):
     db.session.delete(a)
     db.session.commit()
     flash('Assignment deleted.', 'success')
-    return redirect(url_for('teacher.assignments'))
+    return redire
+
+# ── LEAVE REQUESTS ────────────────────────────────────────────────────────────
+
+@teacher_bp.route('/leave-requests', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def leave_requests():
+    if request.method == 'POST':
+        from_date = datetime.strptime(request.form['from_date'], '%Y-%m-%d').date()
+        to_date = datetime.strptime(request.form['to_date'], '%Y-%m-%d').date()
+        if to_date < from_date:
+            flash('End date cannot be before start date.', 'danger')
+            return redirect(url_for('teacher.leave_requests'))
+        lr = LeaveRequest(
+            user_id=current_user.id,
+            leave_type=request.form.get('leave_type', 'sick'),
+            from_date=from_date,
+            to_date=to_date,
+            reason=request.form.get('reason', '').strip()
+        )
+        db.session.add(lr)
+        db.session.commit()
+        flash('Leave request submitted.', 'success')
+        return redirect(url_for('teacher.leave_requests'))
+
+    my_requests = (LeaveRequest.query
+                   .filter_by(user_id=current_user.id)
+                   .order_by(LeaveRequest.created_at.desc()).all())
+    return render_template('teacher/leave_requests.html', my_requests=my_requests)
+
+
+# ── EVENTS ────────────────────────────────────────────────────────────────────
+
+@teacher_bp.route('/events')
+@login_required
+@teacher_required
+def events():
+    upcoming = (Event.query
+                .filter(Event.event_date >= date.today(), Event.is_active == True,
+                        Event.target_role.in_(['all', 'teacher']))
+                .order_by(Event.event_date.asc()).all())
+    past = (Event.query
+            .filter(Event.event_date < date.today(), Event.is_active == True,
+                    Event.target_role.in_(['all', 'teacher']))
+            .order_by(Event.event_date.desc()).limit(20).all())
+    return render_template('teacher/events.html', upcoming=upcoming, past=past)
+
+
+# ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+
+@teacher_bp.route('/notifications')
+@login_required
+@teacher_required
+def notifications():
+    notifs = (Notification.query
+              .filter_by(user_id=current_user.id)
+              .order_by(Notification.created_at.desc()).limit(50).all())
+    Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
+    db.session.commit()
+    return render_template('teacher/notifications.html', notifs=notifs)

@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Add Parent — Admin{% endblock %}
+{% block page_title %}Add Parent{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="page-header-row">
+        <div>
+            <h5 class="page-sub-title">New Parent Account</h5>
+            <p class="text-muted">Create a parent account and link to a student</p>
+        </div>
+        <a href="{{ url_for('admin.parents') }}" class="btn btn-outline-secondary btn-action">
+            <i class="fas fa-arrow-left me-2"></i>Back
+        </a>
+    </div>
+
+    <div class="info-card">
+        <form method="POST" action="{{ url_for('admin.add_parent') }}">
+            <div class="row g-3">
+                <div class="col-12"><h6 class="section-divider-title">Personal Information</h6></div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Full Name *</label>
+                    <input type="text" name="full_name" class="form-control" required placeholder="Parent's full name">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Email Address *</label>
+                    <input type="email" name="email" class="form-control" required placeholder="parent@email.com">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Phone Number</label>
+                    <input type="text" name="phone" class="form-control" placeholder="98XXXXXXXX">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Relationship to Student</label>
+                    <select name="relationship" class="form-select">
+                        <option value="">Select...</option>
+                        <option value="father">Father</option>
+                        <option value="mother">Mother</option>
+                        <option value="guardian">Guardian</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="col-12 mt-2"><h6 class="section-divider-title">Student Link</h6></div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Link to Student</label>
+                    <select name="student_id" class="form-select">
+                        <option value="">— No student linked yet —</option>
+                        {% for s, su in students %}
+                        <option value="{{ s.id }}">{{ su.full_name }} — Roll {{ s.roll_no }}
+                            {% if s.class_ref %} ({{ s.class_ref.full_name }}){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-12 mt-2"><h6 class="section-divider-title">Additional Info</h6></div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Occupation</label>
+                    <input type="text" name="occupation" class="form-control" placeholder="e.g. Business, Government">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Annual Income (NPR)</label>
+                    <input type="number" name="annual_income" class="form-control" placeholder="e.g. 500000">
+                </div>
+
+                <div class="col-12 d-flex gap-3 mt-2">
+                    <button type="submit" class="btn btn-primary btn-action">
+                        <i class="fas fa-user-plus me-2"></i>Create Parent Account
+                    </button>
+                    <a href="{{ url_for('admin.parents') }}" class="btn btn-outline-secondary btn-action">Cancel</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Child's Leave Requests{% endblock %}
+{% block page_title %}Child's Leave Requests{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="page-header-row">
+        <div>
+            <h5 class="page-sub-title">Leave Request History</h5>
+            <p class="text-muted">View leave applications submitted by your child</p>
+        </div>
+    </div>
+
+    <div class="info-card">
+        {% if child_requests %}
+        <div class="table-responsive">
+            <table class="table table-hover modern-table">
+                <thead>
+                    <tr><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Reviewer</th></tr>
+                </thead>
+                <tbody>
+                {% for lr in child_requests %}
+                <tr>
+                    <td>{{ lr.leave_type | title }}</td>
+                    <td>{{ lr.from_date.strftime('%d %b %Y') }}</td>
+                    <td>{{ lr.to_date.strftime('%d %b %Y') }}</td>
+                    <td>{{ lr.days }}</td>
+                    <td class="text-truncate" style="max-width:200px;">{{ lr.reason }}</td>
+                    <td>
+                        {% if lr.status == 'approved' %}
+                            <span class="badge bg-success">Approved</span>
+                        {% elif lr.status == 'rejected' %}
+                            <span class="badge bg-danger">Rejected</span>
+                            {% if lr.review_comment %}<div class="small text-muted">{{ lr.review_comment }}</div>{% endif %}
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ lr.reviewer.full_name if lr.reviewer else '—' }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-calendar-check fa-3x mb-3"></i>
+            <p>No leave requests found for your child.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

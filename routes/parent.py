@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from functools import wraps
-from models import db, Parent, Student, User, Attendance, Result, Exam, Fee, Notice, Subject, Assignment, TimeTable
+from models import db, Parent, Student, User, Attendance, Result, Exam, Fee, Notice, Subject, Assignment, TimeTable, LeaveRequest, Event, Notification
 from datetime import datetime, date
 from sqlalchemy import func
 
@@ -134,3 +134,50 @@ def mark_message_read(mid):
         msg.is_read = True
         db.session.commit()
     return redirect(url_for('parent.messages'))
+
+# ── LEAVE REQUESTS ────────────────────────────────────────────────────────────
+
+@parent_bp.route('/leave-requests')
+@login_required
+@parent_required
+def leave_requests():
+    parent = Parent.query.filter_by(user_id=current_user.id).first()
+    child_requests = []
+    if parent and parent.student_id:
+        child = db.session.get(Student, parent.student_id)
+        if child:
+            child_requests = (LeaveRequest.query
+                              .filter_by(user_id=child.user_id)
+                              .order_by(LeaveRequest.created_at.desc()).all())
+    return render_template('parent/leave_requests.html', child_requests=child_requests)
+
+
+# ── EVENTS ────────────────────────────────────────────────────────────────────
+
+@parent_bp.route('/events')
+@login_required
+@parent_required
+def events():
+    upcoming = (Event.query
+                .filter(Event.event_date >= date.today(), Event.is_active == True,
+                        Event.target_role.in_(['all', 'parent']))
+                .order_by(Event.event_date.asc()).all())
+    past = (Event.query
+            .filter(Event.event_date < date.today(), Event.is_active == True,
+                    Event.target_role.in_(['all', 'parent']))
+            .order_by(Event.event_date.desc()).limit(20).all())
+    return render_template('parent/events.html', upcoming=upcoming, past=past)
+
+
+# ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+
+@parent_bp.route('/notifications')
+@login_required
+@parent_required
+def notifications():
+    notifs = (Notification.query
+              .filter_by(user_id=current_user.id)
+              .order_by(Notification.created_at.desc()).limit(50).all())
+    Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
+    db.session.commit()
+    return render_template('parent/notifications.html', notifs=notifs)

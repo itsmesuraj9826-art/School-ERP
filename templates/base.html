@@ -122,6 +122,18 @@
                     <i class="fas fa-comments"></i><span>Messages</span>
                 </a>
             </li>
+            <li class="nav-section">Events & Leaves</li>
+            <li class="nav-item">
+                <a href="{{ url_for('admin.events') }}" class="nav-link {% if 'event' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-calendar-alt"></i><span>Events</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('admin.leave_requests') }}" class="nav-link {% if 'leave' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-calendar-check"></i><span>Leave Requests</span>
+                </a>
+            </li>
+
             <li class="nav-section">Parents</li>
             <li class="nav-item">
                 <a href="{{ url_for('admin.parents') }}" class="nav-link {% if 'admin.parent' in request.endpoint %}active{% endif %}">
@@ -171,6 +183,23 @@
                 </a>
             </li>
 
+            <li class="nav-section">Other</li>
+            <li class="nav-item">
+                <a href="{{ url_for('teacher.events') }}" class="nav-link {% if 'event' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-calendar-alt"></i><span>Events</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('teacher.leave_requests') }}" class="nav-link {% if 'leave' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-calendar-check"></i><span>Leave Request</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('teacher.notifications') }}" class="nav-link {% if 'notification' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-bell"></i><span>Notifications</span>
+                </a>
+            </li>
+
             {% elif current_user.role == 'student' %}
             <li class="nav-section">Main</li>
             <li class="nav-item">
@@ -215,6 +244,21 @@
                     <i class="fas fa-id-card"></i><span>Report Card</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a href="{{ url_for('student.events') }}" class="nav-link {% if 'event' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-calendar-alt"></i><span>Events</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('student.leave_requests') }}" class="nav-link {% if 'leave' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-calendar-check"></i><span>Leave Request</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('student.notifications') }}" class="nav-link {% if 'notification' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-bell"></i><span>Notifications</span>
+                </a>
+            </li>
 
             {% elif current_user.role == 'parent' %}
             <li class="nav-section">Main</li>
@@ -226,6 +270,21 @@
             <li class="nav-item">
                 <a href="{{ url_for('parent.messages') }}" class="nav-link {% if 'message' in request.endpoint %}active{% endif %}">
                     <i class="fas fa-comments"></i><span>Messages</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('parent.events') }}" class="nav-link {% if 'event' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-calendar-alt"></i><span>Events</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('parent.leave_requests') }}" class="nav-link {% if 'leave' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-calendar-check"></i><span>Child's Leave</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('parent.notifications') }}" class="nav-link {% if 'notification' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-bell"></i><span>Notifications</span>
                 </a>
             </li>
             {% endif %}
@@ -263,59 +322,44 @@
                 <div class="dark-mode-toggle" id="darkModeToggle" title="Toggle Dark Mode">
                     <i class="fas fa-moon"></i>
                 </div>
-                <div class="nav-icon-btn position-relative">
-                    <i class="fas fa-bell"></i>
-                    <span class="badge-dot"></span>
-                </div>
-                <div class="user-profile-nav" data-bs-toggle="dropdown" aria-expanded="false">
+                {% if current_user.is_authenticated %}
+                <a href="{% if current_user.role == 'admin' %}{{ url_for('admin.notifications') }}
+                         {% elif current_user.role == 'teacher' %}{{ url_for('teacher.notifications') }}
+                         {% elif current_user.role == 'student' %}{{ url_for('student.notifications') }}
+                         {% elif current_user.role == 'parent' %}{{ url_for('parent.notifications') }}
+                         {% else %}#{% endif %}"
+                            id="notifCount" style="font-size:.6rem;display:none;"></span>
+                </a>
+                {% endif %}
+                <div class="user-profile-nav dropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     <div class="user-avatar-nav">
                         <i class="fas fa-user-circle fa-lg"></i>
                     </div>
                     <div class="user-details-nav">
-                        <span class="user-name-nav">{{ current_user.full_name }}</span>
+                        <span class="user-name-nav">{{ current_user.full_name.split()[0] }}</span>
                         <span class="user-role-nav">{{ current_user.role | title }}</span>
                     </div>
-                    <i class="fas fa-chevron-down ms-2 small"></i>
+                    <i class="fas fa-chevron-down ms-1" style="font-size:.7rem;"></i>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><span class="dropdown-item-text small text-muted">{{ current_user.email }}</span></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt me-2 text-danger"></i>Logout</a></li>
+                    </ul>
                 </div>
-                <!-- Dropdown Menu - FIXED with working links -->
-               <!-- Dropdown Menu - FIXED with working links -->
-<ul class="dropdown-menu dropdown-menu-end profile-dropdown">
-    <li><div class="dropdown-header">{{ current_user.email }}</div></li>
-    <li><hr class="dropdown-divider"></li>
-    {% if current_user.role == 'teacher' %}
-        <li><a class="dropdown-item" href="{{ url_for('teacher.my_profile') }}"><i class="fas fa-user me-2"></i>My Profile</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('teacher.settings') }}"><i class="fas fa-cog me-2"></i>Settings</a></li>
-    {% elif current_user.role == 'student' %}
-        <li><a class="dropdown-item" href="{{ url_for('student.profile') }}"><i class="fas fa-user me-2"></i>My Profile</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('student.settings') }}"><i class="fas fa-cog me-2"></i>Settings</a></li>
-    {% elif current_user.role == 'admin' %}
-        <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>My Profile</a></li>
-        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
-    {% elif current_user.role == 'parent' %}
-        <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>My Profile</a></li>
-        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
-    {% else %}
-        <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>My Profile</a></li>
-        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
-    {% endif %}
-    <li><hr class="dropdown-divider"></li>
-    <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-</ul>
             </div>
         </header>
 
         <!-- Flash Messages -->
-        <div class="flash-messages px-4 pt-3">
+        <div class="flash-container px-4 pt-3">
             {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' if category == 'success' else 'info' }} alert-dismissible fade show alert-custom" role="alert">
-                        <i class="fas fa-{{ 'exclamation-circle' if category == 'danger' else 'check-circle' if category == 'success' else 'info-circle' }} me-2"></i>
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                    {% endfor %}
-                {% endif %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                {{ message | safe }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
             {% endwith %}
         </div>
 
@@ -325,25 +369,86 @@
         </div>
     </div>
 </div>
+
 {% else %}
-    {% block auth_content %}{% endblock %}
+{% block content %}{% endblock %}
 {% endif %}
 
+<!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
 <script>
-// Sidebar toggle functionality
-document.getElementById('menuToggle').addEventListener('click', function() {
-    document.getElementById('sidebar').classList.toggle('open');
+// Sidebar toggle
+document.getElementById('menuToggle')?.addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+    document.getElementById('mainContent').classList.toggle('expanded');
+});
+document.getElementById('sidebarToggle')?.addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+    document.getElementById('mainContent').classList.toggle('expanded');
 });
 
-// Dark mode toggle
-document.getElementById('darkModeToggle').addEventListener('click', function() {
-    const html = document.documentElement;
+// Dark mode
+const dmToggle = document.getElementById('darkModeToggle');
+const html = document.documentElement;
+if (localStorage.getItem('theme') === 'dark') { html.setAttribute('data-theme', 'dark'); }
+dmToggle?.addEventListener('click', () => {
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    localStorage.setItem('theme', isDark ? 'light' : 'dark');
+});
+
+// Bell notification count
+{% if current_user.is_authenticated %}
+function refreshNotifCount() {
+    fetch('{{ url_for("admin.notif_count") if current_user.role == "admin" else "#" }}')
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+        if (data && data.count > 0) {
+            const el = document.getElementById('notifCount');
+            const dot = document.getElementById('notifBadgeDot');
+            if (el) { el.textContent = data.count > 9 ? '9+' : data.count; el.style.display = ''; }
+            if (dot) dot.style.display = '';
+        }
+    }).catch(() => {});
+}
+{% if current_user.role == 'admin' %}
+refreshNotifCount();
+setInterval(refreshNotifCount, 60000);
+{% endif %}
+{% endif %}
+
+// PWA service worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('{{ url_for("static", filename="sw.js") }}')
+            .catch(() => {});
+    });
+}
+
+// PWA install prompt
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const btn = document.getElementById('pwaInstallBtn');
+    if (btn) btn.style.display = 'flex';
+});
+document.getElementById('pwaInstallBtn')?.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.getElementById('pwaInstallBtn').style.display = 'none';
+});
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
+lement;
     const currentTheme = html.getAttribute('data-theme');
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
     html.setAttribute('data-theme', newTheme);

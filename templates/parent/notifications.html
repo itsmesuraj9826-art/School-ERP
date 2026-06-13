@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Notifications{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="page-header-row">
+        <h5 class="page-sub-title">Your Notifications</h5>
+    </div>
+    <div class="info-card">
+        {% if notifs %}
+        <div class="list-group list-group-flush">
+            {% for n in notifs %}
+            <div class="list-group-item list-group-item-action px-4 py-3
+                        {% if not n.is_read %}border-start border-4 border-primary{% endif %}">
+                <div class="d-flex gap-3 align-items-start">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0
+                                {% if n.notif_type == 'success' %}bg-success
+                                {% elif n.notif_type == 'danger' %}bg-danger
+                                {% elif n.notif_type == 'warning' %}bg-warning
+                                {% else %}bg-primary{% endif %}"
+                         style="width:40px;height:40px;color:#fff;">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-600">{{ n.title }}</div>
+                        <div class="text-muted small">{{ n.message }}</div>
+                        <div class="text-muted" style="font-size:.75rem;">{{ n.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+                    </div>
+                    {% if n.link %}<a href="{{ n.link }}" class="btn btn-xs btn-outline-primary">View</a>{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-bell-slash fa-3x mb-3"></i>
+            <p>No notifications yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

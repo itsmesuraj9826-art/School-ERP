@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block title %}Leave Requests{% endblock %}
+{% block page_title %}Leave Requests{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="page-header-row">
+        <div>
+            <h5 class="page-sub-title">My Leave Requests</h5>
+            <p class="text-muted">Apply for leave and check approval status</p>
+        </div>
+        <button class="btn btn-primary btn-action" data-bs-toggle="modal" data-bs-target="#newLeaveModal">
+            <i class="fas fa-plus me-2"></i>Apply for Leave
+        </button>
+    </div>
+
+    <div class="info-card">
+        {% if my_requests %}
+        <div class="table-responsive">
+            <table class="table table-hover modern-table">
+                <thead>
+                    <tr><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Comment</th></tr>
+                </thead>
+                <tbody>
+                {% for lr in my_requests %}
+                <tr>
+                    <td>{{ lr.leave_type | title }}</td>
+                    <td>{{ lr.from_date.strftime('%d %b %Y') }}</td>
+                    <td>{{ lr.to_date.strftime('%d %b %Y') }}</td>
+                    <td>{{ lr.days }}</td>
+                    <td class="text-truncate" style="max-width:200px;">{{ lr.reason }}</td>
+                    <td>
+                        {% if lr.status == 'approved' %}
+                            <span class="badge bg-success">Approved</span>
+                        {% elif lr.status == 'rejected' %}
+                            <span class="badge bg-danger">Rejected</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted small">{{ lr.review_comment or '—' }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-calendar-check fa-3x mb-3"></i>
+            <p>No leave requests submitted yet.</p>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newLeaveModal">Apply for Leave</button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="modal fade" id="newLeaveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-calendar-plus me-2"></i>Apply for Leave</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('teacher.leave_requests') }}">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Leave Type</label>
+                            <select name="leave_type" class="form-select">
+                                <option value="sick">Sick Leave</option>
+                                <option value="personal">Personal</option>
+                                <option value="family">Family Emergency</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">From Date *</label>
+                            <input type="date" name="from_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">To Date *</label>
+                            <input type="date" name="to_date" class="form-control" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Reason *</label>
+                            <textarea name="reason" class="form-control" rows="3" required></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

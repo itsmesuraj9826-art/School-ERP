@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Events{% endblock %}
+{% block page_title %}School Events{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="page-header-row">
+        <h5 class="page-sub-title">Upcoming & Past Events</h5>
+    </div>
+
+    <div class="info-card mb-4">
+        <div class="card-head">
+            <h6 class="card-head-title"><i class="fas fa-calendar-alt me-2 text-primary"></i>Upcoming Events</h6>
+        </div>
+        {% if upcoming %}
+        <div class="row g-3 p-3">
+            {% for ev in upcoming %}
+            <div class="col-md-6 col-xl-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <span class="badge mb-2
+                            {% if ev.event_type == 'exam' %}bg-danger
+                            {% elif ev.event_type == 'holiday' %}bg-success
+                            {% elif ev.event_type == 'sport' %}bg-warning text-dark
+                            {% elif ev.event_type == 'cultural' %}bg-info
+                            {% else %}bg-primary{% endif %}">
+                            {{ ev.event_type | title }}
+                        </span>
+                        <h6 class="fw-700 mb-1">{{ ev.title }}</h6>
+                        {% if ev.description %}<p class="text-muted small mb-2">{{ ev.description }}</p>{% endif %}
+                        <div class="small text-muted">
+                            <i class="fas fa-calendar me-1"></i>
+                            {{ ev.event_date.strftime('%d %B %Y') }}
+                            {% if ev.end_date and ev.end_date != ev.event_date %}
+                                — {{ ev.end_date.strftime('%d %B %Y') }}
+                            {% endif %}
+                        </div>
+                        {% if ev.location %}
+                        <div class="small text-muted mt-1"><i class="fas fa-map-marker-alt me-1"></i>{{ ev.location }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-calendar-times fa-3x mb-3"></i>
+            <p>No upcoming events.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if past %}
+    <div class="info-card">
+        <div class="card-head">
+            <h6 class="card-head-title"><i class="fas fa-history me-2 text-muted"></i>Past Events</h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover modern-table">
+                <thead><tr><th>Title</th><th>Type</th><th>Date</th><th>Location</th></tr></thead>
+                <tbody>
+                {% for ev in past %}
+                <tr>
+                    <td class="fw-600">{{ ev.title }}</td>
+                    <td><span class="badge bg-secondary">{{ ev.event_type | title }}</span></td>
+                    <td>{{ ev.event_date.strftime('%d %b %Y') }}</td>
+                    <td>{{ ev.location or '—' }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

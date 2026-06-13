@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from functools import wraps
 from models import db, User, Student, Teacher, Parent, Class, Subject, Stream, Attendance, Exam, Result, Fee, Notice, \
-    Assignment, TimeTable, Message
+    Assignment, TimeTable, Message, LeaveRequest, Event, Notification
 from datetime import datetime, date, timedelta
 from sqlalchemy import func
 from app import mail
@@ -1541,3 +1541,147 @@ def student_report_card(sid):
                            all_results=all_results,
                            total_att=total_att, present_att=present_att, att_pct=att_pct,
                            avg_gpa=avg_gpa, now=_dt.now())
+
+
+# ── LEAVE REQUESTS ────────────────────────────────────────────────────────────
+
+@admin_bp.route('/leave-requests')
+@login_required
+@admin_required
+def leave_requests():
+    pending = (LeaveRequest.query
+               .join(User, LeaveRequest.user_id == User.id)
+               .filter(LeaveRequest.status == 'pending')
+               .order_by(LeaveRequest.created_at.desc()).all())
+    all_requests = (LeaveRequest.query
+                    .join(User, LeaveRequest.user_id == User.id)
+                    .order_by(LeaveRequest.created_at.desc())
+                    .limit(100).all())
+    return render_template('admin/leave_requests.html',
+                           pending=pending, all_requests=all_requests)
+
+
+@admin_bp.route('/leave-requests/<int:lid>/approve', methods=['POST'])
+@login_required
+@admin_required
+def approve_leave(lid):
+    lr = db.session.get(LeaveRequest, lid)
+    if not lr:
+        flash('Leave request not found.', 'danger')
+        return redirect(url_for('admin.leave_requests'))
+    lr.status = 'approved'
+    lr.reviewed_by = current_user.id
+    lr.reviewed_at = datetime.utcnow()
+    lr.review_comment = request.form.get('comment', '')
+    # Notify the requester
+    notif = Notification(
+        user_id=lr.user_id,
+        title='Leave Request Approved',
+        message=f'Your leave request from {lr.from_date} to {lr.to_date} has been approved.',
+        notif_type='success',
+        link=url_for('student.leave_requests') if lr.requester.role == 'student' else url_for('teacher.leave_requests')
+    )
+    db.session.add(notif)
+    db.session.commit()
+    flash('Leave request approved.', 'success')
+    return redirect(url_for('admin.leave_requests'))
+
+
+@admin_bp.route('/leave-requests/<int:lid>/reject', methods=['POST'])
+@login_required
+@admin_required
+def reject_leave(lid):
+    lr = db.session.get(LeaveRequest, lid)
+    if not lr:
+        flash('Leave request not found.', 'danger')
+        return redirect(url_for('admin.leave_requests'))
+    lr.status = 'rejected'
+    lr.reviewed_by = current_user.id
+    lr.reviewed_at = datetime.utcnow()
+    lr.review_comment = request.form.get('comment', '')
+    notif = Notification(
+        user_id=lr.user_id,
+        title='Leave Request Rejected',
+        message=f'Your leave request from {lr.from_date} to {lr.to_date} has been rejected. '
+                f'Reason: {lr.review_comment or "Not specified"}',
+        notif_type='danger',
+        link=url_for('student.leave_requests') if lr.requester.role == 'student' else url_for('teacher.leave_requests')
+    )
+    db.session.add(notif)
+    db.session.commit()
+    flash('Leave request rejected.', 'warning')
+    return redirect(url_for('admin.leave_requests'))
+
+
+# ── EVENTS ────────────────────────────────────────────────────────────────────
+
+@admin_bp.route('/events')
+@login_required
+@admin_required
+def events():
+    upcoming = (Event.query
+                .filter(Event.event_date >= date.today(), Event.is_active == True)
+                .order_by(Event.event_date.asc()).all())
+    past = (Event.query
+            .filter(Event.event_date < date.today(), Event.is_active == True)
+            .order_by(Event.event_date.desc()).limit(30).all())
+    return render_template('admin/events.html', upcoming=upcoming, past=past)
+
+
+@admin_bp.route('/events/add', methods=['POST'])
+@login_required
+@admin_required
+def add_event():
+    title = request.form.get('title', '').strip()
+    if not title:
+        flash('Event title is required.', 'danger')
+        return redirect(url_for('admin.events'))
+    ev = Event(
+        title=title,
+        description=request.form.get('description', ''),
+        event_date=datetime.strptime(request.form['event_date'], '%Y-%m-%d').date(),
+        end_date=datetime.strptime(request.form['end_date'], '%Y-%m-%d').date()
+                if request.form.get('end_date') else None,
+        event_type=request.form.get('event_type', 'general'),
+        target_role=request.form.get('target_role', 'all'),
+        location=request.form.get('location', ''),
+        created_by=current_user.id
+    )
+    db.session.add(ev)
+    db.session.commit()
+    flash('Event added successfully.', 'success')
+    return redirect(url_for('admin.events'))
+
+
+@admin_bp.route('/events/<int:eid>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_event(eid):
+    ev = db.session.get(Event, eid)
+    if ev:
+        ev.is_active = False
+        db.session.commit()
+    flash('Event removed.', 'info')
+    return redirect(url_for('admin.events'))
+
+
+# ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+
+@admin_bp.route('/notifications')
+@login_required
+@admin_required
+def notifications():
+    notifs = (Notification.query
+              .filter_by(user_id=current_user.id)
+              .order_by(Notification.created_at.desc()).limit(50).all())
+    # mark all read
+    Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
+    db.session.commit()
+    return render_template('admin/notifications.html', notifs=notifs)
+
+
+@admin_bp.route('/notifications/count')
+@login_required
+def notif_count():
+    count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
+    return jsonify({'count': count})

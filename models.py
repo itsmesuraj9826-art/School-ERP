@@ -37,7 +37,7 @@ class User(db.Model, UserMixin):
 class Stream(db.Model):
     __tablename__ = 'streams'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False)       # Science, Management, Humanities...
+    name = db.Column(db.String(50), nullable=False)
     code = db.Column(db.String(10), unique=True)
     description = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True)
@@ -114,7 +114,6 @@ class Teacher(db.Model):
     department = db.Column(db.String(100))
     status = db.Column(db.String(20), default='active')
 
-    # Additional fields
     emergency_contact = db.Column(db.String(20))
     address = db.Column(db.Text)
     employment_type = db.Column(db.String(50), default='Full-time')
@@ -128,19 +127,19 @@ class Teacher(db.Model):
     gender = db.Column(db.String(10))
     blood_group = db.Column(db.String(5))
 
-    # File upload fields
     profile_image = db.Column(db.String(255), default='default_teacher.png')
-    cv_file = db.Column(db.String(255))  # CV/Resume PDF
-    certificate_file = db.Column(db.String(255))  # Degree/Certificate PDF
-    contract_file = db.Column(db.String(255))  # Employment contract PDF
-    id_proof = db.Column(db.String(255))  # Citizenship/ID proof
-    teaching_license = db.Column(db.String(255))  # Teaching license PDF
+    cv_file = db.Column(db.String(255))
+    certificate_file = db.Column(db.String(255))
+    contract_file = db.Column(db.String(255))
+    id_proof = db.Column(db.String(255))
+    teaching_license = db.Column(db.String(255))
 
     classes_taught = db.relationship('Class', backref='class_teacher', lazy=True,
                                      foreign_keys='Class.class_teacher_id')
     subjects = db.relationship('Subject', backref='teacher', lazy=True)
     assignments = db.relationship('Assignment', backref='teacher', lazy=True)
     timetables = db.relationship('TimeTable', backref='teacher', lazy=True)
+
 
 class Parent(db.Model):
     __tablename__ = 'parents'
@@ -160,7 +159,7 @@ class Subject(db.Model):
     class_id = db.Column(db.Integer, db.ForeignKey('classes.id'))
     stream_id = db.Column(db.Integer, db.ForeignKey('streams.id'))
     teacher_id = db.Column(db.Integer, db.ForeignKey('teachers.id'))
-    subject_type = db.Column(db.String(20), default='theory')  # theory, practical, both
+    subject_type = db.Column(db.String(20), default='theory')
     max_marks = db.Column(db.Integer, default=100)
     pass_marks = db.Column(db.Integer, default=40)
     credit_hours = db.Column(db.Integer, default=4)
@@ -194,7 +193,6 @@ class Exam(db.Model):
     max_marks = db.Column(db.Integer, default=100)
     pass_marks = db.Column(db.Integer, default=40)
     exam_type = db.Column(db.String(30), default='unit')
-    # unit_test, first_terminal, mid_term, pre_board, final_board, internal, practical
     academic_year = db.Column(db.String(20), default='2081-2082')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -222,7 +220,6 @@ class Result(db.Model):
     @property
     def percentage(self):
         if self.exam and self.exam.max_marks:
-            total_max = self.exam.max_marks + (self.exam.pass_marks or 0)
             return round((self.total_marks / self.exam.max_marks) * 100, 1)
         return 0
 
@@ -304,7 +301,7 @@ class TimeTable(db.Model):
     class_id = db.Column(db.Integer, db.ForeignKey('classes.id'), nullable=False)
     subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id'))
     teacher_id = db.Column(db.Integer, db.ForeignKey('teachers.id'))
-    day_of_week = db.Column(db.Integer, nullable=False)  # 0=Mon, 6=Sun
+    day_of_week = db.Column(db.Integer, nullable=False)
     start_time = db.Column(db.Time)
     end_time = db.Column(db.Time)
     room_no = db.Column(db.String(20))
@@ -317,7 +314,6 @@ class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     recipient_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    # recipient_type: 'all_parents', 'all_teachers', 'all_students', 'specific'
     recipient_type = db.Column(db.String(30), default='specific')
     subject = db.Column(db.String(200), nullable=False)
     body = db.Column(db.Text, nullable=False)
@@ -327,3 +323,62 @@ class Message(db.Model):
 
     sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_messages')
     recipient = db.relationship('User', foreign_keys=[recipient_id], backref='received_messages')
+
+
+
+class LeaveRequest(db.Model):
+    """Leave requests from students or teachers."""
+    __tablename__ = 'leave_requests'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    leave_type = db.Column(db.String(50), default='sick')
+    from_date = db.Column(db.Date, nullable=False)
+    to_date = db.Column(db.Date, nullable=False)
+    reason = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default='pending')
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    review_comment = db.Column(db.Text)
+    reviewed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    requester = db.relationship('User', foreign_keys=[user_id], backref='leave_requests')
+    reviewer = db.relationship('User', foreign_keys=[reviewed_by])
+
+    @property
+    def days(self):
+        if self.from_date and self.to_date:
+            return (self.to_date - self.from_date).days + 1
+        return 0
+
+
+class Event(db.Model):
+    """School calendar events."""
+    __tablename__ = 'events'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    event_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date)
+    event_type = db.Column(db.String(50), default='general')
+    target_role = db.Column(db.String(20), default='all')
+    location = db.Column(db.String(200))
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+
+    author = db.relationship('User', foreign_keys=[created_by])
+
+
+class Notification(db.Model):
+    """In-app bell notifications for users."""
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    notif_type = db.Column(db.String(50), default='info')
+    link = db.Column(db.String(300))
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', foreign_keys=[user_id], backref='notifications')

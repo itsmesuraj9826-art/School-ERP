@@ -53,19 +53,18 @@ def send_attendance_notification(mail, parent_email, parent_name, student_name, 
     """Email a parent when their child is marked absent or late."""
     school = current_app.config.get('SCHOOL_NAME', "Martyrs' Memorial College")
     status_text = "ABSENT" if status == "absent" else "LATE"
-    emoji = "❌" if status == "absent" else "⚠️"
     body = (
         f"Dear {parent_name},\n\n"
-        f"{emoji} Attendance Alert for {student_name}\n\n"
-        f"This is to inform you that your child {student_name} was marked {status_text} "
+        f"Attendance Alert for {student_name}\n\n"
+        f"Your child {student_name} was marked {status_text} "
         f"on {att_date.strftime('%A, %d %B %Y')}"
-        f"{f' (Class: {class_name})' if class_name else ''}.\n\n"
-        f"If this is incorrect or your child was absent due to illness, please contact "
-        f"the school administration.\n\n"
+        f"{(' (Class: ' + class_name + ')') if class_name else ''}.\n\n"
+        f"If this is incorrect or your child was absent due to illness, "
+        f"please contact the school administration.\n\n"
         f"Regards,\n{school} Administration\n"
     )
     msg = Message(
-        subject=f"[{school}] Attendance Alert — {student_name} marked {status_text}",
+        subject=f"[{school}] Attendance Alert - {student_name} marked {status_text}",
         recipients=[parent_email],
         body=body
     )
@@ -89,12 +88,12 @@ def send_fee_reminder(mail, parent_email, parent_name, student_name, fee_type, a
         f"    Fee Type  : {fee_type}\n"
         f"    Amount    : NPR {amount:,.0f}\n"
         f"    Due Date  : {due_date.strftime('%d %B %Y') if due_date else 'N/A'}\n\n"
-        f"{'⚠️ This fee is overdue. Please pay immediately to avoid penalties.' if overdue else 'Please ensure timely payment.'}\n\n"
+        f"{'This fee is overdue. Please pay immediately to avoid penalties.' if overdue else 'Please ensure timely payment.'}\n\n"
         f"Visit the school office or the parent portal to make payment.\n\n"
         f"Regards,\n{school} Administration\n"
     )
     msg = Message(
-        subject=f"[{school}] Fee Reminder — {student_name} ({fee_type})",
+        subject=f"[{school}] Fee Reminder - {student_name} ({fee_type})",
         recipients=[parent_email],
         body=body
     )
@@ -111,7 +110,7 @@ def send_notice_to_parent(mail, parent_email, parent_name, notice_title, notice_
     school = current_app.config.get('SCHOOL_NAME', "Martyrs' Memorial College")
     body = (
         f"Dear {parent_name},\n\n"
-        f"📢 New Notice from {school}\n\n"
+        f"New Notice from {school}\n\n"
         f"Title: {notice_title}\n\n"
         f"{notice_content}\n\n"
         f"Please log in to the Parent Portal for more details.\n\n"
@@ -132,13 +131,13 @@ def send_notice_to_parent(mail, parent_email, parent_name, notice_title, notice_
 
 def send_assignment_notification(mail, parent_email, parent_name, student_name,
                                   assignment_title, subject_name, due_date, class_name=""):
-    """Email a parent when a new assignment is posted for their child's class."""
+    """Email a parent when a new assignment is posted."""
     school = current_app.config.get('SCHOOL_NAME', "Martyrs' Memorial College")
     body = (
         f"Dear {parent_name},\n\n"
-        f"📚 New Assignment for {student_name}\n\n"
+        f"New Assignment for {student_name}\n\n"
         f"A new assignment has been posted"
-        f"{f' for {class_name}' if class_name else ''}:\n\n"
+        f"{(' for ' + class_name) if class_name else ''}:\n\n"
         f"    Assignment : {assignment_title}\n"
         f"    Subject    : {subject_name or 'N/A'}\n"
         f"    Due Date   : {due_date.strftime('%d %B %Y') if due_date else 'N/A'}\n\n"
@@ -164,9 +163,8 @@ def send_direct_message(mail, recipient_email, recipient_name, sender_name, subj
     body = (
         f"Dear {recipient_name},\n\n"
         f"You have a new message from {sender_name} ({school}):\n\n"
-        f"{'─' * 50}\n"
-        f"{body_text}\n"
-        f"{'─' * 50}\n\n"
+        f"Subject: {subject}\n\n"
+        f"{body_text}\n\n"
         f"Please log in to your portal to reply or view more messages.\n\n"
         f"Regards,\n{school} Administration\n"
     )

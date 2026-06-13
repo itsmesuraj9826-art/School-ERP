@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}Edit Parent — {{ user.full_name }}{% endblock %}
+{% block page_title %}Edit Parent{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="page-header-row">
+        <div>
+            <h5 class="page-sub-title">Edit: {{ user.full_name }}</h5>
+        </div>
+        <a href="{{ url_for('admin.view_parent', pid=parent.id) }}" class="btn btn-outline-secondary btn-action">
+            <i class="fas fa-arrow-left me-2"></i>Back
+        </a>
+    </div>
+
+    <div class="info-card">
+        <form method="POST" action="{{ url_for('admin.edit_parent', pid=parent.id) }}">
+            <div class="row g-3">
+                <div class="col-12"><h6 class="section-divider-title">Personal Information</h6></div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Full Name *</label>
+                    <input type="text" name="full_name" class="form-control" value="{{ user.full_name }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Email Address *</label>
+                    <input type="email" name="email" class="form-control" value="{{ user.email }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Phone Number</label>
+                    <input type="text" name="phone" class="form-control" value="{{ user.phone or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Relationship to Student</label>
+                    <select name="relationship" class="form-select">
+                        <option value="">Select...</option>
+                        {% for rel in ['father','mother','guardian','other'] %}
+                        <option value="{{ rel }}" {{ 'selected' if parent.relationship == rel }}>{{ rel | title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check mt-4">
+                        <input class="form-check-input" type="checkbox" name="is_active" id="isActive"
+                               {{ 'checked' if user.is_active }}>
+                        <label class="form-check-label" for="isActive">Account Active</label>
+                    </div>
+                </div>
+
+                <div class="col-12 mt-2"><h6 class="section-divider-title">Student Link</h6></div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Linked Student</label>
+                    <select name="student_id" class="form-select">
+                        <option value="">— No student linked —</option>
+                        {% for s, su in students %}
+                        <option value="{{ s.id }}" {{ 'selected' if parent.student_id == s.id }}>
+                            {{ su.full_name }} — Roll {{ s.roll_no }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-12 mt-2"><h6 class="section-divider-title">Additional Info</h6></div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Occupation</label>
+                    <input type="text" name="occupation" class="form-control" value="{{ parent.occupation or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Annual Income (NPR)</label>
+                    <input type="number" name="annual_income" class="form-control"
+                           value="{{ parent.annual_income | int if parent.annual_income else '' }}">
+                </div>
+
+                <div class="col-12 mt-2"><h6 class="section-divider-title">Reset Password (optional)</h6></div>
+                <div class="col-md-6">
+                    <label class="form-label">New Password</label>
+                    <input type="password" name="new_password" class="form-control"
+                           placeholder="Leave blank to keep current password">
+                </div>
+
+                <div class="col-12 d-flex gap-3 mt-2">
+                    <button type="submit" class="btn btn-warning btn-action">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                    <a href="{{ url_for('admin.view_parent', pid=parent.id) }}"
+                       class="btn btn-outline-secondary btn-action">Cancel</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

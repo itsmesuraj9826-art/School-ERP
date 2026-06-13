@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from functools import wraps
-from models import db, Student, User, Class, Subject, Attendance, Exam, Result, Fee, Notice, Assignment, TimeTable
+from models import db, Student, User, Class, Subject, Attendance, Exam, Result, Fee, Notice, Assignment, TimeTable, LeaveRequest, Event, Notification
 from datetime import datetime, date
 from sqlalchemy import func
 
@@ -420,3 +420,64 @@ def report_card():
                            all_results=all_results,
                            total_att=total_att, present_att=present_att, att_pct=att_pct,
                            avg_gpa=avg_gpa, now=_dt.now())
+
+
+# ── LEAVE REQUESTS ────────────────────────────────────────────────────────────
+
+@student_bp.route('/leave-requests', methods=['GET', 'POST'])
+@login_required
+@student_required
+def leave_requests():
+    if request.method == 'POST':
+        from_date = datetime.strptime(request.form['from_date'], '%Y-%m-%d').date()
+        to_date = datetime.strptime(request.form['to_date'], '%Y-%m-%d').date()
+        if to_date < from_date:
+            flash('End date cannot be before start date.', 'danger')
+            return redirect(url_for('student.leave_requests'))
+        lr = LeaveRequest(
+            user_id=current_user.id,
+            leave_type=request.form.get('leave_type', 'sick'),
+            from_date=from_date,
+            to_date=to_date,
+            reason=request.form.get('reason', '').strip()
+        )
+        db.session.add(lr)
+        db.session.commit()
+        flash('Leave request submitted.', 'success')
+        return redirect(url_for('student.leave_requests'))
+
+    my_requests = (LeaveRequest.query
+                   .filter_by(user_id=current_user.id)
+                   .order_by(LeaveRequest.created_at.desc()).all())
+    return render_template('student/leave_requests.html', my_requests=my_requests)
+
+
+# ── EVENTS ────────────────────────────────────────────────────────────────────
+
+@student_bp.route('/events')
+@login_required
+@student_required
+def events():
+    upcoming = (Event.query
+                .filter(Event.event_date >= date.today(), Event.is_active == True,
+                        Event.target_role.in_(['all', 'student']))
+                .order_by(Event.event_date.asc()).all())
+    past = (Event.query
+            .filter(Event.event_date < date.today(), Event.is_active == True,
+                    Event.target_role.in_(['all', 'student']))
+            .order_by(Event.event_date.desc()).limit(20).all())
+    return render_template('student/events.html', upcoming=upcoming, past=past)
+
+
+# ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+
+@student_bp.route('/notifications')
+@login_required
+@student_required
+def notifications():
+    notifs = (Notification.query
+              .filter_by(user_id=current_user.id)
+              .order_by(Notification.created_at.desc()).limit(50).all())
+    Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
+    db.session.commit()
+    return render_template('student/notifications.html', notifs=notifs)
