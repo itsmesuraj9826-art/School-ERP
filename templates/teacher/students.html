@@ -63,9 +63,14 @@
                         <td><span class="badge bg-secondary">{{ student.roll_no }}</span></td>
                         <td>
                             <div class="d-flex align-items-center gap-2">
-                                <div class="user-avatar-sm-table">
-                                    <i class="fas fa-user-circle text-muted fa-lg"></i>
-                                </div>
+                                {% if student.profile_image and student.profile_image != 'default.png' %}
+                                <img src="{{ url_for('static', filename=student.profile_image) }}"
+                                     style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;"
+                                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                <div class="student-avatar" style="display:none;">{{ user.full_name[0]|upper }}</div>
+                                {% else %}
+                                <div class="student-avatar">{{ user.full_name[0]|upper }}</div>
+                                {% endif %}
                                 <div>
                                     <div class="fw-semibold">{{ user.full_name }}</div>
                                     <div class="text-muted small">{{ user.email }}</div>

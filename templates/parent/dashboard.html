@@ -2,20 +2,84 @@
 {% block title %}Parent Dashboard — Martyrs' Memorial ERP{% endblock %}
 {% block page_title %}Parent Dashboard{% endblock %}
 
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+#calendarModal .modal-content { border-radius: 18px; overflow: hidden; border: none; box-shadow: 0 24px 64px rgba(0,0,0,0.18); }
+#calendarModal .modal-header { background: linear-gradient(135deg, #1a237e, #3949ab); color: #fff; border: none; padding: 20px 24px; }
+#calendarModal .modal-header .btn-close { filter: brightness(0) invert(1); }
+.cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.cal-nav h5 { margin: 0; font-weight: 700; font-size: 1.1rem; color: #1a237e; }
+.cal-nav-btn { background: none; border: 1.5px solid #e0e0e0; border-radius: 8px; width: 34px; height: 34px; cursor: pointer; color: #555; font-size: .85rem; display: flex; align-items: center; justify-content: center; transition: all .15s; }
+.cal-nav-btn:hover { background: #f0f4ff; border-color: #3949ab; color: #3949ab; }
+.cal-grid-head { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; margin-bottom: 6px; }
+.cal-day-name { text-align: center; font-size: .7rem; font-weight: 700; color: #888; text-transform: uppercase; padding: 4px 0; }
+.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+.cal-cell { aspect-ratio: 1; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 4px 2px 2px; cursor: pointer; position: relative; font-size: .78rem; font-weight: 600; color: #333; background: #f8f9ff; border: 1.5px solid transparent; transition: all .15s; min-height: 46px; }
+.cal-cell:hover { border-color: #3949ab; background: #eef0ff; }
+.cal-cell.empty { background: transparent; cursor: default; border: none; }
+.cal-cell.today { border-color: #3949ab; background: #e8eaf6; }
+.cal-cell.today .cal-date { color: #3949ab; }
+.cal-cell.present { background: #e8f5e9; }
+.cal-cell.present .cal-date { color: #2e7d32; }
+.cal-cell.absent { background: #ffebee; }
+.cal-cell.absent .cal-date { color: #c62828; }
+.cal-cell.leave { background: #fff8e1; }
+.cal-cell.leave .cal-date { color: #e65100; }
+.cal-cell.has-event::after { content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 5px; height: 5px; border-radius: 50%; background: #3949ab; }
+.cal-cell.has-assign::before { content: ''; position: absolute; bottom: 4px; right: 6px; width: 5px; height: 5px; border-radius: 50%; background: #e65100; }
+.cal-date { font-size: .82rem; font-weight: 700; line-height: 1; margin-bottom: 2px; }
+.cal-dot-row { display: flex; gap: 2px; flex-wrap: wrap; justify-content: center; }
+.cal-dot { width: 4px; height: 4px; border-radius: 50%; }
+.cal-dot-p { background: #43a047; } .cal-dot-a { background: #e53935; } .cal-dot-ev { background: #3949ab; } .cal-dot-as { background: #e65100; }
+.cal-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.cal-legend-item { display: flex; align-items: center; gap: 5px; font-size: .72rem; color: #555; }
+.cl-dot { width: 10px; height: 10px; border-radius: 3px; }
+.cl-present { background: #c8e6c9; border: 1.5px solid #43a047; } .cl-absent { background: #ffcdd2; border: 1.5px solid #e53935; } .cl-leave { background: #fff9c4; border: 1.5px solid #f9a825; } .cl-event { background: #c5cae9; border: 1.5px solid #3949ab; } .cl-assign { background: #ffe0b2; border: 1.5px solid #e65100; }
+#calDayDetail { margin-top: 16px; border-top: 1.5px solid #e8eaf6; padding-top: 14px; display: none; }
+#calDayDetail h6 { font-size: .85rem; font-weight: 700; color: #1a237e; margin-bottom: 8px; }
+.cal-detail-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; background: #f8f9ff; margin-bottom: 5px; font-size: .8rem; color: #333; }
+.cal-detail-item i { width: 16px; text-align: center; }
+.cal-open-btn { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.2); border: 1.5px solid rgba(255,255,255,0.3); color: #fff; font-size: 1rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; backdrop-filter: blur(4px); }
+.cal-open-btn:hover { background: rgba(255,255,255,0.35); transform: scale(1.08); }
+</style>
+{% endblock %}
+
 {% block content %}
+<script id="calData" type="application/json">
+{
+  "attendance": {
+    {% for a in all_attendance %}"{{ a.date.strftime('%Y-%m-%d') }}": "{{ a.status }}"{% if not loop.last %},{% endif %}{% endfor %}
+  },
+  "events": [
+    {% for e in all_events %}{"date": "{{ e.event_date.strftime('%Y-%m-%d') if e.event_date else '' }}", "title": {{ e.title | tojson }}}{% if not loop.last %},{% endif %}{% endfor %}
+  ],
+  "assignments": [
+    {% for a in upcoming_assignments %}{"date": "{{ a.due_date.strftime('%Y-%m-%d') if a.due_date else '' }}", "title": {{ a.title | tojson }}}{% if not loop.last %},{% endif %}{% endfor %}
+  ],
+  "timetable": {
+    {% for i, day in [(0,'Monday'),(1,'Tuesday'),(2,'Wednesday'),(3,'Thursday'),(4,'Friday'),(5,'Saturday')] %}"{{ i }}": [{% set ns = namespace(first=true) %}{% for tt, subj in full_timetable %}{% if tt.day_of_week == i %}{% if not ns.first %},{% endif %}{"time": "{{ tt.start_time.strftime('%I:%M %p') if tt.start_time else '' }}", "subject": {{ (subj.name if subj else 'Free Period') | tojson }}, "room": {{ (tt.room_no or '') | tojson }}}{% set ns.first = false %}{% endif %}{% endfor %}]{% if not loop.last %},{% endif %}{% endfor %}
+  }
+}
+</script>
+
 <div class="dashboard-content">
     <div class="welcome-banner">
         <div class="welcome-text">
-            <h4>{{ greeting }}, {{ current_user.full_name.split()[0] }}! 👨‍👧</h4>
+            <h4><i class="fas fa-users me-2" style="color:rgba(255,255,255,0.85);font-size:.95em;"></i>{{ greeting }}, {{ current_user.full_name.split()[0] }}!</h4>
             <p>Monitoring: <strong>{{ student_user.full_name }}</strong> | Roll: {{ student.roll_no }}</p>
         </div>
-        <div class="welcome-date">
-            <i class="fas fa-calendar-alt me-2"></i>
-            <span id="currentDate"></span>
+        <div class="d-flex align-items-center gap-3">
+            <div class="welcome-date">
+                <i class="fas fa-calendar-alt me-2"></i>
+                <span id="currentDate"></span>
+            </div>
+            <button class="cal-open-btn" onclick="openCalendar()" title="Open Full Calendar">
+                <i class="fas fa-calendar-days"></i>
+            </button>
         </div>
     </div>
 
-    <!-- Stats -->
     <div class="row g-4 mb-4">
         <div class="col-xl-3 col-md-6">
             <div class="stat-card stat-blue">
@@ -23,9 +87,7 @@
                 <div class="stat-info">
                     <div class="stat-value">{{ attendance_pct }}%</div>
                     <div class="stat-label">Attendance</div>
-                    <div class="stat-change {{ 'positive' if attendance_pct >= 75 else 'negative' }}">
-                        {{ present_att }}/{{ total_att }} days present
-                    </div>
+                    <div class="stat-change {{ 'positive' if attendance_pct >= 75 else 'negative' }}">{{ present_att }}/{{ total_att }} days present</div>
                 </div>
             </div>
         </div>
@@ -45,9 +107,7 @@
                 <div class="stat-info">
                     <div class="stat-value">NPR {{ "{:,.0f}".format(pending_fees) }}</div>
                     <div class="stat-label">Pending Fees</div>
-                    <div class="stat-change {{ 'negative' if pending_fees > 0 else 'positive' }}">
-                        {{ 'Please clear dues' if pending_fees > 0 else 'All cleared!' }}
-                    </div>
+                    <div class="stat-change {{ 'negative' if pending_fees > 0 else 'positive' }}">{{ 'Please clear dues' if pending_fees > 0 else 'All cleared!' }}</div>
                 </div>
             </div>
         </div>
@@ -57,60 +117,34 @@
                 <div class="stat-info">
                     <div class="stat-value">{{ student.class_ref.name if student.class_ref else 'N/A' }}</div>
                     <div class="stat-label">Current Class</div>
-                    <div class="stat-change">
-                        {% if student.class_ref %}Section {{ student.class_ref.section }}
-                        {% if student.class_ref.stream %} · {{ student.class_ref.stream.name }}{% endif %}
-                        {% endif %}
-                    </div>
+                    <div class="stat-change">{% if student.class_ref %}Section {{ student.class_ref.section }}{% if student.class_ref.stream %} · {{ student.class_ref.stream.name }}{% endif %}{% endif %}</div>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="row g-4">
-        <!-- Child Profile -->
         <div class="col-xl-3">
             <div class="info-card h-100">
-                <div class="card-head">
-                    <h6 class="card-head-title"><i class="fas fa-user-graduate me-2 text-primary"></i>Child Profile</h6>
-                </div>
+                <div class="card-head"><h6 class="card-head-title"><i class="fas fa-user-graduate me-2 text-primary"></i>Child Profile</h6></div>
                 <div class="child-profile text-center p-3">
                     <div class="child-avatar-lg mb-3">{{ student_user.full_name[0] }}</div>
                     <div class="child-name mb-0">{{ student_user.full_name }}</div>
                     <div class="child-roll text-muted small">{{ student.roll_no }}</div>
-                    {% if student.class_ref %}
-                    <div class="mt-2">
-                        <span class="badge bg-primary">{{ student.class_ref.full_name }}</span>
-                    </div>
-                    {% endif %}
+                    {% if student.class_ref %}<div class="mt-2"><span class="badge bg-primary">{{ student.class_ref.full_name }}</span></div>{% endif %}
                     <div class="child-stats-mini mt-3">
-                        <div class="cs-item">
-                            <span class="cs-val">{{ attendance_pct }}%</span>
-                            <span class="cs-key">Attendance</span>
-                        </div>
-                        <div class="cs-item">
-                            <span class="cs-val">{{ avg_gpa }}</span>
-                            <span class="cs-key">GPA</span>
-                        </div>
+                        <div class="cs-item"><span class="cs-val">{{ attendance_pct }}%</span><span class="cs-key">Attendance</span></div>
+                        <div class="cs-item"><span class="cs-val">{{ avg_gpa }}</span><span class="cs-key">GPA</span></div>
                     </div>
-
                     <div class="attendance-ring-wrap mt-3">
                         <div class="ring-chart">
                             <canvas id="attDonut" width="140" height="140"></canvas>
-                            <div class="ring-center">
-                                <span class="ring-pct">{{ attendance_pct }}%</span>
-                            </div>
+                            <div class="ring-center"><span class="ring-pct">{{ attendance_pct }}%</span></div>
                         </div>
                     </div>
                     <div class="att-stats-row mt-2">
-                        <div class="att-stat present-stat">
-                            <span class="att-num">{{ present_att }}</span>
-                            <span class="att-label">Present</span>
-                        </div>
-                        <div class="att-stat absent-stat">
-                            <span class="att-num">{{ total_att - present_att }}</span>
-                            <span class="att-label">Absent</span>
-                        </div>
+                        <div class="att-stat present-stat"><span class="att-num">{{ present_att }}</span><span class="att-label">Present</span></div>
+                        <div class="att-stat absent-stat"><span class="att-num">{{ total_att - present_att }}</span><span class="att-label">Absent</span></div>
                     </div>
                     <table class="table table-sm table-borderless text-start mt-3 mb-0">
                         <tr><td class="text-muted small">Gender</td><td class="fw-semibold small">{{ student.gender|title if student.gender else '—' }}</td></tr>
@@ -121,29 +155,24 @@
             </div>
         </div>
 
-        <!-- Recent Attendance + Today Schedule -->
         <div class="col-xl-4">
             <div class="info-card mb-4">
                 <div class="card-head">
                     <h6 class="card-head-title"><i class="fas fa-calendar-check me-2 text-success"></i>Recent Attendance</h6>
+                    <button class="btn btn-sm btn-outline-primary" onclick="openCalendar()" style="font-size:.7rem;padding:3px 10px;border-radius:20px;"><i class="fas fa-expand me-1"></i>Full Calendar</button>
                 </div>
                 <div class="attendance-history">
                     {% for att in recent_attendance %}
                     <div class="att-history-item">
                         <span class="att-date">{{ att.date.strftime('%b %d, %Y') }}</span>
                         <span class="att-status-badge status-{{ att.status }}">
-                            <i class="fas fa-{{ 'check' if att.status == 'present' else 'times' if att.status == 'absent' else 'clock' }} me-1"></i>
-                            {{ att.status|title }}
+                            <i class="fas fa-{{ 'check' if att.status == 'present' else 'times' if att.status == 'absent' else 'clock' }} me-1"></i>{{ att.status|title }}
                         </span>
                     </div>
-                    {% else %}
-                    <div class="empty-state-sm text-center py-4">
-                        <p class="text-muted">No attendance records</p>
-                    </div>
+                    {% else %}<div class="empty-state-sm text-center py-4"><p class="text-muted">No attendance records</p></div>
                     {% endfor %}
                 </div>
             </div>
-
             {% if timetable_today %}
             <div class="info-card">
                 <div class="card-head">
@@ -168,12 +197,9 @@
             {% endif %}
         </div>
 
-        <!-- Results + Fees -->
         <div class="col-xl-5">
             <div class="info-card mb-4">
-                <div class="card-head">
-                    <h6 class="card-head-title"><i class="fas fa-chart-bar me-2 text-danger"></i>Recent Results</h6>
-                </div>
+                <div class="card-head"><h6 class="card-head-title"><i class="fas fa-chart-bar me-2 text-danger"></i>Recent Results</h6></div>
                 {% for result, exam, subj in recent_results %}
                 {% set pct = (result.marks_obtained / exam.max_marks * 100)|round(1) if exam.max_marks else 0 %}
                 <div class="result-item">
@@ -183,26 +209,17 @@
                     </div>
                     <div class="result-score">
                         <div class="score-bar-wrap">
-                            <div class="score-bar {% if pct >= 60 %}score-good{% elif pct >= 40 %}score-ok{% else %}score-bad{% endif %}"
-                                style="width:{{ pct }}%"></div>
+                            <div class="score-bar {% if pct >= 60 %}score-good{% elif pct >= 40 %}score-ok{% else %}score-bad{% endif %}" style="width:{{ pct }}%"></div>
                         </div>
                         <span class="score-pct">{{ pct }}%</span>
                     </div>
-                    <span class="badge neb-grade-{{ (result.grade or 'F').replace('+','p') }}">
-                        {{ result.grade or 'F' }}
-                    </span>
+                    <span class="badge neb-grade-{{ (result.grade or 'F').replace('+','p') }}">{{ result.grade or 'F' }}</span>
                 </div>
-                {% else %}
-                <div class="empty-state-sm text-center py-5">
-                    <p class="text-muted">No results yet</p>
-                </div>
+                {% else %}<div class="empty-state-sm text-center py-5"><p class="text-muted">No results yet</p></div>
                 {% endfor %}
             </div>
-
             <div class="info-card">
-                <div class="card-head">
-                    <h6 class="card-head-title"><i class="fas fa-rupee-sign me-2 text-success"></i>Fee Details</h6>
-                </div>
+                <div class="card-head"><h6 class="card-head-title"><i class="fas fa-rupee-sign me-2 text-success"></i>Fee Details</h6></div>
                 <div class="table-responsive">
                     <table class="table table-hover modern-table mb-0">
                         <thead><tr><th>Type</th><th>Amount</th><th>Due</th><th>Status</th></tr></thead>
@@ -212,35 +229,26 @@
                                 <td>{{ fee.fee_type }}</td>
                                 <td>NPR {{ "{:,.0f}".format(fee.amount) }}</td>
                                 <td>{{ fee.due_date.strftime('%b %d') if fee.due_date else '—' }}</td>
-                                <td>
-                                    <span class="badge {% if fee.status == 'paid' %}bg-success{% elif fee.status == 'overdue' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
-                                        {{ fee.status|title }}
-                                    </span>
-                                </td>
+                                <td><span class="badge {% if fee.status == 'paid' %}bg-success{% elif fee.status == 'overdue' %}bg-danger{% else %}bg-warning text-dark{% endif %}">{{ fee.status|title }}</span></td>
                             </tr>
-                            {% else %}
-                            <tr><td colspan="4" class="text-center text-muted py-3">No fee records</td></tr>
+                            {% else %}<tr><td colspan="4" class="text-center text-muted py-3">No fee records</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
                 {% if pending_fees > 0 %}
                 <div class="alert alert-warning mx-3 mb-3 mt-0 py-2 small">
-                    <i class="fas fa-exclamation-triangle me-1"></i>
-                    <strong>NPR {{ "{:,.0f}".format(pending_fees) }}</strong> pending — visit accounts office
+                    <i class="fas fa-exclamation-triangle me-1"></i><strong>NPR {{ "{:,.0f}".format(pending_fees) }}</strong> pending — visit accounts office
                 </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Notices -->
     <div class="row g-4 mt-0">
         <div class="col-12">
             <div class="info-card">
-                <div class="card-head">
-                    <h6 class="card-head-title"><i class="fas fa-bullhorn me-2 text-warning"></i>School Notices</h6>
-                </div>
+                <div class="card-head"><h6 class="card-head-title"><i class="fas fa-bullhorn me-2 text-warning"></i>School Notices</h6></div>
                 <div class="notices-grid">
                     {% for notice in notices %}
                     <div class="notice-card priority-{{ notice.priority }}">
@@ -248,35 +256,152 @@
                         <div class="notice-content">
                             <div class="notice-title">{{ notice.title }}</div>
                             <div class="notice-preview">{{ notice.content[:100] }}{% if notice.content|length > 100 %}...{% endif %}</div>
-                            <div class="notice-meta">
-                                <span><i class="fas fa-clock me-1"></i>{{ notice.created_at.strftime('%b %d, %Y') }}</span>
-                            </div>
+                            <div class="notice-meta"><span><i class="fas fa-clock me-1"></i>{{ notice.created_at.strftime('%b %d, %Y') }}</span></div>
                         </div>
                     </div>
-                    {% else %}
-                    <div class="empty-state-sm text-center w-100 py-3">
-                        <p class="text-muted">No notices</p>
-                    </div>
+                    {% else %}<div class="empty-state-sm text-center w-100 py-3"><p class="text-muted">No notices</p></div>
                     {% endfor %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Calendar Modal -->
+<div class="modal fade" id="calendarModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title mb-0"><i class="fas fa-calendar-days me-2"></i>Academic Calendar</h5>
+          <small style="opacity:.75;">{{ student_user.full_name }} — attendance, events &amp; schedule</small>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="calNav(-1)"><i class="fas fa-chevron-left"></i></button>
+          <h5 id="calMonthLabel">—</h5>
+          <button class="cal-nav-btn" onclick="calNav(1)"><i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div class="cal-grid-head">
+          <div class="cal-day-name">Sun</div><div class="cal-day-name">Mon</div><div class="cal-day-name">Tue</div>
+          <div class="cal-day-name">Wed</div><div class="cal-day-name">Thu</div><div class="cal-day-name">Fri</div><div class="cal-day-name">Sat</div>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="cal-legend">
+          <div class="cal-legend-item"><div class="cl-dot cl-present"></div> Present</div>
+          <div class="cal-legend-item"><div class="cl-dot cl-absent"></div> Absent</div>
+          <div class="cal-legend-item"><div class="cl-dot cl-leave"></div> Leave</div>
+          <div class="cal-legend-item"><div class="cl-dot cl-event"></div> <span style="width:6px;height:6px;border-radius:50%;background:#3949ab;display:inline-block;margin-right:2px;"></span>Event</div>
+          <div class="cal-legend-item"><div class="cl-dot cl-assign"></div> <span style="width:6px;height:6px;border-radius:50%;background:#e65100;display:inline-block;margin-right:2px;"></span>Assignment</div>
+        </div>
+        <div id="calDayDetail">
+          <h6 id="calDetailDate"></h6>
+          <div id="calDetailItems"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-});
-new Chart(document.getElementById('attDonut'), {
+document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+// Donut chart
+try {
+  new Chart(document.getElementById('attDonut'), {
     type: 'doughnut',
-    data: {
-        datasets: [{ data: [{{ attendance_pct }}, {{ 100 - attendance_pct }}],
-            backgroundColor: ['#0D47A1', '#E8EAF6'], borderWidth: 0 }]
-    },
+    data: { datasets: [{ data: [{{ attendance_pct }}, {{ 100 - attendance_pct }}], backgroundColor: ['#0D47A1','#E8EAF6'], borderWidth: 0 }] },
     options: { cutout: '75%', plugins: { legend: { display: false }, tooltip: { enabled: false } } }
-});
-</script>
+  });
+} catch(e) {}
+
+// Calendar
+var _calRaw = JSON.parse(document.getElementById('calData').textContent);
+var ATT = _calRaw.attendance;
+var EVENTS = _calRaw.events;
+var ASSIGN = _calRaw.assignments;
+var TT = _calRaw.timetable;
+
+var evByDate = {}, asByDate = {};
+EVENTS.forEach(function(e){ if(e.date){ if(!evByDate[e.date]) evByDate[e.date]=[]; evByDate[e.date].push(e.title); } });
+ASSIGN.forEach(function(a){ if(a.date){ if(!asByDate[a.date]) asByDate[a.date]=[]; asByDate[a.date].push(a.title); } });
+
+var today = new Date(); today.setHours(0,0,0,0);
+var calYear = today.getFullYear(), calMonth = today.getMonth();
+var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+var DAYS_LABEL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+function pad(n){ return String(n).padStart(2,'0'); }
+function dateStr(y,m,d){ return y+'-'+pad(m+1)+'-'+pad(d); }
+
+function renderCalendar(){
+  var grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  document.getElementById('calMonthLabel').textContent = MONTHS[calMonth]+' '+calYear;
+  document.getElementById('calDayDetail').style.display = 'none';
+  var firstDay = new Date(calYear, calMonth, 1).getDay();
+  var daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  for(var i=0; i<firstDay; i++){
+    var empty = document.createElement('div'); empty.className='cal-cell empty'; grid.appendChild(empty);
+  }
+  for(var d=1; d<=daysInMonth; d++){
+    var ds = dateStr(calYear, calMonth, d);
+    var thisDate = new Date(calYear, calMonth, d);
+    var cell = document.createElement('div'); cell.className='cal-cell';
+    var att = ATT[ds];
+    if(att==='present') cell.classList.add('present');
+    else if(att==='absent') cell.classList.add('absent');
+    else if(att==='leave'||att==='late') cell.classList.add('leave');
+    if(thisDate.getTime()===today.getTime()) cell.classList.add('today');
+    if(evByDate[ds]) cell.classList.add('has-event');
+    if(asByDate[ds]) cell.classList.add('has-assign');
+    var dateEl = document.createElement('div'); dateEl.className='cal-date'; dateEl.textContent=d; cell.appendChild(dateEl);
+    var dotRow = document.createElement('div'); dotRow.className='cal-dot-row';
+    if(att==='present'){var dot=document.createElement('div');dot.className='cal-dot cal-dot-p';dotRow.appendChild(dot);}
+    if(att==='absent'){var dot=document.createElement('div');dot.className='cal-dot cal-dot-a';dotRow.appendChild(dot);}
+    if(evByDate[ds]){var dot=document.createElement('div');dot.className='cal-dot cal-dot-ev';dotRow.appendChild(dot);}
+    if(asByDate[ds]){var dot=document.createElement('div');dot.className='cal-dot cal-dot-as';dotRow.appendChild(dot);}
+    cell.appendChild(dotRow);
+    (function(ds2, d2, dow){ cell.addEventListener('click', function(){ showDayDetail(ds2, d2, dow); }); })(ds, d, thisDate.getDay());
+    grid.appendChild(cell);
+  }
+}
+
+function showDayDetail(ds, day, dow){
+  var panel = document.getElementById('calDayDetail');
+  document.getElementById('calDetailDate').textContent = MONTHS[calMonth]+' '+day+', '+calYear+' — '+DAYS_LABEL[dow===0?6:dow-1];
+  var items = document.getElementById('calDetailItems'); items.innerHTML = '';
+  var att = ATT[ds];
+  if(att){
+    var icon = att==='present'?'check-circle':att==='absent'?'times-circle':'clock';
+    var col = att==='present'?'#2e7d32':att==='absent'?'#c62828':'#e65100';
+    items.innerHTML += '<div class="cal-detail-item"><i class="fas fa-'+icon+'" style="color:'+col+'"></i><span>Attendance: <strong>'+att.charAt(0).toUpperCase()+att.slice(1)+'</strong></span></div>';
+  }
+  var ttKey = dow===0 ? -1 : dow-1;
+  if(ttKey>=0 && TT[ttKey] && TT[ttKey].length>0){
+    items.innerHTML += '<div class="cal-detail-item" style="background:#f0f4ff;"><i class="fas fa-chalkboard" style="color:#3949ab"></i><strong>Classes</strong></div>';
+    TT[ttKey].forEach(function(p){
+      items.innerHTML += '<div class="cal-detail-item" style="padding-left:28px;"><i class="fas fa-clock" style="color:#7986cb"></i><span>'+p.time+' &mdash; <strong>'+p.subject+'</strong>'+(p.room?' &middot; Room '+p.room:'')+'</span></div>';
+    });
+  }
+  if(evByDate[ds]){ evByDate[ds].forEach(function(t){ items.innerHTML += '<div class="cal-detail-item" style="background:#e8eaf6;"><i class="fas fa-star" style="color:#3949ab"></i><span>Event: <strong>'+t+'</strong></span></div>'; }); }
+  if(asByDate[ds]){ asByDate[ds].forEach(function(t){ items.innerHTML += '<div class="cal-detail-item" style="background:#fff3e0;"><i class="fas fa-tasks" style="color:#e65100"></i><span>Assignment Due: <strong>'+t+'</strong></span></div>'; }); }
+  if(!items.innerHTML) items.innerHTML = '<div class="cal-detail-item"><i class="fas fa-info-circle" style="color:#9e9e9e"></i><span style="color:#9e9e9e">No records for this day.</span></div>';
+  panel.style.display = 'block';
+}
+
+function calNav(dir){
+  calMonth += dir;
+  if(calMonth>11){calMonth=0;calYear++;}
+  if(calMonth<0){calMonth=11;calYear--;}
+  renderCalendar();
+}
+
+function openCalendar(){
+  renderCalendar();
+  new bootstrap.Modal(document.getElementById('calendarModal')).show();
+}
 {% endblock %}

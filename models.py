@@ -180,6 +180,8 @@ class Attendance(db.Model):
     status = db.Column(db.String(20), nullable=False, default='present')
     marked_by = db.Column(db.Integer, db.ForeignKey('teachers.id'))
     remarks = db.Column(db.String(200))
+    leave_reason = db.Column(db.String(500))
+    notif_sent = db.Column(db.Boolean, default=False)
 
     __table_args__ = (db.UniqueConstraint('student_id', 'date'),)
 

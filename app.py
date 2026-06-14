@@ -125,6 +125,22 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        # Safe migrations — add columns that may not exist yet (MySQL-compatible)
+        try:
+            from sqlalchemy import text, inspect
+            inspector = inspect(db.engine)
+            existing_cols = [c['name'] for c in inspector.get_columns('attendance')]
+            with db.engine.connect() as con:
+                if 'leave_reason' not in existing_cols:
+                    con.execute(text("ALTER TABLE attendance ADD COLUMN leave_reason VARCHAR(500)"))
+                    con.commit()
+                    app.logger.info("Migration: added leave_reason to attendance")
+                if 'notif_sent' not in existing_cols:
+                    con.execute(text("ALTER TABLE attendance ADD COLUMN notif_sent TINYINT(1) DEFAULT 0"))
+                    con.commit()
+                    app.logger.info("Migration: added notif_sent to attendance")
+        except Exception as _e:
+            app.logger.warning(f"Migration warning: {_e}")
 
     return app
 

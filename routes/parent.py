@@ -81,6 +81,25 @@ def dashboard():
         upcoming_assignments = Assignment.query.filter_by(class_id=student.class_id, status='active')\
             .filter(Assignment.due_date >= today).order_by(Assignment.due_date).limit(5).all()
 
+    all_events = Event.query.filter(
+        db.or_(Event.target_role == 'all', Event.target_role == 'parent', Event.target_role == 'student')
+    ).order_by(Event.event_date).all()
+
+    full_timetable = []
+    if student.class_id:
+        full_timetable = db.session.query(TimeTable, Subject)\
+            .outerjoin(Subject, TimeTable.subject_id == Subject.id)\
+            .filter(TimeTable.class_id == student.class_id)\
+            .order_by(TimeTable.day_of_week, TimeTable.start_time).all()
+
+    hour = datetime.now().hour
+    if hour < 12:
+        greeting = 'Good Morning'
+    elif hour < 17:
+        greeting = 'Good Afternoon'
+    else:
+        greeting = 'Good Evening'
+
     return render_template('parent/dashboard.html',
         parent=parent,
         student=student,
@@ -96,15 +115,15 @@ def dashboard():
         total_paid=total_paid,
         notices=notices,
         recent_attendance=recent_attendance,
+        all_attendance=attendances,
         timetable_today=timetable_today,
+        full_timetable=full_timetable,
         upcoming_assignments=upcoming_assignments,
-        today=today
+        all_events=all_events,
+        today=today,
+        greeting=greeting
     )
 
-
-# ============================================================================
-# MESSAGES
-# ============================================================================
 
 from models import Message
 from app import mail
@@ -119,7 +138,6 @@ def messages():
     sent = (Message.query
             .filter_by(sender_id=current_user.id)
             .order_by(Message.sent_at.desc()).all())
-    # Count unread
     unread = sum(1 for m in received if not m.is_read)
     return render_template('parent/messages.html',
                            received=received, sent=sent, unread=unread)
@@ -135,7 +153,6 @@ def mark_message_read(mid):
         db.session.commit()
     return redirect(url_for('parent.messages'))
 
-# ------------------------------------------------------------
 
 @parent_bp.route('/leave-requests')
 @login_required
@@ -152,24 +169,22 @@ def leave_requests():
     return render_template('parent/leave_requests.html', child_requests=child_requests)
 
 
-# ------------------------------------------------------------
-
 @parent_bp.route('/events')
 @login_required
 @parent_required
 def events():
-    upcoming = (Event.query
-                .filter(Event.event_date >= date.today(), Event.is_active == True,
-                        Event.target_role.in_(['all', 'parent']))
-                .order_by(Event.event_date.asc()).all())
-    past = (Event.query
-            .filter(Event.event_date < date.today(), Event.is_active == True,
-                    Event.target_role.in_(['all', 'parent']))
-            .order_by(Event.event_date.desc()).limit(20).all())
+    upcoming = Event.query.filter(
+        Event.event_date >= date.today(),
+        Event.is_active == True,
+        Event.target_role.in_(['all', 'parent'])
+    ).order_by(Event.event_date.asc()).all()
+    past = Event.query.filter(
+        Event.event_date < date.today(),
+        Event.is_active == True,
+        Event.target_role.in_(['all', 'parent'])
+    ).order_by(Event.event_date.desc()).limit(20).all()
     return render_template('parent/events.html', upcoming=upcoming, past=past)
 
-
-# ------------------------------------------------------------
 
 @parent_bp.route('/notifications')
 @login_required

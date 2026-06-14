@@ -114,22 +114,38 @@ def send_credentials_email(mail, recipient_email, full_name, role, username, pas
         return False
 
 
-def send_attendance_notification(mail, parent_email, parent_name, student_name, att_date, status, class_name=""):
-    """Email a parent when their child is marked absent or late."""
+def send_attendance_notification(mail, parent_email, parent_name, student_name,
+                                  att_date, status, class_name="", leave_reason=""):
+    """Email a parent when their child is marked absent, late, or on leave."""
     school = current_app.config.get('SCHOOL_NAME', "Martyrs' Memorial College")
-    status_text = "ABSENT" if status == "absent" else "LATE"
+    status_map = {"absent": "ABSENT", "late": "LATE", "leave": "ON LEAVE"}
+    status_text = status_map.get(status, status.upper())
+    emoji_map = {"absent": "❌", "late": "⏰", "leave": "📋"}
+    emoji = emoji_map.get(status, "⚠️")
+
+    reason_line = f"\n    Reason    : {leave_reason}" if leave_reason else ""
+    class_line = f" · {class_name}" if class_name else ""
+    followup = {
+        "absent": "If this absence was unexpected, please contact the class teacher.",
+        "late": "Your child arrived late today. Please ensure punctuality.",
+        "leave": "Leave has been recorded as requested.",
+    }.get(status, "")
+
     body = (
         f"Dear {parent_name},\n\n"
-        f"Attendance Alert for {student_name}\n\n"
-        f"Your child {student_name} was marked {status_text} "
-        f"on {att_date.strftime('%A, %d %B %Y')}"
-        f"{(' (Class: ' + class_name + ')') if class_name else ''}.\n\n"
-        f"If this is incorrect or your child was absent due to illness, "
-        f"please contact the school administration.\n\n"
+        f"{emoji} Attendance Alert — {student_name}\n"
+        f"{'='*50}\n\n"
+        f"    Student   : {student_name}\n"
+        f"    Date      : {att_date.strftime('%A, %d %B %Y')}{class_line}\n"
+        f"    Status    : {status_text}"
+        f"{reason_line}\n\n"
+        f"{followup}\n\n"
+        f"Log in to the Parent Portal to view full attendance details.\n\n"
         f"Regards,\n{school} Administration\n"
+        f"\n─ Automated notification · Do not reply ─\n"
     )
     msg = Message(
-        subject=f"[{school}] Attendance Alert - {student_name} marked {status_text}",
+        subject=f"[{school}] Attendance Alert — {student_name} · {status_text}",
         recipients=[parent_email],
         body=body
     )

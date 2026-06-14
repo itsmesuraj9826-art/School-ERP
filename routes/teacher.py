@@ -170,20 +170,35 @@ def attendance():
 
     selected_class_id = request.args.get('class_id', type=int)
     selected_date = request.args.get('date', date.today().isoformat())
+    view_mode = request.args.get('view', 'mark')  # 'mark' or 'history'
 
     students = []
-    existing_attendance = {}
+    existing_attendance = {}   # student_id -> Attendance obj
+    history_records = []
 
     if selected_class_id:
         students_data = db.session.query(Student, User)\
             .join(User, Student.user_id == User.id)\
             .filter(Student.class_id == selected_class_id, Student.status == 'active')\
             .order_by(Student.roll_no).all()
+        students = students_data
 
         att_date = datetime.strptime(selected_date, '%Y-%m-%d').date()
-        existing = Attendance.query.filter_by(class_id=selected_class_id, date=att_date).all()
-        existing_attendance = {a.student_id: a.status for a in existing}
-        students = students_data
+        existing_records = Attendance.query.filter_by(class_id=selected_class_id, date=att_date).all()
+        existing_attendance = {a.student_id: a for a in existing_records}
+
+        if view_mode == 'history':
+            # Last 30 days of attendance for this class
+            from datetime import timedelta
+            hist_start = att_date - timedelta(days=29)
+            history_records = db.session.query(Attendance, Student, User)\
+                .join(Student, Attendance.student_id == Student.id)\
+                .join(User, Student.user_id == User.id)\
+                .filter(
+                    Attendance.class_id == selected_class_id,
+                    Attendance.date >= hist_start,
+                    Attendance.date <= date.today()
+                ).order_by(Attendance.date.desc(), Student.roll_no).all()
 
     if request.method == 'POST':
         att_date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
@@ -194,51 +209,99 @@ def attendance():
         student_ids = request.form.getlist('student_ids')
         saved = 0
         notify_count = 0
+
         for sid in student_ids:
             sid = int(sid)
-            status = request.form.get(f'status_{sid}', 'absent')
-            old_status = None
-            existing = Attendance.query.filter_by(student_id=sid, date=att_date).first()
-            if existing:
-                old_status = existing.status
-                existing.status = status
+            new_status = request.form.get(f'status_{sid}', 'present')
+            leave_reason = request.form.get(f'reason_{sid}', '').strip()
+
+            existing_rec = Attendance.query.filter_by(student_id=sid, date=att_date).first()
+            old_status = existing_rec.status if existing_rec else None
+            was_notified = existing_rec.notif_sent if existing_rec else False
+
+            if existing_rec:
+                existing_rec.status = new_status
+                existing_rec.leave_reason = leave_reason if new_status in ('absent', 'leave') else None
+                existing_rec.marked_by = teacher.id
             else:
-                att = Attendance(student_id=sid, class_id=class_id, date=att_date,
-                                 status=status, marked_by=teacher.id)
-                db.session.add(att)
+                existing_rec = Attendance(
+                    student_id=sid, class_id=class_id, date=att_date,
+                    status=new_status, marked_by=teacher.id,
+                    leave_reason=leave_reason if new_status in ('absent', 'leave') else None,
+                    notif_sent=False
+                )
+                db.session.add(existing_rec)
             saved += 1
 
-            # Send parent notification if student is absent or late (and status changed)
-            if status in ('absent', 'late') and old_status != status:
+            # Only notify if:
+            # 1) status is absent/leave
+            # 2) notification not already sent today
+            # 3) this is a real status change (new absent/leave, or updated to absent/leave)
+            should_notify = (
+                new_status in ('absent', 'leave') and
+                not was_notified and
+                old_status != new_status
+            )
+            # Also notify first time marking (no previous record)
+            if new_status in ('absent', 'leave') and old_status is None and not was_notified:
+                should_notify = True
+
+            if should_notify:
                 student = db.session.get(Student, sid)
                 if student and student.parents:
                     student_user = db.session.get(User, student.user_id)
                     student_name = student_user.full_name if student_user else f"Roll {student.roll_no}"
                     for parent in student.parents:
                         parent_user = db.session.get(User, parent.user_id)
-                        if parent_user and parent_user.email:
-                            try:
-                                send_attendance_notification(
-                                    mail, parent_user.email, parent_user.full_name,
-                                    student_name, att_date, status, class_name
-                                )
-                                notify_count += 1
-                            except Exception:
-                                pass
+                        if parent_user:
+                            # In-app notification for parent portal
+                            status_label = 'Absent' if new_status == 'absent' else 'On Leave'
+                            reason_text = f" (Reason: {leave_reason})" if leave_reason else ""
+                            notif_msg = (
+                                f"{student_name} was marked {status_label} on "
+                                f"{att_date.strftime('%d %B %Y')}"
+                                f" in {class_name}{reason_text}."
+                            )
+                            notif = Notification(
+                                user_id=parent_user.id,
+                                title=f"Attendance Alert — {student_name}",
+                                message=notif_msg,
+                                notif_type='warning',
+                                link=url_for('parent.dashboard')
+                            )
+                            db.session.add(notif)
+
+                            # Email notification
+                            if parent_user.email:
+                                try:
+                                    send_attendance_notification(
+                                        mail, parent_user.email, parent_user.full_name,
+                                        student_name, att_date, new_status,
+                                        class_name, leave_reason
+                                    )
+                                    notify_count += 1
+                                except Exception:
+                                    pass
+
+                existing_rec.notif_sent = True
 
         db.session.commit()
-        msg = f'Attendance saved for {saved} students!'
+        msg = f'Attendance saved for {saved} students.'
         if notify_count:
-            msg += f' {notify_count} parent notification(s) sent.'
+            msg += f' {notify_count} parent(s) notified.'
         flash(msg, 'success')
-        return redirect(url_for('teacher.attendance', class_id=class_id, date=att_date.isoformat()))
+        return redirect(url_for('teacher.attendance', class_id=class_id,
+                                date=att_date.isoformat(), view=view_mode))
 
     return render_template('teacher/attendance.html',
         my_classes=my_classes,
         students=students,
         existing_attendance=existing_attendance,
         selected_class_id=selected_class_id,
-        selected_date=selected_date
+        selected_date=selected_date,
+        view_mode=view_mode,
+        history_records=history_records,
+        today=date.today().isoformat()
     )
 
 # ------------------------------------------------------------
@@ -452,8 +515,8 @@ def add_assignment():
                         mail, parent_user.email, parent_user.full_name,
                         student_user.full_name if student_user else student.roll_no,
                         asgn.title,
-                        subject.name if subject else 'N/A',
-                        due_date,
+                        subject.name if subject else 'General',
+                        asgn.due_date,
                         cls.full_name if cls else ''
                     )
                     notify_count += 1
@@ -464,72 +527,66 @@ def add_assignment():
     return redirect(url_for('teacher.assignments'))
 
 
-@teacher_bp.route('/assignments/<int:aid>/delete', methods=['POST'])
-@login_required
-@teacher_required
-def delete_assignment(aid):
-    a = Assignment.query.get_or_404(aid)
-    db.session.delete(a)
-    db.session.commit()
-    flash('Assignment deleted.', 'success')
-    return redire
-
-# ------------------------------------------------------------
-
-@teacher_bp.route('/leave-requests', methods=['GET', 'POST'])
-@login_required
-@teacher_required
-def leave_requests():
-    if request.method == 'POST':
-        from_date = datetime.strptime(request.form['from_date'], '%Y-%m-%d').date()
-        to_date = datetime.strptime(request.form['to_date'], '%Y-%m-%d').date()
-        if to_date < from_date:
-            flash('End date cannot be before start date.', 'danger')
-            return redirect(url_for('teacher.leave_requests'))
-        lr = LeaveRequest(
-            user_id=current_user.id,
-            leave_type=request.form.get('leave_type', 'sick'),
-            from_date=from_date,
-            to_date=to_date,
-            reason=request.form.get('reason', '').strip()
-        )
-        db.session.add(lr)
-        db.session.commit()
-        flash('Leave request submitted.', 'success')
-        return redirect(url_for('teacher.leave_requests'))
-
-    my_requests = (LeaveRequest.query
-                   .filter_by(user_id=current_user.id)
-                   .order_by(LeaveRequest.created_at.desc()).all())
-    return render_template('teacher/leave_requests.html', my_requests=my_requests)
-
-
 # ------------------------------------------------------------
 
 @teacher_bp.route('/events')
 @login_required
 @teacher_required
 def events():
-    upcoming = (Event.query
-                .filter(Event.event_date >= date.today(), Event.is_active == True,
-                        Event.target_role.in_(['all', 'teacher']))
-                .order_by(Event.event_date.asc()).all())
-    past = (Event.query
-            .filter(Event.event_date < date.today(), Event.is_active == True,
-                    Event.target_role.in_(['all', 'teacher']))
-            .order_by(Event.event_date.desc()).limit(20).all())
+    upcoming = Event.query.filter(
+        Event.event_date >= date.today(),
+        Event.is_active == True,
+        Event.target_role.in_(['all', 'teacher'])
+    ).order_by(Event.event_date.asc()).all()
+    past = Event.query.filter(
+        Event.event_date < date.today(),
+        Event.is_active == True,
+        Event.target_role.in_(['all', 'teacher'])
+    ).order_by(Event.event_date.desc()).limit(20).all()
     return render_template('teacher/events.html', upcoming=upcoming, past=past)
 
 
-# ------------------------------------------------------------
+@teacher_bp.route('/leave-requests')
+@login_required
+@teacher_required
+def leave_requests():
+    my_requests = LeaveRequest.query.filter_by(user_id=current_user.id)\
+        .order_by(LeaveRequest.created_at.desc()).all()
+    return render_template('teacher/leave_requests.html', leave_requests=my_requests)
+
+
+@teacher_bp.route('/leave-requests/add', methods=['POST'])
+@login_required
+@teacher_required
+def add_leave_request():
+    leave_type = request.form.get('leave_type', 'sick')
+    from_date_str = request.form.get('from_date')
+    to_date_str = request.form.get('to_date')
+    reason = request.form.get('reason', '').strip()
+    if not from_date_str or not to_date_str or not reason:
+        flash('Please fill all fields.', 'danger')
+        return redirect(url_for('teacher.leave_requests'))
+    lr = LeaveRequest(
+        user_id=current_user.id,
+        leave_type=leave_type,
+        from_date=datetime.strptime(from_date_str, '%Y-%m-%d').date(),
+        to_date=datetime.strptime(to_date_str, '%Y-%m-%d').date(),
+        reason=reason,
+        status='pending'
+    )
+    db.session.add(lr)
+    db.session.commit()
+    flash('Leave request submitted.', 'success')
+    return redirect(url_for('teacher.leave_requests'))
+
 
 @teacher_bp.route('/notifications')
 @login_required
 @teacher_required
 def notifications():
-    notifs = (Notification.query
-              .filter_by(user_id=current_user.id)
-              .order_by(Notification.created_at.desc()).limit(50).all())
-    Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
+    notifs = Notification.query.filter_by(user_id=current_user.id)\
+        .order_by(Notification.created_at.desc()).limit(50).all()
+    Notification.query.filter_by(user_id=current_user.id, is_read=False)\
+        .update({'is_read': True})
     db.session.commit()
     return render_template('teacher/notifications.html', notifs=notifs)
