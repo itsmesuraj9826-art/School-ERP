@@ -1,4 +1,4 @@
-// Martyrs' Memorial College ERP — Main JS
+// Martyrs' Memorial Martyrs Memorial +2 — Main JS
 
 document.addEventListener('DOMContentLoaded', function () {
 

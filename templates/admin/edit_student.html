@@ -1,270 +1,150 @@
 {% extends 'base.html' %}
-
 {% block title %}Edit Student - {{ user.full_name }}{% endblock %}
 {% block page_title %}Edit Student{% endblock %}
 
 {% block content %}
 <div class="dashboard-content">
-    <div class="page-header-row mb-4">
+    <div class="page-header-row mb-3">
         <div>
             <h5 class="page-sub-title">Edit Student</h5>
-            <p class="text-muted">Update student information and profile</p>
+            <p class="text-muted mb-0">Update student information and profile</p>
         </div>
-        <div>
+        <div class="d-flex gap-2">
             <a href="{{ url_for('admin.view_student', sid=student.id) }}" class="btn btn-secondary btn-action">
-                View Profile
+                <i class="fas fa-eye me-1"></i>View Profile
             </a>
             <a href="{{ url_for('admin.students') }}" class="btn btn-outline-secondary btn-action">
-                Back to List
+                <i class="fas fa-arrow-left me-1"></i>Back
             </a>
         </div>
     </div>
 
     <div class="info-card">
-        <form method="POST">
-            <!-- Personal Information -->
-            <h6>Personal Information</h6>
-            <hr>
+        <form method="POST" enctype="multipart/form-data">
 
-            <div>
-                <label>Full Name *</label>
-                <input type="text" name="full_name" class="form-control" value="{{ user.full_name }}" required>
+            <!-- Profile Photo -->
+            <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
+                {% if student.profile_image and student.profile_image != 'default.png' %}
+                <img src="{{ url_for('static', filename=student.profile_image) }}" alt="Photo"
+                     style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid #e3e8f7;flex-shrink:0;">
+                {% else %}
+                <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#0D47A1,#1565C0);display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:700;flex-shrink:0;">
+                    {{ user.full_name[0]|upper }}
+                </div>
+                {% endif %}
+                <div class="flex-grow-1">
+                    <label class="form-label fw-600 mb-1">Profile Photo</label>
+                    <input type="file" name="profile_image" class="form-control form-control-sm" accept="image/*">
+                    <small class="text-muted">JPG or PNG, max 2MB</small>
+                </div>
             </div>
 
-            <div>
-                <label>Email *</label>
-                <input type="email" name="email" class="form-control" value="{{ user.email }}" required>
-            </div>
-
-            <div>
-                <label>Phone</label>
-                <input type="text" name="phone" class="form-control" value="{{ user.phone }}">
-            </div>
-
-            <div>
-                <label>Roll Number *</label>
-                <input type="text" name="roll_no" class="form-control" value="{{ student.roll_no }}" required>
-            </div>
-
-            <div>
-                <label>Class</label>
-                <select name="class_id" class="form-control">
-                    <option value="">-- Select Class --</option>
-                    {% for cls in classes %}
-                    <option value="{{ cls.id }}" {% if student.class_id == cls.id %}selected{% endif %}>
-                        {{ cls.name }}-{{ cls.section }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div>
-                <label>Gender</label>
-                <select name="gender" class="form-control">
-                    <option value="">-- Select Gender --</option>
-                    <option value="male" {% if student.gender == 'male' %}selected{% endif %}>Male</option>
-                    <option value="female" {% if student.gender == 'female' %}selected{% endif %}>Female</option>
-                    <option value="other" {% if student.gender == 'other' %}selected{% endif %}>Other</option>
-                </select>
-            </div>
-
-            <div>
-                <label>Date of Birth</label>
-                <input type="date" name="date_of_birth" class="form-control" value="{{ student.date_of_birth }}">
-            </div>
-
-            <div>
-                <label>Blood Group</label>
-                <select name="blood_group" class="form-control">
-                    <option value="">-- Select Blood Group --</option>
-                    <option value="A+" {% if student.blood_group == 'A+' %}selected{% endif %}>A+</option>
-                    <option value="A-" {% if student.blood_group == 'A-' %}selected{% endif %}>A-</option>
-                    <option value="B+" {% if student.blood_group == 'B+' %}selected{% endif %}>B+</option>
-                    <option value="B-" {% if student.blood_group == 'B-' %}selected{% endif %}>B-</option>
-                    <option value="O+" {% if student.blood_group == 'O+' %}selected{% endif %}>O+</option>
-                    <option value="O-" {% if student.blood_group == 'O-' %}selected{% endif %}>O-</option>
-                    <option value="AB+" {% if student.blood_group == 'AB+' %}selected{% endif %}>AB+</option>
-                    <option value="AB-" {% if student.blood_group == 'AB-' %}selected{% endif %}>AB-</option>
-                </select>
-            </div>
-
-            <div>
-                <label>Address</label>
-                <textarea name="address" class="form-control" rows="3">{{ student.address }}</textarea>
+            <!-- Personal Information — 2-column grid -->
+            <h6 class="section-title mb-3">Personal Information</h6>
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-600">Full Name *</label>
+                    <input type="text" name="full_name" class="form-control" value="{{ user.full_name }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-600">Email *</label>
+                    <input type="email" name="email" class="form-control" value="{{ user.email }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-600">Phone</label>
+                    <input type="text" name="phone" class="form-control" value="{{ user.phone or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-600">Roll Number *</label>
+                    <input type="text" name="roll_no" class="form-control" value="{{ student.roll_no }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-600">Class</label>
+                    <select name="class_id" class="form-control">
+                        <option value="">-- Select Class --</option>
+                        {% for cls in classes %}
+                        <option value="{{ cls.id }}" {% if student.class_id == cls.id %}selected{% endif %}>
+                            {{ cls.name }}-{{ cls.section }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-600">Gender</label>
+                    <select name="gender" class="form-control">
+                        <option value="">-- Select --</option>
+                        <option value="male"   {% if student.gender == 'male'   %}selected{% endif %}>Male</option>
+                        <option value="female" {% if student.gender == 'female' %}selected{% endif %}>Female</option>
+                        <option value="other"  {% if student.gender == 'other'  %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-600">Date of Birth</label>
+                    <input type="date" name="date_of_birth" class="form-control" value="{{ student.date_of_birth or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-600">Blood Group</label>
+                    <select name="blood_group" class="form-control">
+                        <option value="">-- Select --</option>
+                        {% for bg in ['A+','A-','B+','B-','O+','O-','AB+','AB-'] %}
+                        <option value="{{ bg }}" {% if student.blood_group == bg %}selected{% endif %}>{{ bg }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-600">Address</label>
+                    <textarea name="address" class="form-control" rows="2">{{ student.address or '' }}</textarea>
+                </div>
             </div>
 
             <!-- Guardian Information -->
-            <h6>Guardian Information</h6>
-            <hr>
-
-            <div>
-                <label>Guardian Name</label>
-                <input type="text" name="guardian_name" class="form-control" value="{{ student.guardian_name }}">
-            </div>
-
-            <div>
-                <label>Guardian Phone</label>
-                <input type="text" name="guardian_phone" class="form-control" value="{{ student.guardian_phone }}">
+            <h6 class="section-title mb-3 mt-2">Guardian Information</h6>
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-600">Guardian Name</label>
+                    <input type="text" name="guardian_name" class="form-control" value="{{ student.guardian_name or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-600">Guardian Phone</label>
+                    <input type="text" name="guardian_phone" class="form-control" value="{{ student.guardian_phone or '' }}">
+                </div>
             </div>
 
             <!-- Status -->
-            <h6>Status and Settings</h6>
-            <hr>
-
-            <div>
-                <label>Student Status</label>
-                <select name="status" class="form-control">
-                    <option value="active" {% if student.status == 'active' %}selected{% endif %}>Active</option>
-                    <option value="inactive" {% if student.status == 'inactive' %}selected{% endif %}>Inactive</option>
-                    <option value="graduated" {% if student.status == 'graduated' %}selected{% endif %}>Graduated</option>
-                    <option value="transferred" {% if student.status == 'transferred' %}selected{% endif %}>Transferred</option>
-                </select>
+            <h6 class="section-title mb-3 mt-2">Status &amp; Account</h6>
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-600">Student Status</label>
+                    <select name="status" class="form-control">
+                        <option value="active"      {% if student.status == 'active'      %}selected{% endif %}>Active</option>
+                        <option value="inactive"    {% if student.status == 'inactive'    %}selected{% endif %}>Inactive</option>
+                        <option value="graduated"   {% if student.status == 'graduated'   %}selected{% endif %}>Graduated</option>
+                        <option value="transferred" {% if student.status == 'transferred' %}selected{% endif %}>Transferred</option>
+                    </select>
+                </div>
+                <div class="col-md-6 d-flex align-items-end pb-1">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="is_active" id="isActive"
+                               {% if user.is_active %}checked{% endif %}>
+                        <label class="form-check-label fw-600" for="isActive">User Account Active (Allow login)</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-600">New Password <small class="text-muted fw-400">(leave blank to keep)</small></label>
+                    <input type="password" name="new_password" class="form-control" placeholder="Reset password…">
+                </div>
             </div>
 
-            <div>
-                <label>
-                    <input type="checkbox" name="is_active" {% if user.is_active %}checked{% endif %}>
-                    User Account Active (Allow login)
-                </label>
+            <!-- Actions -->
+            <div class="d-flex gap-2 pt-3 border-top">
+                <button type="submit" class="btn btn-primary btn-action">
+                    <i class="fas fa-save me-1"></i>Update Student
+                </button>
+                <a href="{{ url_for('admin.view_student', sid=student.id) }}" class="btn btn-secondary btn-action">Cancel</a>
+                <button type="reset" class="btn btn-outline-secondary btn-action">Reset Form</button>
             </div>
 
-            <!-- Password Reset -->
-            <h6>Password Reset (Optional)</h6>
-            <hr>
-
-            <div class="alert alert-info">
-                Leave blank to keep current password. Only fill if you want to reset the password.
-            </div>
-
-            <div>
-                <label>New Password</label>
-                <input type="password" name="new_password" class="form-control" placeholder="Enter new password">
-            </div>
-
-            <!-- Form Actions -->
-            <div>
-                <hr>
-                <button type="submit" class="btn btn-primary">Update Student</button>
-                <a href="{{ url_for('admin.view_student', sid=student.id) }}" class="btn btn-secondary">Cancel</a>
-                <button type="reset" class="btn btn-outline-secondary">Reset Form</button>
-            </div>
         </form>
     </div>
 </div>
-
-<style>
-.dashboard-content {
-    padding: 20px;
-}
-
-.page-header-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.page-sub-title {
-    font-size: 20px;
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-
-.text-muted {
-    color: #6c757d;
-    font-size: 14px;
-}
-
-.mb-4 {
-    margin-bottom: 20px;
-}
-
-.btn {
-    display: inline-block;
-    padding: 8px 16px;
-    text-decoration: none;
-    border-radius: 4px;
-    margin-left: 8px;
-    cursor: pointer;
-}
-
-.btn-secondary {
-    background: #6c757d;
-    color: white;
-    border: none;
-}
-
-.btn-outline-secondary {
-    background: transparent;
-    border: 1px solid #6c757d;
-    color: #6c757d;
-}
-
-.btn-primary {
-    background: #0D47A1;
-    color: white;
-    border: none;
-}
-
-.info-card {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    border: 1px solid #ddd;
-}
-
-.form-control {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    margin-bottom: 15px;
-    box-sizing: border-box;
-}
-
-label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 600;
-}
-
-h6 {
-    font-size: 16px;
-    font-weight: bold;
-    margin-top: 20px;
-    margin-bottom: 10px;
-}
-
-hr {
-    margin: 15px 0;
-    border: 0;
-    border-top: 1px solid #eee;
-}
-
-.alert-info {
-    background: #d1ecf1;
-    border: 1px solid #bee5eb;
-    color: #0c5460;
-    padding: 12px;
-    border-radius: 4px;
-    margin-bottom: 15px;
-}
-
-textarea.form-control {
-    resize: vertical;
-}
-
-@media (max-width: 768px) {
-    .page-header-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-
-    .btn {
-        margin-left: 0;
-        margin-right: 8px;
-    }
-}
-</style>
 {% endblock %}

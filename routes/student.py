@@ -422,7 +422,7 @@ def report_card():
                            avg_gpa=avg_gpa, now=_dt.now())
 
 
-# ── LEAVE REQUESTS ────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @student_bp.route('/leave-requests', methods=['GET', 'POST'])
 @login_required
@@ -452,7 +452,7 @@ def leave_requests():
     return render_template('student/leave_requests.html', my_requests=my_requests)
 
 
-# ── EVENTS ────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @student_bp.route('/events')
 @login_required
@@ -469,7 +469,7 @@ def events():
     return render_template('student/events.html', upcoming=upcoming, past=past)
 
 
-# ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @student_bp.route('/notifications')
 @login_required

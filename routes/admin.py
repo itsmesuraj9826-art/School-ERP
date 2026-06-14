@@ -62,7 +62,7 @@ def create_user_and_get_credentials(role, full_name, email, phone, identifier):
 
     user = User(
         username=username,
-        email=email,
+        email=email if email else None,
         full_name=full_name.strip(),
         phone=phone,
         role=role
@@ -285,6 +285,15 @@ def edit_student(sid):
 
             if request.form.get('date_of_birth'):
                 student.date_of_birth = parse_date(request.form['date_of_birth'])
+
+            # Handle profile photo upload
+            if 'profile_image' in request.files and request.files['profile_image'].filename:
+                from utils.file_helpers import save_student_file, delete_student_file
+                if student.profile_image and student.profile_image != 'default.png':
+                    delete_student_file(student.profile_image)
+                saved = save_student_file(request.files['profile_image'], sid, 'profile')
+                if saved:
+                    student.profile_image = saved
 
             # Optional password reset
             new_password = request.form.get('new_password', '').strip()
@@ -524,6 +533,9 @@ def delete_teacher(tid):
 @login_required
 @admin_required
 def parents():
+    from flask import session as _session
+    new_creds = _session.pop('new_parent_creds', None)
+
     parents_data = (db.session.query(Parent, User, Student)
                     .join(User, Parent.user_id == User.id)
                     .outerjoin(Student, Parent.student_id == Student.id)
@@ -534,7 +546,8 @@ def parents():
                 .filter(Student.status == 'active')
                 .order_by(User.full_name).all())
 
-    return render_template('admin/parents.html', parents_data=parents_data, students=students)
+    return render_template('admin/parents.html', parents_data=parents_data,
+                           students=students, new_creds=new_creds)
 
 
 @admin_bp.route('/parents/<int:pid>')
@@ -557,8 +570,13 @@ def view_parent(pid):
 def add_parent():
     if request.method == 'POST':
         full_name = request.form['full_name'].strip()
-        email = request.form['email'].strip()
+        email = (request.form.get('email') or '').strip() or None
         student_id = request.form.get('student_id') or None
+
+        # If email already belongs to another user, drop it to avoid unique-key error
+        if email and User.query.filter_by(email=email).first():
+            flash(f'Email {email} is already in use by another account — parent will be created without email.', 'warning')
+            email = None
 
         # Generate identifier for username
         identifier = 'par'
@@ -593,9 +611,40 @@ def add_parent():
                 if student_user:
                     extra_info = f"Linked to student: {student_user.full_name} (Roll No: {student.roll_no})"
 
-        # Send credentials
-        send_credentials_or_fallback(email, full_name, 'parent', user.username, password, extra_info)
-        flash(f'Parent {full_name} added successfully!', 'success')
+        # Send credentials via email (optional)
+        if email:
+            send_credentials_or_fallback(email, full_name, 'parent', user.username, password, extra_info)
+
+        # Build WhatsApp wa.me link so admin can send with one tap
+        parent_phone = request.form.get('phone', '').strip()
+        wa_link = None
+        if parent_phone:
+            digits = ''.join(c for c in parent_phone if c.isdigit())
+            if not digits.startswith('977'):
+                digits = '977' + digits.lstrip('0')
+            school = 'Martyrs Memorial +2 College'
+            wa_text = (
+                f"Hello {full_name}!\n\n"
+                f"Welcome to {school} Parent Portal.\n\n"
+                f"Your login credentials:\n"
+                f"Username: {user.username}\n"
+                f"Password: {password}\n\n"
+                f"{extra_info}\n\n"
+                f"Please keep these safe."
+            )
+            import urllib.parse
+            wa_link = 'https://wa.me/' + digits + '?text=' + urllib.parse.quote(wa_text)
+
+        # Store one-time credentials in session for the redirect page to show
+        from flask import session as _session
+        _session['new_parent_creds'] = {
+            'name': full_name,
+            'username': user.username,
+            'password': password,
+            'phone': parent_phone,
+            'wa_link': wa_link,
+        }
+        flash('Parent ' + full_name + ' created! See credentials below.', 'success')
         return redirect(url_for('admin.parents'))
 
     students = (db.session.query(Student, User)
@@ -1543,7 +1592,7 @@ def student_report_card(sid):
                            avg_gpa=avg_gpa, now=_dt.now())
 
 
-# ── LEAVE REQUESTS ────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @admin_bp.route('/leave-requests')
 @login_required
@@ -1613,7 +1662,7 @@ def reject_leave(lid):
     return redirect(url_for('admin.leave_requests'))
 
 
-# ── EVENTS ────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @admin_bp.route('/events')
 @login_required
@@ -1640,8 +1689,7 @@ def add_event():
         title=title,
         description=request.form.get('description', ''),
         event_date=datetime.strptime(request.form['event_date'], '%Y-%m-%d').date(),
-        end_date=datetime.strptime(request.form['end_date'], '%Y-%m-%d').date()
-                if request.form.get('end_date') else None,
+        end_date=datetime.strptime(request.form['end_date'], '%Y-%m-%d').date() if request.form.get('end_date') else None,
         event_type=request.form.get('event_type', 'general'),
         target_role=request.form.get('target_role', 'all'),
         location=request.form.get('location', ''),
@@ -1657,15 +1705,14 @@ def add_event():
 @login_required
 @admin_required
 def delete_event(eid):
-    ev = db.session.get(Event, eid)
-    if ev:
-        ev.is_active = False
-        db.session.commit()
-    flash('Event removed.', 'info')
+    ev = db.get_or_404(Event, eid)
+    ev.is_active = False
+    db.session.commit()
+    flash('Event removed.', 'success')
     return redirect(url_for('admin.events'))
 
 
-# ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @admin_bp.route('/notifications')
 @login_required
@@ -1674,7 +1721,6 @@ def notifications():
     notifs = (Notification.query
               .filter_by(user_id=current_user.id)
               .order_by(Notification.created_at.desc()).limit(50).all())
-    # mark all read
     Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
     db.session.commit()
     return render_template('admin/notifications.html', notifs=notifs)
@@ -1682,6 +1728,8 @@ def notifications():
 
 @admin_bp.route('/notifications/count')
 @login_required
+@admin_required
 def notif_count():
+    from flask import jsonify
     count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
     return jsonify({'count': count})

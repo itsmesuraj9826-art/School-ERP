@@ -69,7 +69,14 @@
                         <td>{{ loop.index + (students_data.page - 1) * students_data.per_page }}</td>
                         <td>
                             <div class="student-cell">
+                                {% if student.profile_image and student.profile_image != 'default.png' %}
+                                <img src="{{ url_for('static', filename=student.profile_image) }}"
+                                     style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;"
+                                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                <div class="student-avatar" style="display:none;">{{ user.full_name[0]|upper }}</div>
+                                {% else %}
                                 <div class="student-avatar">{{ user.full_name[0]|upper }}</div>
+                                {% endif %}
                                 <div>
                                     <div class="fw-600">{{ user.full_name }}</div>
                                     <small class="text-muted">{{ user.email }}</small>

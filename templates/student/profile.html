@@ -16,9 +16,19 @@
             <!-- Profile Card -->
             <div class="info-card mb-4">
                 <div class="text-center py-3">
+                    {% if student.profile_image and student.profile_image != 'default.png' %}
+                    <img src="{{ url_for('static', filename=student.profile_image) }}"
+                         alt="{{ user.full_name }}"
+                         style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:3px solid #e3e8f7;margin:0 auto;display:block;"
+                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                    <div class="student-avatar-lg mx-auto" style="display:none;">
+                        {{ user.full_name[0]|upper }}
+                    </div>
+                    {% else %}
                     <div class="student-avatar-lg mx-auto">
                         {{ user.full_name[0]|upper }}
                     </div>
+                    {% endif %}
                     <h4 class="mt-3">{{ user.full_name }}</h4>
                     <p class="text-muted">{{ user.email }}</p>
                     <span class="badge {% if student.status == 'active' %}bg-success{% else %}bg-secondary{% endif %}">

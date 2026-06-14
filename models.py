@@ -10,7 +10,7 @@ class User(db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=True)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False)
     full_name = db.Column(db.String(150), nullable=False)
@@ -87,6 +87,7 @@ class Student(db.Model):
     blood_group = db.Column(db.String(5))
     academic_year = db.Column(db.String(20), default='2081-2082')
     status = db.Column(db.String(20), default='active')
+    profile_image = db.Column(db.String(255), default='default.png')
 
     attendances = db.relationship('Attendance', backref='student', lazy=True)
     results = db.relationship('Result', backref='student', lazy=True)
@@ -369,8 +370,8 @@ class Event(db.Model):
     author = db.relationship('User', foreign_keys=[created_by])
 
 
+
 class Notification(db.Model):
-    """In-app bell notifications for users."""
     __tablename__ = 'notifications'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -380,5 +381,4 @@ class Notification(db.Model):
     link = db.Column(db.String(300))
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
     user = db.relationship('User', foreign_keys=[user_id], backref='notifications')

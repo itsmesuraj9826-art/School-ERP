@@ -50,6 +50,12 @@ class Config:
         os.environ.get('MAIL_USERNAME', 'noreply@martyrsmemorial.edu.np')
     )
 
+    # ── WhatsApp (Twilio) ─────────────────────────────────────────────────────
+    TWILIO_ACCOUNT_SID    = os.environ.get('TWILIO_ACCOUNT_SID', '')
+    TWILIO_AUTH_TOKEN     = os.environ.get('TWILIO_AUTH_TOKEN', '')
+    TWILIO_WHATSAPP_FROM  = os.environ.get('TWILIO_WHATSAPP_FROM', '+14155238886')  # sandbox default
+    SCHOOL_URL            = os.environ.get('SCHOOL_URL', '')
+
     # ── School info ───────────────────────────────────────────────────────────
     ACADEMIC_YEAR   = '2024-2025'
     SCHOOL_NAME     = "Martyrs' Memorial College"

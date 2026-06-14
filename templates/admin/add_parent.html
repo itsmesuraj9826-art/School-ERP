@@ -24,8 +24,9 @@
                     <input type="text" name="full_name" class="form-control" required placeholder="Parent's full name">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Email Address *</label>
-                    <input type="email" name="email" class="form-control" required placeholder="parent@email.com">
+                    <label class="form-label">Email Address <small class="text-muted">(optional)</small></label>
+                    <input type="email" name="email" class="form-control" placeholder="parent@email.com">
+                    <small class="text-muted">If provided, login credentials will be emailed automatically.</small>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Phone Number</label>
@@ -67,7 +68,17 @@
                     <input type="number" name="annual_income" class="form-control" placeholder="e.g. 500000">
                 </div>
 
-                <div class="col-12 d-flex gap-3 mt-2">
+                
+                <div class="col-12">
+                    <div class="alert alert-info py-2 mb-0" style="font-size:.88rem;">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <strong>Parent Login Format:</strong> Username will be
+                        <code>p.{student_roll_no}.{first_name}@tbc.edu.np</code> &mdash;
+                        e.g. <code>p.10001.ram@tbc.edu.np</code>. The password will be shown on screen after saving.
+                        Share both with the parent so they can log in without email.
+                    </div>
+                </div>
+<div class="col-12 d-flex gap-3 mt-2">
                     <button type="submit" class="btn btn-primary btn-action">
                         <i class="fas fa-user-plus me-2"></i>Create Parent Account
                     </button>

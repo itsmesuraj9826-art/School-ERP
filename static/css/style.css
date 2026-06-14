@@ -1,3 +1,6 @@
+/* Prevent transition flash on load */
+.preload, .preload * { transition: none !important; }
+
 /* =========================================
    MARTYRS' MEMORIAL COLLEGE ERP — STYLES
    Color Palette: Primary #0D47A1, Accent #E53935
@@ -151,7 +154,17 @@ body {
   border-radius: var(--radius-sm);
 }
 
-.user-avatar-sm { color: rgba(255,255,255,0.8); }
+.user-avatar-sm {
+  color: rgba(255,255,255,0.8);
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 .user-info-sm {
   display: flex;
@@ -1350,11 +1363,9 @@ body {
 
 .login-left {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
   display: none;
+  position: relative;
+  overflow: hidden;
 }
 
 .school-branding { text-align: center; color: white; max-width: 440px; }
@@ -1663,7 +1674,7 @@ body {
    ============================ */
 
 @media (min-width: 1024px) {
-  .login-left { display: flex; }
+  .login-left { display: block; }
   .login-right { max-width: 460px; }
   .menu-toggle { display: none; }
 }

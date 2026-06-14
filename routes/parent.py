@@ -135,7 +135,7 @@ def mark_message_read(mid):
         db.session.commit()
     return redirect(url_for('parent.messages'))
 
-# ── LEAVE REQUESTS ────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @parent_bp.route('/leave-requests')
 @login_required
@@ -152,7 +152,7 @@ def leave_requests():
     return render_template('parent/leave_requests.html', child_requests=child_requests)
 
 
-# ── EVENTS ────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @parent_bp.route('/events')
 @login_required
@@ -169,7 +169,7 @@ def events():
     return render_template('parent/events.html', upcoming=upcoming, past=past)
 
 
-# ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @parent_bp.route('/notifications')
 @login_required

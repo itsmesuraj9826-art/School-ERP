@@ -39,7 +39,14 @@
                         <td>{{ loop.index }}</div>
                         <td>
                             <div class="d-flex align-items-center gap-2">
+                                {% if teacher.profile_image and teacher.profile_image != 'default_teacher.png' %}
+                                <img src="{{ url_for('static', filename=teacher.profile_image) }}"
+                                     style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;"
+                                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                <div class="teacher-avatar-sm" style="display:none;">{{ user.full_name[0] }}</div>
+                                {% else %}
                                 <div class="teacher-avatar-sm">{{ user.full_name[0] }}</div>
+                                {% endif %}
                                 <div>
                                     <div class="fw-semibold">{{ user.full_name }}</div>
                                     <small class="text-muted">{{ user.email }}</small>

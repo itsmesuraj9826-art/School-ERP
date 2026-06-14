@@ -41,3 +41,27 @@ def delete_teacher_file(filepath):
         full_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filepath)
         if os.path.exists(full_path):
             os.remove(full_path)
+
+def save_student_file(file, student_id, file_type='profile'):
+    """Save a file for a student"""
+    if not file or file.filename == '':
+        return None
+    if not allowed_file(file.filename):
+        return None
+    # Always resolve from root_path so there is no double-uploads confusion
+    student_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'students', str(student_id))
+    os.makedirs(student_folder, exist_ok=True)
+    ext = file.filename.rsplit('.', 1)[1].lower()
+    import uuid
+    filename = f"{file_type}_{uuid.uuid4().hex[:12]}.{ext}"
+    filepath = os.path.join(student_folder, filename)
+    file.save(filepath)
+    return f"uploads/students/{student_id}/{filename}"
+
+
+def delete_student_file(filepath):
+    """Delete a student file"""
+    if filepath and filepath != 'default.png':
+        full_path = os.path.join(current_app.root_path, 'static', filepath)
+        if os.path.exists(full_path):
+            os.remove(full_path)

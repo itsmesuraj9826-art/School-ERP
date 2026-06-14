@@ -1,8 +1,73 @@
 import random
 import string
+import requests as _requests
 from datetime import date as _date
 from flask import current_app
 from flask_mail import Message
+
+
+def _nepal_phone(phone):
+    """Normalise a Nepal phone number to E.164 (+977XXXXXXXXXX)."""
+    phone = ''.join(c for c in (phone or '') if c.isdigit() or c == '+')
+    if phone.startswith('+977'):
+        return phone
+    if phone.startswith('977'):
+        return '+' + phone
+    if phone.startswith('0'):
+        phone = phone[1:]
+    return '+977' + phone
+
+
+def send_whatsapp_credentials(phone, full_name, username, password, student_name=''):
+    """
+    Send login credentials to a parent via WhatsApp using Twilio.
+    Requires in .env:
+        TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxx
+        TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxx
+        TWILIO_WHATSAPP_FROM=+14155238886   (Twilio sandbox number or your approved number)
+    """
+    try:
+        sid   = current_app.config.get('TWILIO_ACCOUNT_SID', '')
+        token = current_app.config.get('TWILIO_AUTH_TOKEN', '')
+        from_ = current_app.config.get('TWILIO_WHATSAPP_FROM', '')
+        if not (sid and token and from_ and phone):
+            return False
+
+        to_number = _nepal_phone(phone)
+        school = current_app.config.get('SCHOOL_NAME', "Martyrs' Memorial +2 College")
+        portal_url = current_app.config.get('SCHOOL_URL', '')
+
+        body = (
+            f"Hello {full_name}! 👋\n\n"
+            f"Welcome to *{school}* Parent Portal.\n\n"
+            f"Your login credentials:\n"
+            f"🔑 *Username:* {username}\n"
+            f"🔒 *Password:* {password}\n"
+        )
+        if student_name:
+            body += f"👤 *Student:* {student_name}\n"
+        if portal_url:
+            body += f"\n🌐 Login at: {portal_url}\n"
+        body += "\nPlease keep these safe. Contact school admin if you need help."
+
+        resp = _requests.post(
+            f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json",
+            auth=(sid, token),
+            data={
+                'From': f'whatsapp:{from_}',
+                'To':   f'whatsapp:{to_number}',
+                'Body': body,
+            },
+            timeout=10
+        )
+        if resp.status_code in (200, 201):
+            current_app.logger.info(f"WhatsApp sent to {to_number}")
+            return True
+        current_app.logger.warning(f"WhatsApp failed ({resp.status_code}): {resp.text}")
+        return False
+    except Exception as e:
+        current_app.logger.error(f"WhatsApp error: {e}")
+        return False
 
 
 def generate_password(length=10):

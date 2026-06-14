@@ -6,7 +6,7 @@
 <div class="dashboard-content">
     <div class="welcome-banner">
         <div class="welcome-text">
-            <h4>Good day, {{ current_user.full_name.split()[0] }}! 👨‍🏫</h4>
+            <h4>{{ greeting }}, {{ current_user.full_name.split()[0] }}! 👨‍🏫</h4>
             <p>{{ teacher.department or 'Faculty' }} | {{ teacher.subject or 'Subject Teacher' }}</p>
         </div>
         <div class="welcome-date">

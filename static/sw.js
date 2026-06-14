@@ -1,4 +1,4 @@
-// Service Worker for Martyrs' Memorial College ERP
+// Service Worker for Martyrs' Memorial Martyrs Memorial +2
 const CACHE_NAME = 'mmc-erp-v1';
 const STATIC_ASSETS = [
   '/',

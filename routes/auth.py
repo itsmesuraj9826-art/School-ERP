@@ -23,10 +23,13 @@ def login():
         password = request.form.get('password', '').strip()
         remember = bool(request.form.get('remember', False))
 
+        role = request.form.get('role', '').strip()
         user = User.query.filter_by(username=username).first()
 
         if user is None or not user.check_password(password):
             flash('Invalid username or password. Please check your credentials and try again.', 'danger')
+        elif role and user.role != role:
+            flash(f'These credentials do not belong to a {role} account. Please select the correct role.', 'danger')
         elif not user.is_active:
             flash('Your account has been deactivated. Please contact the administrator.', 'warning')
         else:
@@ -47,3 +50,8 @@ def logout():
     logout_user()
     flash('You have been logged out successfully.', 'success')
     return redirect(url_for('auth.login'))
+
+
+@auth_bp.route('/parent-guide')
+def parent_guide():
+    return render_template('auth/parent_guide.html')

@@ -6,7 +6,7 @@
 <div class="dashboard-content">
     <div class="welcome-banner">
         <div class="welcome-text">
-            <h4>Welcome, {{ current_user.full_name.split()[0] }}! 🎓</h4>
+            <h4>{{ greeting }}, {{ current_user.full_name.split()[0] }}! 🎓</h4>
             <p>
                 Roll No: <strong>{{ student.roll_no }}</strong>
                 {% if student.class_ref %} | Class: <strong>{{ student.class_ref.full_name }}</strong>{% endif %}

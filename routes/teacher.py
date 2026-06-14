@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from functools import wraps
@@ -23,7 +24,7 @@ def teacher_required(f):
 def get_teacher():
     return Teacher.query.filter_by(user_id=current_user.id).first()
 
-# ── Dashboard ─────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @teacher_bp.route('/dashboard')
 @login_required
@@ -148,7 +149,7 @@ def settings():
     return render_template('teacher/settings.html', teacher=teacher, user=user)
 
 
-# ── Attendance ────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @teacher_bp.route('/attendance', methods=['GET', 'POST'])
 @login_required
@@ -240,7 +241,7 @@ def attendance():
         selected_date=selected_date
     )
 
-# ── My Students ───────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @teacher_bp.route('/students')
 @login_required
@@ -281,7 +282,7 @@ def students():
         search=search
     )
 
-# ── Timetable ─────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @teacher_bp.route('/timetable')
 @login_required
@@ -308,7 +309,7 @@ def timetable():
         teacher=teacher
     )
 
-# ── Marks Entry ───────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @teacher_bp.route('/marks')
 @login_required
@@ -386,7 +387,7 @@ def enter_marks(eid):
     return render_template('teacher/enter_marks.html',
         exam=exam, students_data=students_data, existing=existing)
 
-# ── Assignments ───────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @teacher_bp.route('/assignments')
 @login_required
@@ -409,7 +410,8 @@ def assignments():
     return render_template('teacher/assignments.html',
         assignments_data=assignments_data,
         my_classes=my_classes,
-        my_subjects=my_subjects
+        my_subjects=my_subjects,
+        today=date.today()
     )
 
 
@@ -472,7 +474,7 @@ def delete_assignment(aid):
     flash('Assignment deleted.', 'success')
     return redire
 
-# ── LEAVE REQUESTS ────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @teacher_bp.route('/leave-requests', methods=['GET', 'POST'])
 @login_required
@@ -502,7 +504,7 @@ def leave_requests():
     return render_template('teacher/leave_requests.html', my_requests=my_requests)
 
 
-# ── EVENTS ────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @teacher_bp.route('/events')
 @login_required
@@ -519,7 +521,7 @@ def events():
     return render_template('teacher/events.html', upcoming=upcoming, past=past)
 
 
-# ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+# ------------------------------------------------------------
 
 @teacher_bp.route('/notifications')
 @login_required

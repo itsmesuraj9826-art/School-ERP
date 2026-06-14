@@ -1,11 +1,11 @@
 {
-  "name": "Martyrs' Memorial College ERP",
-  "short_name": "MMC ERP",
-  "description": "School Management System for Martyrs' Memorial College, Biratnagar",
+  "name": "Martyrs Memorial +2 College",
+  "short_name": "MM+2",
+  "description": "ERP System for Martyrs Memorial Higher Secondary School, Biratnagar",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1a237e",
-  "theme_color": "#1a237e",
+  "background_color": "#CC2E2E",
+  "theme_color": "#CC2E2E",
   "orientation": "portrait-primary",
   "icons": [
     {

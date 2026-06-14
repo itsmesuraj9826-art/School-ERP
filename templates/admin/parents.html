@@ -4,6 +4,38 @@
 
 {% block content %}
 <div class="dashboard-content">
+
+    {% if new_creds %}
+    <div style="background:#f0fdf4;border:2px solid #22c55e;border-radius:14px;padding:20px 24px;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <div>
+                <div style="font-weight:700;font-size:15px;color:#15803d;margin-bottom:6px;">
+                    <i class="fas fa-check-circle me-2"></i>Parent account created — {{ new_creds.name }}
+                </div>
+                <div style="font-size:13px;color:#374151;">
+                    <span style="background:#fff;border:1px solid #d1fae5;border-radius:6px;padding:3px 10px;margin-right:8px;">
+                        <strong>Username:</strong> {{ new_creds.username }}
+                    </span>
+                    <span style="background:#fff;border:1px solid #d1fae5;border-radius:6px;padding:3px 10px;">
+                        <strong>Password:</strong> {{ new_creds.password }}
+                    </span>
+                </div>
+                <div style="font-size:12px;color:#6b7280;margin-top:6px;">
+                    <i class="fas fa-exclamation-triangle text-warning me-1"></i>
+                    Copy these credentials now — they won't be shown again.
+                </div>
+            </div>
+            {% if new_creds.wa_link %}
+            <a href="{{ new_creds.wa_link }}" target="_blank"
+               style="background:#25D366;color:#fff;border-radius:10px;padding:12px 20px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px;font-size:14px;white-space:nowrap;">
+                <i class="fab fa-whatsapp" style="font-size:18px;"></i>
+                Send via WhatsApp
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <div class="page-header-row">
         <div>
             <h5 class="page-sub-title">All Parents</h5>
