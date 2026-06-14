@@ -357,33 +357,28 @@
 {% endblock %}
 
 {% block extra_js %}
-var SEL_CLASSES = { present:'selected-present', absent:'selected-absent', late:'selected-late', leave:'selected-leave' };
+var SEL = { present:'selected-present', absent:'selected-absent', late:'selected-late', leave:'selected-leave' };
 
 function setStatus(id, status) {
-    // Update hidden field
     var hid = document.getElementById('hid-' + id);
     if (hid) hid.value = status;
 
-    // Update row background
     var row = document.getElementById('row-' + id);
     if (row) {
         row.className = 'att-row row-' + status;
-        // Update all 4 radio buttons in this row
         row.querySelectorAll('[data-status]').forEach(function(btn) {
-            Object.values(SEL_CLASSES).forEach(function(c) { btn.classList.remove(c); });
+            Object.values(SEL).forEach(function(c) { btn.classList.remove(c); });
             if (btn.getAttribute('data-status') === status) {
-                btn.classList.add(SEL_CLASSES[status]);
+                btn.classList.add(SEL[status]);
             }
         });
     }
 
-    // Show/hide reason box
     var wrap = document.getElementById('reason-wrap-' + id);
-    if (wrap) {
-        wrap.classList.toggle('open', status === 'absent' || status === 'leave');
-    }
-    updateSummary();
+    if (wrap) wrap.classList.toggle('open', status === 'absent' || status === 'leave');
 
+    updateSummary();
+}
 
 function markAll(status) {
     document.querySelectorAll('input[name="student_ids"]').forEach(function(inp) {
@@ -403,7 +398,7 @@ function updateSummary() {
     document.getElementById('leaveCount').textContent   = counts.leave;
 }
 
-// Init on page load — apply saved statuses visually
+// Init on load
 document.querySelectorAll('input[id^="hid-"]').forEach(function(h) {
     var id = h.id.replace('hid-', '');
     var status = h.value || 'present';
@@ -411,9 +406,9 @@ document.querySelectorAll('input[id^="hid-"]').forEach(function(h) {
     if (row) {
         row.className = 'att-row row-' + status;
         row.querySelectorAll('[data-status]').forEach(function(btn) {
-            Object.values(SEL_CLASSES).forEach(function(c) { btn.classList.remove(c); });
+            Object.values(SEL).forEach(function(c) { btn.classList.remove(c); });
             if (btn.getAttribute('data-status') === status) {
-                btn.classList.add(SEL_CLASSES[status]);
+                btn.classList.add(SEL[status]);
             }
         });
     }
@@ -421,7 +416,4 @@ document.querySelectorAll('input[id^="hid-"]').forEach(function(h) {
     if (wrap) wrap.classList.toggle('open', status === 'absent' || status === 'leave');
 });
 updateSummary();
-}
-
-
 {% endblock %}
