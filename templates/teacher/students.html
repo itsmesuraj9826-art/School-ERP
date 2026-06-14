@@ -9,42 +9,54 @@
             <h5 class="fw-bold mb-1">My Students</h5>
             <p class="text-muted small mb-0">Students across all your classes</p>
         </div>
-        <span class="badge bg-primary fs-6">{{ students_data|length }} students</span>
+        <div class="d-flex gap-2 align-items-center">
+            <span class="badge bg-primary fs-6" id="visibleCount">{{ students_data|length }} students</span>
+            <a href="{{ url_for('teacher.notes') }}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-file-upload me-1"></i>My Notes
+            </a>
+        </div>
     </div>
 
-    <!-- Filters -->
+    <!-- Live Filters -->
     <div class="info-card mb-4">
-        <form method="GET" class="row g-3 align-items-end">
+        <div class="row g-3 align-items-end">
             <div class="col-md-4">
-                <label class="form-label fw-semibold small">Class</label>
-                <select name="class_id" class="form-select form-select-sm">
+                <label class="form-label fw-semibold small">Filter by Class</label>
+                <select id="classFilter" class="form-select form-select-sm">
                     <option value="">All My Classes</option>
                     {% for cls in my_classes %}
-                    <option value="{{ cls.id }}" {% if class_filter == cls.id|string %}selected{% endif %}>
-                        {{ cls.full_name }}
-                    </option>
+                    <option value="{{ cls.id }}">{{ cls.full_name }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-5">
-                <label class="form-label fw-semibold small">Search</label>
-                <input type="text" name="search" class="form-control form-control-sm"
-                    placeholder="Name or Roll No…" value="{{ search }}">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold small">Live Search</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" id="liveSearch" class="form-control"
+                        placeholder="Type a name or roll no…" autocomplete="off">
+                    <button class="btn btn-outline-secondary" type="button" id="clearSearch"
+                        style="display:none;" title="Clear">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="searchHint" class="text-muted" style="font-size:11px;margin-top:4px;"></div>
             </div>
-            <div class="col-md-3">
-                <button type="submit" class="btn btn-primary-custom btn-sm w-100">
-                    <i class="fas fa-search me-2"></i>Search
+            <div class="col-md-2">
+                <button class="btn btn-outline-secondary btn-sm w-100" onclick="resetFilters()">
+                    <i class="fas fa-redo me-1"></i>Reset
                 </button>
             </div>
-        </form>
+        </div>
     </div>
 
     <div class="info-card">
-        <div class="card-head">
-            <h6 class="card-head-title"><i class="fas fa-users me-2 text-primary"></i>Student List</h6>
+        <div class="card-head d-flex justify-content-between align-items-center">
+            <h6 class="card-head-title mb-0"><i class="fas fa-users me-2 text-primary"></i>Student List</h6>
+            <span class="text-muted small" id="tableCount"></span>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover modern-table data-table">
+            <table class="table table-hover modern-table" id="studentTable">
                 <thead>
                     <tr>
                         <th>Roll No</th>
@@ -57,9 +69,13 @@
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="studentTbody">
                     {% for student, user, cls in students_data %}
-                    <tr>
+                    <tr class="student-row"
+                        data-name="{{ user.full_name|lower }}"
+                        data-roll="{{ student.roll_no|lower }}"
+                        data-class-id="{{ student.class_id }}"
+                        data-class-name="{{ cls.full_name|lower if cls else '' }}">
                         <td><span class="badge bg-secondary">{{ student.roll_no }}</span></td>
                         <td>
                             <div class="d-flex align-items-center gap-2">
@@ -72,13 +88,17 @@
                                 <div class="student-avatar">{{ user.full_name[0]|upper }}</div>
                                 {% endif %}
                                 <div>
-                                    <div class="fw-semibold">{{ user.full_name }}</div>
+                                    <div class="fw-semibold student-name-cell">{{ user.full_name }}</div>
                                     <div class="text-muted small">{{ user.email }}</div>
                                 </div>
                             </div>
                         </td>
                         <td>{{ cls.full_name if cls else '—' }}</td>
-                        <td><span class="badge {% if student.gender == 'male' %}bg-info text-dark{% else %}bg-pink text-dark{% endif %}">{{ student.gender|title if student.gender else '—' }}</span></td>
+                        <td>
+                            <span class="badge {% if student.gender == 'male' %}bg-info text-dark{% elif student.gender == 'female' %}bg-pink text-dark{% else %}bg-secondary{% endif %}">
+                                {{ student.gender|title if student.gender else '—' }}
+                            </span>
+                        </td>
                         <td>{{ user.phone or '—' }}</td>
                         <td>
                             <div class="fw-semibold small">{{ student.guardian_name or '—' }}</div>
@@ -98,17 +118,129 @@
                         </td>
                         <td>
                             <a href="{{ url_for('teacher.attendance', class_id=student.class_id) }}"
-                                class="btn btn-sm btn-outline-primary" title="Mark Attendance">
+                               class="btn btn-sm btn-outline-primary" title="Mark Attendance">
                                 <i class="fas fa-clipboard-check"></i>
                             </a>
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="8" class="text-center text-muted py-4">No students found.</td></tr>
+                    <tr id="noDataRow"><td colspan="8" class="text-center text-muted py-4">No students found.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
+            <!-- No results message (injected by JS) -->
+            <div id="noResultsMsg" style="display:none;" class="text-center py-5 text-muted">
+                <i class="fas fa-search fa-2x mb-3" style="color:var(--border);"></i>
+                <p class="mb-0" id="noResultsText">No students match your search.</p>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+var _allRows = Array.from(document.querySelectorAll('.student-row'));
+var _totalAll = _allRows.length;
+
+function highlight(cell, query) {
+    // Wrap matched text in <mark>
+    if (!query) {
+        cell.innerHTML = cell.getAttribute('data-original') || cell.innerHTML;
+        return;
+    }
+    var orig = cell.getAttribute('data-original');
+    if (!orig) {
+        orig = cell.textContent;
+        cell.setAttribute('data-original', orig);
+    }
+    var re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    cell.innerHTML = orig.replace(re, '<mark style="background:rgba(99,102,241,0.25);color:inherit;border-radius:2px;padding:0 1px;">$1</mark>');
+}
+
+function filterTable() {
+    var q      = document.getElementById('liveSearch').value.trim().toLowerCase();
+    var clsId  = document.getElementById('classFilter').value;
+    var visible = 0;
+
+    // Show/hide clear button
+    document.getElementById('clearSearch').style.display = q ? 'block' : 'none';
+
+    _allRows.forEach(function(row) {
+        var name    = row.getAttribute('data-name') || '';
+        var roll    = row.getAttribute('data-roll') || '';
+        var rowCls  = row.getAttribute('data-class-id') || '';
+
+        var classOk = !clsId || rowCls === clsId;
+        var nameOk  = !q || name.includes(q) || roll.includes(q);
+
+        if (classOk && nameOk) {
+            row.style.display = '';
+            // Highlight name cell
+            var nameCell = row.querySelector('.student-name-cell');
+            if (nameCell) highlight(nameCell, q);
+            visible++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    // Update counters
+    document.getElementById('visibleCount').textContent = visible + ' student' + (visible !== 1 ? 's' : '');
+    document.getElementById('tableCount').textContent   = visible + ' of ' + _totalAll + ' shown';
+
+    // Hint text
+    var hint = document.getElementById('searchHint');
+    if (q.length === 1) {
+        hint.textContent = 'Showing students starting with "' + q.toUpperCase() + '"…';
+    } else if (q.length > 1) {
+        hint.textContent = visible + ' match' + (visible !== 1 ? 'es' : '') + ' for "' + q + '"';
+    } else {
+        hint.textContent = '';
+    }
+
+    // No results state
+    var noMsg = document.getElementById('noResultsMsg');
+    var tbody = document.getElementById('studentTbody');
+    if (visible === 0 && _totalAll > 0) {
+        noMsg.style.display = 'block';
+        tbody.style.display = 'none';
+        var txt = q ? 'No students match "' + q + '"' : 'No students in this class.';
+        document.getElementById('noResultsText').textContent = txt;
+    } else {
+        noMsg.style.display = 'none';
+        tbody.style.display = '';
+    }
+}
+
+function resetFilters() {
+    document.getElementById('liveSearch').value = '';
+    document.getElementById('classFilter').value = '';
+    document.getElementById('clearSearch').style.display = 'none';
+    document.getElementById('searchHint').textContent = '';
+    // Reset highlights
+    _allRows.forEach(function(row) {
+        var nameCell = row.querySelector('.student-name-cell');
+        if (nameCell) {
+            var orig = nameCell.getAttribute('data-original');
+            if (orig) nameCell.textContent = orig;
+        }
+        row.style.display = '';
+    });
+    document.getElementById('visibleCount').textContent = _totalAll + ' students';
+    document.getElementById('tableCount').textContent = '';
+    document.getElementById('noResultsMsg').style.display = 'none';
+    document.getElementById('studentTbody').style.display = '';
+}
+
+// Wire up events
+document.getElementById('liveSearch').addEventListener('input', filterTable);
+document.getElementById('classFilter').addEventListener('change', filterTable);
+document.getElementById('clearSearch').addEventListener('click', function() {
+    document.getElementById('liveSearch').value = '';
+    filterTable();
+    document.getElementById('liveSearch').focus();
+});
+
+// Init count
+document.getElementById('tableCount').textContent = _totalAll + ' shown';
 {% endblock %}

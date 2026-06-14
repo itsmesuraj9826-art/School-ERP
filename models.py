@@ -384,3 +384,22 @@ class Notification(db.Model):
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user = db.relationship('User', foreign_keys=[user_id], backref='notifications')
+
+class Note(db.Model):
+    """Teacher-uploaded notes / study materials accessible to students."""
+    __tablename__ = 'notes'
+    id = db.Column(db.Integer, primary_key=True)
+    teacher_id = db.Column(db.Integer, db.ForeignKey('teachers.id'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('classes.id'), nullable=True)
+    subject = db.Column(db.String(100))
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    filename = db.Column(db.String(300), nullable=False)
+    original_filename = db.Column(db.String(300), nullable=False)
+    file_type = db.Column(db.String(50))
+    file_size = db.Column(db.Integer, default=0)
+    download_count = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    teacher = db.relationship('Teacher', backref='notes')
+    class_ref = db.relationship('Class', backref='notes')

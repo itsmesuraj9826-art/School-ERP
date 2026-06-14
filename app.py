@@ -125,6 +125,10 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        # Ensure notes upload directory exists
+        import os as _os
+        _os.makedirs(_os.path.join(app.root_path, 'static', 'uploads', 'notes'), exist_ok=True)
+
         # Safe migrations — add columns that may not exist yet (MySQL-compatible)
         try:
             from sqlalchemy import text, inspect

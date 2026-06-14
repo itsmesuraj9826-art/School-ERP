@@ -1,12 +1,20 @@
 # -*- coding: utf-8 -*-
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+import os, uuid
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_from_directory
 from flask_login import login_required, current_user
 from functools import wraps
-from models import db, Teacher, Student, User, Class, Subject, Attendance, Assignment, Exam, Result, Notice, TimeTable, Parent, LeaveRequest, Event, Notification
+from werkzeug.utils import secure_filename
+from models import db, Teacher, Student, User, Class, Subject, Attendance, Assignment, Exam, Result, Notice, TimeTable, Parent, LeaveRequest, Event, Notification, Note
 from datetime import datetime, date
 from sqlalchemy import func
 from app import mail
 from utils.mail_helpers import send_attendance_notification, send_assignment_notification
+
+NOTES_UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'static', 'uploads', 'notes')
+ALLOWED_NOTE_EXTS = {'pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'png', 'jpg', 'jpeg', 'zip'}
+
+def allowed_note_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_NOTE_EXTS
 
 teacher_bp = Blueprint('teacher', __name__)
 
@@ -590,3 +598,84 @@ def notifications():
         .update({'is_read': True})
     db.session.commit()
     return render_template('teacher/notifications.html', notifs=notifs)
+
+
+# ── NOTES ─────────────────────────────────────────────────────────────────────
+
+@teacher_bp.route('/notes')
+@login_required
+@teacher_required
+def notes():
+    teacher = get_teacher()
+    all_class_ids_q = db.session.query(TimeTable.class_id)\
+        .filter(TimeTable.teacher_id == teacher.id).distinct().all()
+    all_class_ids = list(set(
+        [c[0] for c in all_class_ids_q] +
+        [c.id for c in Class.query.filter_by(class_teacher_id=teacher.id).all()]
+    ))
+    my_classes = Class.query.filter(Class.id.in_(all_class_ids))\
+        .order_by(Class.name, Class.section).all()
+    my_notes = Note.query.filter_by(teacher_id=teacher.id)\
+        .order_by(Note.created_at.desc()).all()
+    return render_template('teacher/notes.html', my_notes=my_notes, my_classes=my_classes)
+
+
+@teacher_bp.route('/notes/upload', methods=['POST'])
+@login_required
+@teacher_required
+def upload_note():
+    teacher = get_teacher()
+    title       = request.form.get('title', '').strip()
+    subject     = request.form.get('subject', '').strip()
+    description = request.form.get('description', '').strip()
+    class_id    = request.form.get('class_id') or None
+
+    if not title:
+        flash('Title is required.', 'danger')
+        return redirect(url_for('teacher.notes'))
+
+    file = request.files.get('note_file')
+    if not file or file.filename == '':
+        flash('Please choose a file to upload.', 'danger')
+        return redirect(url_for('teacher.notes'))
+    if not allowed_note_file(file.filename):
+        flash('File type not allowed. Supported: PDF, Word, PPT, Excel, TXT, images, ZIP.', 'danger')
+        return redirect(url_for('teacher.notes'))
+
+    original_name = secure_filename(file.filename)
+    ext = original_name.rsplit('.', 1)[1].lower()
+    saved_name = f"{uuid.uuid4().hex}.{ext}"
+    os.makedirs(NOTES_UPLOAD_FOLDER, exist_ok=True)
+    file.save(os.path.join(NOTES_UPLOAD_FOLDER, saved_name))
+    file_size = os.path.getsize(os.path.join(NOTES_UPLOAD_FOLDER, saved_name))
+
+    note = Note(
+        teacher_id=teacher.id,
+        class_id=int(class_id) if class_id else None,
+        subject=subject,
+        title=title,
+        description=description,
+        filename=saved_name,
+        original_filename=original_name,
+        file_type=ext,
+        file_size=file_size,
+    )
+    db.session.add(note)
+    db.session.commit()
+    flash(f'"{title}" uploaded successfully!', 'success')
+    return redirect(url_for('teacher.notes'))
+
+
+@teacher_bp.route('/notes/<int:note_id>/delete', methods=['POST'])
+@login_required
+@teacher_required
+def delete_note(note_id):
+    teacher = get_teacher()
+    note = Note.query.filter_by(id=note_id, teacher_id=teacher.id).first_or_404()
+    path = os.path.join(NOTES_UPLOAD_FOLDER, note.filename)
+    if os.path.exists(path):
+        os.remove(path)
+    db.session.delete(note)
+    db.session.commit()
+    flash('Note deleted.', 'success')
+    return redirect(url_for('teacher.notes'))

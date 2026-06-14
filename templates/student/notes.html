@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% block title %}Study Materials — ERP{% endblock %}
+{% block page_title %}Study Materials{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="fw-bold mb-1">Study Materials</h5>
+            <p class="text-muted small mb-0">Notes and files shared by your teachers</p>
+        </div>
+        <span class="badge bg-primary fs-6">{{ notes|length }} file{{ 's' if notes|length != 1 }}</span>
+    </div>
+
+    <!-- Subject filter + search -->
+    <div class="info-card mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold small">Filter by Subject</label>
+                <select id="subjectFilter" class="form-select form-select-sm">
+                    <option value="">All Subjects</option>
+                    {% for subj in all_subjects %}
+                    <option value="{{ subj|lower }}" {% if subject_filter == subj %}selected{% endif %}>{{ subj }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold small">Search</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" id="noteSearch" class="form-control" placeholder="Title or teacher name…" autocomplete="off">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-outline-secondary btn-sm w-100" onclick="resetNoteFilters()">
+                    <i class="fas fa-redo me-1"></i>Reset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes Grid -->
+    <div id="notesGrid" class="row g-3">
+        {% for note, teacher_user in notes %}
+        <div class="col-md-6 col-xl-4 note-card-wrap"
+             data-title="{{ note.title|lower }}"
+             data-subject="{{ (note.subject or '')|lower }}"
+             data-teacher="{{ (teacher_user.full_name if teacher_user else '')|lower }}">
+            <div class="note-card h-100">
+                <div class="note-card-top">
+                    <!-- File type icon -->
+                    <div class="note-file-icon {{ note.file_type }}">
+                        {% if note.file_type == 'pdf' %}<i class="fas fa-file-pdf"></i>
+                        {% elif note.file_type in ('doc','docx') %}<i class="fas fa-file-word"></i>
+                        {% elif note.file_type in ('ppt','pptx') %}<i class="fas fa-file-powerpoint"></i>
+                        {% elif note.file_type in ('xls','xlsx') %}<i class="fas fa-file-excel"></i>
+                        {% elif note.file_type in ('png','jpg','jpeg') %}<i class="fas fa-file-image"></i>
+                        {% elif note.file_type == 'zip' %}<i class="fas fa-file-archive"></i>
+                        {% else %}<i class="fas fa-file-alt"></i>{% endif %}
+                    </div>
+                    <div class="note-card-meta">
+                        {% if note.subject %}
+                        <span class="badge bg-primary" style="font-size:10px;">{{ note.subject }}</span>
+                        {% endif %}
+                        {% if not note.class_id %}
+                        <span class="badge bg-success ms-1" style="font-size:10px;">All Classes</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="note-card-body">
+                    <div class="note-title fw-semibold">{{ note.title }}</div>
+                    {% if note.description %}
+                    <p class="text-muted small mt-1 mb-0" style="line-height:1.4;">
+                        {{ note.description[:100] }}{% if note.description|length > 100 %}…{% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+                <div class="note-card-footer">
+                    <div class="d-flex align-items-center gap-2 text-muted" style="font-size:11px;">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                        <span>{{ teacher_user.full_name if teacher_user else 'Teacher' }}</span>
+                        <span class="ms-auto">{{ note.created_at.strftime('%d %b %Y') }}</span>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between mt-2">
+                        <span class="text-muted" style="font-size:11px;">
+                            <i class="fas fa-download me-1"></i>{{ note.download_count or 0 }} downloads
+                            {% if note.file_size %}
+                            &nbsp;·&nbsp;{{ "%.0f KB" % (note.file_size / 1024) }}
+                            {% endif %}
+                        </span>
+                        <a href="{{ url_for('student.download_note', note_id=note.id) }}"
+                           class="btn btn-sm btn-primary-custom">
+                            <i class="fas fa-download me-1"></i>Download
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-folder-open fa-3x mb-3" style="color:var(--border);"></i>
+                <p>No study materials available yet. Check back later!</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- No results message -->
+    <div id="noNotesMsg" style="display:none;" class="text-center py-5 text-muted">
+        <i class="fas fa-search fa-2x mb-3" style="color:var(--border);"></i>
+        <p class="mb-0">No notes match your search.</p>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.note-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex; flex-direction: column;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+}
+.note-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+
+.note-card-top {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border);
+}
+.note-file-icon {
+    width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    background: rgba(13,71,161,0.1); color: var(--primary);
+}
+.note-file-icon.pdf  { background: rgba(239,68,68,0.12); color: #ef4444; }
+.note-file-icon.doc,
+.note-file-icon.docx { background: rgba(13,71,161,0.12); color: #1565c0; }
+.note-file-icon.ppt,
+.note-file-icon.pptx { background: rgba(245,101,7,0.12); color: #d84315; }
+.note-file-icon.xls,
+.note-file-icon.xlsx { background: rgba(34,197,94,0.12); color: #16a34a; }
+.note-file-icon.zip  { background: rgba(99,102,241,0.12); color: #4f46e5; }
+
+.note-card-meta { flex: 1; }
+.note-card-body { padding: 12px 16px; flex: 1; }
+.note-title { font-size: 14px; color: var(--text); }
+.note-card-footer { padding: 10px 16px; border-top: 1px solid var(--border); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+var _noteWraps = Array.from(document.querySelectorAll('.note-card-wrap'));
+
+function filterNotes() {
+    var q    = document.getElementById('noteSearch').value.trim().toLowerCase();
+    var subj = document.getElementById('subjectFilter').value.toLowerCase();
+    var visible = 0;
+    _noteWraps.forEach(function(wrap) {
+        var title   = wrap.getAttribute('data-title') || '';
+        var subject = wrap.getAttribute('data-subject') || '';
+        var teacher = wrap.getAttribute('data-teacher') || '';
+        var ok = (!q || title.includes(q) || teacher.includes(q)) &&
+                 (!subj || subject.includes(subj));
+        wrap.style.display = ok ? '' : 'none';
+        if (ok) visible++;
+    });
+    document.getElementById('noNotesMsg').style.display = (visible === 0 && _noteWraps.length > 0) ? 'block' : 'none';
+}
+
+function resetNoteFilters() {
+    document.getElementById('noteSearch').value = '';
+    document.getElementById('subjectFilter').value = '';
+    _noteWraps.forEach(function(w) { w.style.display = ''; });
+    document.getElementById('noNotesMsg').style.display = 'none';
+}
+
+document.getElementById('noteSearch').addEventListener('input', filterNotes);
+document.getElementById('subjectFilter').addEventListener('change', filterNotes);
+{% endblock %}

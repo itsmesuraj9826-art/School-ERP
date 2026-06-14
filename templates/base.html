@@ -213,6 +213,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a href="{{ url_for('teacher.notes') }}" class="nav-link {% if 'notes' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-folder-open"></i><span>Study Materials</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="{{ url_for('teacher.notifications') }}" class="nav-link {% if 'notification' in request.endpoint %}active{% endif %}">
                     <i class="fas fa-bell"></i><span>Notifications</span>
                 </a>
@@ -270,6 +275,11 @@
             <li class="nav-item">
                 <a href="{{ url_for('student.leave_requests') }}" class="nav-link {% if 'leave' in request.endpoint %}active{% endif %}">
                     <i class="fas fa-calendar-check"></i><span>Leave Request</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('student.notes') }}" class="nav-link {% if 'notes' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-folder-open"></i><span>Study Materials</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -421,21 +431,23 @@ dmToggle?.addEventListener('click', () => {
     localStorage.setItem('theme', isDark ? 'light' : 'dark');
 });
 
-// Bell notification count
+// Bell notification count — all roles
 {% if current_user.is_authenticated %}
+var _notifUrl = "{% if current_user.role == 'admin' %}{{ url_for('admin.notif_count') }}{% elif current_user.role == 'teacher' %}{{ url_for('teacher.notifications') }}{% elif current_user.role == 'parent' %}{{ url_for('parent.notif_count') }}{% elif current_user.role == 'student' %}{{ url_for('student.notifications') }}{% else %}#{% endif %}";
 function refreshNotifCount() {
-    fetch('{{ url_for("admin.notif_count") if current_user.role == "admin" else "#" }}')
+    if (_notifUrl === '#') return;
+    fetch(_notifUrl)
     .then(r => r.ok ? r.json() : null)
     .then(data => {
         if (data && data.count > 0) {
             const el = document.getElementById('notifCount');
             const dot = document.getElementById('notifBadgeDot');
-            if (el) { el.textContent = data.count > 9 ? '9+' : data.count; el.style.display = ''; }
+            if (el) { el.textContent = data.count > 9 ? '9+' : data.count; el.style.display = 'inline-flex'; }
             if (dot) dot.style.display = '';
         }
     }).catch(() => {});
 }
-{% if current_user.role == 'admin' %}
+{% if current_user.role in ('admin', 'parent') %}
 refreshNotifCount();
 setInterval(refreshNotifCount, 60000);
 {% endif %}
@@ -454,7 +466,7 @@ let deferredPrompt;
 window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
     deferredPrompt = e;
-    cons    const installBtn = document.getElementById('installBtn');
+    const installBtn = document.getElementById('installBtn');
     if (installBtn) installBtn.style.display = 'block';
     installBtn?.addEventListener('click', () => {
         if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; }

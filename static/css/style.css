@@ -1658,16 +1658,252 @@ body {
    DARK MODE
    ============================ */
 
-[data-theme="dark"] .stat-card { border-color: var(--border); }
-[data-theme="dark"] .form-control { background: #1e2f42; border-color: var(--border); color: var(--text); }
-[data-theme="dark"] .form-select { background: #1e2f42; border-color: var(--border); color: var(--text); }
-[data-theme="dark"] .top-navbar { background: var(--card); border-color: var(--border); }
-[data-theme="dark"] .modern-table thead th { background: rgba(255,255,255,0.03); }
-[data-theme="dark"] .info-card { border-color: var(--border); }
-[data-theme="dark"] .exam-item,
-[data-theme="dark"] .notice-card,
-[data-theme="dark"] .schedule-item,
-[data-theme="dark"] .att-history-item { background: rgba(255,255,255,0.03); }
+/* ── Core layout ── */
+[data-theme="dark"] body { background: var(--bg); color: var(--text); }
+[data-theme="dark"] .main-content { background: var(--bg); }
+[data-theme="dark"] .page-content { background: var(--bg); }
+
+/* ── Top navbar ── */
+[data-theme="dark"] .top-navbar {
+  background: var(--card);
+  border-color: var(--border);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+[data-theme="dark"] .academic-year-badge {
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+  border-color: var(--border);
+}
+[data-theme="dark"] .user-menu-btn {
+  background: rgba(255,255,255,0.06);
+  border-color: var(--border);
+  color: var(--text);
+}
+[data-theme="dark"] .user-menu-btn:hover { background: rgba(255,255,255,0.12); }
+[data-theme="dark"] .nav-icon-btn { color: var(--text-muted); }
+[data-theme="dark"] .nav-icon-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+[data-theme="dark"] .dark-mode-toggle { color: var(--text-muted); }
+[data-theme="dark"] .dark-mode-toggle:hover { background: var(--primary); color: #fff; }
+
+/* ── Dropdown menus ── */
+[data-theme="dark"] .dropdown-menu {
+  background: #1e2f42;
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+[data-theme="dark"] .dropdown-item { color: var(--text); }
+[data-theme="dark"] .dropdown-item:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+[data-theme="dark"] .dropdown-divider { border-color: var(--border); }
+
+/* ── Cards ── */
+[data-theme="dark"] .info-card {
+  background: var(--card);
+  border-color: var(--border);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+}
+[data-theme="dark"] .card-head {
+  border-bottom-color: var(--border);
+  background: rgba(255,255,255,0.02);
+}
+[data-theme="dark"] .card-head-title { color: var(--text); }
+
+/* ── Stat cards ── */
+[data-theme="dark"] .stat-card {
+  background: var(--card);
+  border-color: var(--border);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+}
+[data-theme="dark"] .stat-label { color: var(--text-muted); }
+[data-theme="dark"] .stat-value { color: var(--text); }
+
+/* ── Welcome banner ── */
+[data-theme="dark"] .welcome-banner {
+  background: linear-gradient(135deg, #0d1f35 0%, #1a2f4a 50%, #0d2a45 100%);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+}
+
+/* ── Tables ── */
+[data-theme="dark"] .modern-table { color: var(--text); }
+[data-theme="dark"] .modern-table thead th {
+  background: rgba(255,255,255,0.04);
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+[data-theme="dark"] .modern-table tbody tr { border-color: var(--border); }
+[data-theme="dark"] .modern-table tbody tr:hover { background: rgba(255,255,255,0.04); }
+[data-theme="dark"] .modern-table td { border-color: var(--border); color: var(--text); }
+[data-theme="dark"] .table-hover tbody tr:hover { background: rgba(255,255,255,0.04); }
+[data-theme="dark"] .table { color: var(--text); }
+[data-theme="dark"] .table thead th { border-color: var(--border); }
+[data-theme="dark"] .table td, [data-theme="dark"] .table th { border-color: var(--border); }
+
+/* ── Forms ── */
+[data-theme="dark"] .form-control {
+  background: #162030;
+  border-color: var(--border);
+  color: var(--text);
+}
+[data-theme="dark"] .form-control:focus {
+  background: #1a2840;
+  border-color: var(--primary-light);
+  color: var(--text);
+  box-shadow: 0 0 0 3px rgba(57,73,171,0.25);
+}
+[data-theme="dark"] .form-control::placeholder { color: var(--text-muted); }
+[data-theme="dark"] .form-select {
+  background-color: #162030;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2390A4AE' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  border-color: var(--border);
+  color: var(--text);
+}
+[data-theme="dark"] .form-select:focus {
+  background-color: #1a2840;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(57,73,171,0.25);
+  color: var(--text);
+}
+[data-theme="dark"] .form-label { color: var(--text); }
+[data-theme="dark"] .input-group-text {
+  background: #1e2f42;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+[data-theme="dark"] textarea.form-control { background: #162030; color: var(--text); }
+
+/* ── Buttons ── */
+[data-theme="dark"] .btn-outline-primary { color: #7986cb; border-color: #7986cb; }
+[data-theme="dark"] .btn-outline-primary:hover { background: #3949ab; border-color: #3949ab; color: #fff; }
+[data-theme="dark"] .btn-outline-secondary { color: var(--text-muted); border-color: var(--border); }
+[data-theme="dark"] .btn-outline-secondary:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+[data-theme="dark"] .btn-outline-danger { color: #ef9a9a; border-color: #ef9a9a; }
+[data-theme="dark"] .btn-outline-success { color: #a5d6a7; border-color: #a5d6a7; }
+[data-theme="dark"] .btn-light { background: rgba(255,255,255,0.08); border-color: var(--border); color: var(--text); }
+[data-theme="dark"] .btn-light:hover { background: rgba(255,255,255,0.15); }
+
+/* ── Modals ── */
+[data-theme="dark"] .modal-content {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--text);
+}
+[data-theme="dark"] .modal-header { border-color: var(--border); }
+[data-theme="dark"] .modal-footer { border-color: var(--border); }
+[data-theme="dark"] .modal-body { color: var(--text); }
+[data-theme="dark"] .btn-close { filter: invert(1) grayscale(1); }
+
+/* ── Alerts / Flash ── */
+[data-theme="dark"] .alert-success { background: #1b2e1f; border-color: #2e7d32; color: #a5d6a7; }
+[data-theme="dark"] .alert-danger  { background: #2e1515; border-color: #c62828; color: #ef9a9a; }
+[data-theme="dark"] .alert-warning { background: #2e2208; border-color: #e65100; color: #ffcc80; }
+[data-theme="dark"] .alert-info    { background: #0d2035; border-color: #0277bd; color: #81d4fa; }
+
+/* ── Badges ── */
+[data-theme="dark"] .badge.bg-light { background: rgba(255,255,255,0.12) !important; color: var(--text) !important; }
+[data-theme="dark"] .badge.bg-secondary { background: rgba(255,255,255,0.15) !important; }
+
+/* ── Page header ── */
+[data-theme="dark"] .page-sub-title { color: var(--text); }
+[data-theme="dark"] .text-muted { color: var(--text-muted) !important; }
+[data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3,
+[data-theme="dark"] h4, [data-theme="dark"] h5, [data-theme="dark"] h6 { color: var(--text); }
+
+/* ── Schedule / timetable ── */
+[data-theme="dark"] .schedule-item {
+  background: rgba(255,255,255,0.04);
+  border-color: var(--border);
+}
+[data-theme="dark"] .schedule-subject { color: var(--text); }
+[data-theme="dark"] .schedule-time span { color: var(--text-muted); }
+[data-theme="dark"] .schedule-room { color: var(--text-muted); }
+
+/* ── Notice cards ── */
+[data-theme="dark"] .notice-card {
+  background: rgba(255,255,255,0.03);
+  border-color: var(--border);
+}
+[data-theme="dark"] .notice-title { color: var(--text); }
+[data-theme="dark"] .notice-preview { color: var(--text-muted); }
+[data-theme="dark"] .notice-meta { color: var(--text-muted); }
+
+/* ── Exam / result items ── */
+[data-theme="dark"] .exam-item { background: rgba(255,255,255,0.03); border-color: var(--border); }
+[data-theme="dark"] .result-item { border-color: var(--border); }
+[data-theme="dark"] .result-item:hover { background: rgba(255,255,255,0.04); }
+
+/* ── Attendance history ── */
+[data-theme="dark"] .att-history-item {
+  background: rgba(255,255,255,0.03);
+  border-color: var(--border);
+}
+[data-theme="dark"] .att-date { color: var(--text-muted); }
+
+/* ── Attendance table (teacher) ── */
+[data-theme="dark"] .att-row { border-color: var(--border) !important; }
+[data-theme="dark"] .att-row.row-present { background: rgba(34,197,94,0.08); }
+[data-theme="dark"] .att-row.row-absent  { background: rgba(239,68,68,0.08); }
+[data-theme="dark"] .att-row.row-late    { background: rgba(245,158,11,0.08); }
+[data-theme="dark"] .att-row.row-leave   { background: rgba(99,102,241,0.08); }
+[data-theme="dark"] .att-radio-btn { background: #162030; border-color: var(--border); }
+[data-theme="dark"] .reason-input { background: #162030; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .att-count-badge.acb-present { background: rgba(34,197,94,0.15); color: #86efac; }
+[data-theme="dark"] .att-count-badge.acb-absent  { background: rgba(239,68,68,0.15); color: #fca5a5; }
+[data-theme="dark"] .att-count-badge.acb-late    { background: rgba(245,158,11,0.15); color: #fcd34d; }
+[data-theme="dark"] .att-count-badge.acb-leave   { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+[data-theme="dark"] .hist-status.hs-present { background: rgba(34,197,94,0.15); color: #86efac; }
+[data-theme="dark"] .hist-status.hs-absent  { background: rgba(239,68,68,0.15); color: #fca5a5; }
+[data-theme="dark"] .hist-status.hs-late    { background: rgba(245,158,11,0.15); color: #fcd34d; }
+[data-theme="dark"] .hist-status.hs-leave   { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+
+/* ── Calendar modal ── */
+[data-theme="dark"] #calendarModal .modal-content { background: #1a2535; }
+[data-theme="dark"] .cal-cell { background: #1e2f42; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .cal-cell:hover { border-color: #7986cb; background: #243350; }
+[data-theme="dark"] .cal-cell.today { background: #1e2f52; border-color: #7986cb; }
+[data-theme="dark"] .cal-cell.present { background: rgba(34,197,94,0.12); }
+[data-theme="dark"] .cal-cell.absent  { background: rgba(239,68,68,0.12); }
+[data-theme="dark"] .cal-cell.leave   { background: rgba(245,158,11,0.12); }
+[data-theme="dark"] .cal-nav h5 { color: var(--text); }
+[data-theme="dark"] .cal-detail-item { background: rgba(255,255,255,0.05); color: var(--text); }
+[data-theme="dark"] #calDayDetail { border-color: var(--border); }
+[data-theme="dark"] #calDayDetail h6 { color: var(--text); }
+
+/* ── Child profile (parent dashboard) ── */
+[data-theme="dark"] .child-name { color: var(--text); }
+[data-theme="dark"] .cs-val { color: var(--text); }
+[data-theme="dark"] .cs-key { color: var(--text-muted); }
+
+/* ── Fee table ── */
+[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) { background: rgba(255,255,255,0.02); }
+
+/* ── Code / pre ── */
+[data-theme="dark"] code { background: rgba(57,73,171,0.2); color: #9fa8da; }
+[data-theme="dark"] pre { background: #0d1925; color: var(--text); border-color: var(--border); }
+
+/* ── Scrollbar ── */
+[data-theme="dark"] ::-webkit-scrollbar-track { background: #0f1923; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #2a3a4a; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #3a4f63; }
+
+/* ── Student/teacher avatar ── */
+[data-theme="dark"] .student-avatar { box-shadow: 0 0 0 2px rgba(255,255,255,0.1); }
+
+/* ── Progress bars ── */
+[data-theme="dark"] .progress { background: rgba(255,255,255,0.08); }
+
+/* ── Hr / dividers ── */
+[data-theme="dark"] hr { border-color: var(--border); }
+
+/* ── Login page ── */
+[data-theme="dark"] .login-right { background: #111d2b; }
+[data-theme="dark"] .login-right h2, [data-theme="dark"] .login-right label { color: var(--text); }
+[data-theme="dark"] .role-card { background: rgba(255,255,255,0.05); border-color: var(--border); }
+[data-theme="dark"] .role-card:hover, [data-theme="dark"] .role-card.active { border-color: var(--primary-light); background: rgba(57,73,171,0.15); }
+
+/* ── Score bars ── */
+[data-theme="dark"] .score-bar-wrap { background: rgba(255,255,255,0.08); }
+
+/* ── Notices grid ── */
+[data-theme="dark"] .notices-grid .notice-card { background: rgba(255,255,255,0.03); }
 
 /* ============================
    RESPONSIVE
@@ -1842,3 +2078,567 @@ code { background: rgba(13,71,161,0.08); color: var(--primary); padding: 2px 6px
 
 /* btn-xs */
 .btn-xs { padding: 1px 5px !important; font-size: 11px !important; }
+
+/* ============================
+   CHILD PROFILE PHOTO (new)
+   ============================ */
+
+.cp-photo-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.cp-photo {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #e0e7ff;
+  box-shadow: 0 4px 15px rgba(13,71,161,0.2);
+}
+
+[data-theme="dark"] .cp-photo {
+  border-color: #3b4f6e;
+}
+
+.cp-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+  text-align: left;
+}
+
+.cp-info-item {
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.cp-info-full {
+  grid-column: 1 / -1;
+}
+
+/* Fix dark-mode white table inside child profile */
+[data-theme="dark"] .child-profile .table,
+[data-theme="dark"] .child-profile .table td,
+[data-theme="dark"] .child-profile .table th {
+  background-color: transparent !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme="dark"] .child-profile .text-muted {
+  color: var(--text-muted) !important;
+}
+
+/* Dark mode for info pills */
+[data-theme="dark"] .cp-info-item {
+  background: #1a2535;
+  border-color: var(--border);
+  color: var(--text);
+}
+
+/* ============================
+   PROFILE & SETTINGS PAGES
+   (teacher + student)
+   ============================ */
+
+.teacher-avatar-lg, .student-avatar-lg {
+  width: 120px; height: 120px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 48px; font-weight: 800;
+  margin: 0 auto; overflow: hidden;
+  box-shadow: 0 4px 16px rgba(13,71,161,0.3);
+}
+
+.teacher-avatar-md {
+  width: 100px; height: 100px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 40px; font-weight: 800;
+  margin: 0 auto; overflow: hidden;
+  box-shadow: 0 4px 16px rgba(13,71,161,0.3);
+}
+
+.section-title {
+  font-size: 13px; font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 14px; padding-bottom: 8px;
+  border-bottom: 2px solid var(--border);
+}
+
+.info-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+.info-table th {
+  width: 40%; text-align: left; font-weight: 600;
+  color: var(--text-muted); padding: 8px 0;
+  vertical-align: top;
+}
+.info-table td { padding: 8px 0; color: var(--text); }
+
+.subjects-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.subject-tag {
+  background: rgba(13,71,161,0.08);
+  border: 1px solid rgba(13,71,161,0.15);
+  color: var(--primary);
+  padding: 6px 12px; border-radius: 8px;
+  font-size: 13px; display: inline-flex; align-items: center; gap: 6px;
+}
+
+.form-actions { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+
+.page-sub-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+
+/* ============================
+   ASSIGNMENT CARDS
+   (teacher/student assignments)
+   ============================ */
+
+.assignment-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+  display: flex; flex-direction: column; height: 100%;
+}
+.assignment-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+
+.assignment-card-header {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
+}
+.assignment-card-title { font-weight: 700; font-size: 14px; color: var(--text); flex: 1; }
+.assignment-card-body { padding: 12px 16px; flex: 1; }
+.assignment-footer { padding: 10px 16px; border-top: 1px solid var(--border); }
+
+.assignment-class { font-size: 11px; font-weight: 600; color: var(--primary); }
+.assignment-subject-tag {
+  display: inline-block; font-size: 11px; font-weight: 600;
+  padding: 2px 10px; border-radius: 20px;
+  background: rgba(13,71,161,0.1); color: var(--primary);
+}
+.assignment-date { font-size: 11px; color: var(--text-muted); }
+.assignment-marks { font-size: 12px; color: var(--text-muted); }
+.assignment-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+.due-chip {
+  background: rgba(13,71,161,0.1); color: var(--primary);
+  font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.overdue-chip {
+  background: rgba(239,68,68,0.12); color: #ef4444;
+  font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+
+/* Student dashboard assignment list */
+.assignment-item {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.assignment-item:last-child { border-bottom: none; }
+.assignment-icon {
+  width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+  background: rgba(13,71,161,0.1);
+  display: flex; align-items: center; justify-content: center; color: var(--primary);
+}
+.assignment-info { flex: 1; min-width: 0; }
+.assignment-title { font-weight: 600; font-size: 13px; color: var(--text); }
+.assignment-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.assignment-due { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+
+/* ============================
+   CLASS CARDS (teacher dashboard)
+   ============================ */
+
+.classes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap: 12px; }
+
+.class-mini-card {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 12px;
+  text-align: center; transition: var(--transition);
+}
+.class-mini-card:hover { border-color: var(--primary-light); box-shadow: var(--shadow-sm); }
+
+.class-badge {
+  font-size: 22px; font-weight: 800; font-family: 'Poppins',sans-serif;
+  color: var(--primary); line-height: 1;
+}
+.class-section { font-size: 11px; color: var(--text-muted); margin: 2px 0 6px; }
+.class-count { font-size: 11px; color: var(--text-muted); }
+.class-action-btn {
+  display: block; margin-top: 10px; font-size: 11px; font-weight: 600;
+  color: var(--primary); text-decoration: none;
+  border: 1px solid var(--primary-light); border-radius: 6px; padding: 4px 0;
+  transition: var(--transition);
+}
+.class-action-btn:hover { background: var(--primary); color: white; }
+
+.badge-date {
+  font-size: 11px; color: var(--text-muted);
+  background: var(--bg); padding: 3px 10px; border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+/* ============================
+   STAT CARDS (colour variants)
+   ============================ */
+
+.stat-blue  .stat-icon { background: rgba(13,71,161,0.12); color: #1565c0; }
+.stat-green .stat-icon { background: rgba(34,197,94,0.12); color: #16a34a; }
+.stat-red   .stat-icon { background: rgba(239,68,68,0.12); color: #dc2626; }
+.stat-purple .stat-icon { background: rgba(99,102,241,0.12); color: #4f46e5; }
+
+.stat-change { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+/* ============================
+   SCHEDULE (timetable)
+   ============================ */
+
+.schedule-class { font-size: 11px; color: var(--text-muted); }
+.schedule-status { width: 8px; height: 8px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+.time-end { font-size: 11px; color: var(--text-muted); }
+
+/* ============================
+   EXAM ITEMS
+   ============================ */
+
+.exam-list { display: flex; flex-direction: column; gap: 8px; }
+.exam-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg); }
+.exam-date-badge { display: flex; flex-direction: column; align-items: center; width: 44px; flex-shrink: 0; }
+.exam-day  { font-size: 20px; font-weight: 800; font-family:'Poppins',sans-serif; color: var(--primary); line-height: 1; }
+.exam-month{ font-size: 10px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
+.exam-info { flex: 1; min-width: 0; }
+.exam-name { font-weight: 600; font-size: 13px; color: var(--text); }
+.exam-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+/* ============================
+   NOTIFICATIONS LIST
+   ============================ */
+
+[data-theme="dark"] .list-group-item {
+  background: var(--card); border-color: var(--border); color: var(--text);
+}
+[data-theme="dark"] .list-group-flush .list-group-item { border-color: var(--border); }
+[data-theme="dark"] .list-group-item:hover { background: rgba(255,255,255,0.04); }
+
+/* ============================
+   EVENTS (Bootstrap card used)
+   ============================ */
+
+[data-theme="dark"] .card {
+  background: var(--card); border-color: var(--border); color: var(--text);
+}
+[data-theme="dark"] .card-body { background: transparent; color: var(--text); }
+[data-theme="dark"] .card.shadow-sm { box-shadow: 0 2px 12px rgba(0,0,0,0.3) !important; }
+
+/* ============================
+   MARKS INPUT
+   ============================ */
+
+.marks-input {
+  width: 70px; padding: 4px 8px; border: 1px solid var(--border);
+  border-radius: 6px; font-size: 13px; text-align: center;
+  background: var(--card); color: var(--text);
+}
+.marks-input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px rgba(13,71,161,0.15); }
+
+/* ============================
+   REPORT CARD (student)
+   ============================ */
+
+.rc-wrap { max-width: 780px; margin: 0 auto; background: var(--card); color: var(--text); }
+.rc-header { background: var(--primary); color: white; padding: 20px 24px; border-radius: var(--radius) var(--radius) 0 0; }
+.rc-title { font-size: 20px; font-weight: 800; font-family:'Poppins',sans-serif; }
+.rc-body { padding: 20px 24px; }
+.rc-footer { padding: 14px 24px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
+
+.student-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; margin-bottom: 16px; }
+.info-item { display: flex; flex-direction: column; }
+.info-item .lbl { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+.info-item .val { font-size: 13px; font-weight: 600; color: var(--text); }
+
+.summary-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 16px; }
+.summary-box { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; text-align: center; }
+.summary-box .s-val { font-size: 22px; font-weight: 800; color: var(--primary); font-family:'Poppins',sans-serif; }
+.summary-box .s-lbl { font-size: 11px; color: var(--text-muted); }
+
+.grade-badge {
+  display: inline-block; padding: 2px 8px;
+  border-radius: 6px; font-size: 12px; font-weight: 700;
+  background: rgba(13,71,161,0.1); color: var(--primary);
+}
+
+/* Grade reference pills (results page) */
+.grade-ref-pill {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 8px 12px; border-radius: var(--radius-sm);
+  background: var(--bg); border: 1px solid var(--border);
+}
+.grade-ref-gpa  { font-size: 18px; font-weight: 800; color: var(--primary); font-family:'Poppins',sans-serif; }
+.grade-ref-label{ font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+.grade-ref-range{ font-size: 10px; color: var(--text-muted); }
+
+/* ============================
+   EMPTY STATES
+   ============================ */
+
+.empty-state-sm { color: var(--text-muted); }
+.empty-state-sm i { color: var(--border); }
+
+/* ============================
+   WELCOME BANNER sub-elements
+   ============================ */
+
+.welcome-text h4, .welcome-text h5 { color: white; }
+.welcome-text p { color: rgba(255,255,255,0.8); }
+.welcome-date { font-size: 13px; color: rgba(255,255,255,0.7); }
+
+/* ============================
+   ATTENDANCE STATS (student)
+   ============================ */
+
+.att-stats-row {
+  display: flex; justify-content: space-around;
+  padding: 12px 0 4px; border-top: 1px solid var(--border);
+}
+.att-stat { text-align: center; }
+.att-num { display: block; font-size: 20px; font-weight: 800; font-family:'Poppins',sans-serif; }
+.att-label { display: block; font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+.present-stat .att-num { color: #16a34a; }
+.absent-stat  .att-num { color: #dc2626; }
+.total-stat   .att-num { color: var(--primary); }
+
+/* ============================
+   RING CHART centre text
+   ============================ */
+
+.ring-center {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  text-align: center; pointer-events: none;
+}
+.ring-pct { font-size: 22px; font-weight: 800; color: var(--text); font-family:'Poppins',sans-serif; display: block; line-height:1; }
+.ring-sub { font-size: 10px; color: var(--text-muted); display: block; }
+
+/* ============================
+   ACADEMIC YEAR BADGE (navbar)
+   ============================ */
+
+[data-theme="dark"] .academic-year-badge {
+  background: rgba(57,73,171,0.2); color: #9fa8da; border-color: rgba(57,73,171,0.35);
+}
+
+/* ============================
+   DARK MODE — PROFILE / SETTINGS
+   ============================ */
+
+[data-theme="dark"] .section-title {
+  color: #9fa8da; border-bottom-color: var(--border);
+}
+[data-theme="dark"] .info-table th { color: var(--text-muted); }
+[data-theme="dark"] .info-table td { color: var(--text); }
+[data-theme="dark"] .info-table tr { border-color: var(--border); }
+[data-theme="dark"] .subject-tag {
+  background: rgba(57,73,171,0.15); border-color: rgba(57,73,171,0.3); color: #9fa8da;
+}
+[data-theme="dark"] .info-card {
+  background: var(--card); border-color: var(--border);
+}
+/* Ensure info-card defined in inline styles is overridden */
+[data-theme="dark"] .info-card,
+[data-theme="dark"] .info-card > * { background-color: inherit; }
+
+/* ============================
+   DARK MODE — ASSIGNMENT CARDS
+   ============================ */
+
+[data-theme="dark"] .assignment-card { background: var(--card); border-color: var(--border); }
+[data-theme="dark"] .assignment-card-header { border-color: var(--border); }
+[data-theme="dark"] .assignment-card-title { color: var(--text); }
+[data-theme="dark"] .assignment-card-body { background: transparent; }
+[data-theme="dark"] .assignment-footer { border-color: var(--border); }
+[data-theme="dark"] .assignment-subject-tag { background: rgba(57,73,171,0.2); color: #9fa8da; }
+[data-theme="dark"] .assignment-desc { color: var(--text-muted); }
+[data-theme="dark"] .assignment-title { color: var(--text); }
+[data-theme="dark"] .assignment-item { border-color: var(--border); }
+[data-theme="dark"] .assignment-icon { background: rgba(57,73,171,0.15); color: #9fa8da; }
+[data-theme="dark"] .due-chip { background: rgba(57,73,171,0.2); color: #9fa8da; }
+[data-theme="dark"] .overdue-chip { background: rgba(239,68,68,0.15); color: #fca5a5; }
+
+/* ============================
+   DARK MODE — CLASS CARDS
+   ============================ */
+
+[data-theme="dark"] .class-mini-card { background: #1e2f42; border-color: var(--border); }
+[data-theme="dark"] .class-mini-card:hover { border-color: #7986cb; }
+[data-theme="dark"] .class-badge { color: #9fa8da; }
+[data-theme="dark"] .class-section, [data-theme="dark"] .class-count { color: var(--text-muted); }
+[data-theme="dark"] .class-action-btn { color: #9fa8da; border-color: #3949ab; }
+[data-theme="dark"] .class-action-btn:hover { background: #3949ab; color: white; }
+[data-theme="dark"] .badge-date { background: #1e2f42; border-color: var(--border); color: var(--text-muted); }
+
+/* ============================
+   DARK MODE — STAT CARDS
+   ============================ */
+
+[data-theme="dark"] .stat-blue  .stat-icon { background: rgba(57,73,171,0.2); color: #9fa8da; }
+[data-theme="dark"] .stat-green .stat-icon { background: rgba(34,197,94,0.15); color: #86efac; }
+[data-theme="dark"] .stat-red   .stat-icon { background: rgba(239,68,68,0.15); color: #fca5a5; }
+[data-theme="dark"] .stat-purple .stat-icon { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+[data-theme="dark"] .stat-value { color: var(--text); }
+[data-theme="dark"] .stat-label { color: var(--text-muted); }
+[data-theme="dark"] .stat-change { color: var(--text-muted); }
+
+/* ============================
+   DARK MODE — SCHEDULE
+   ============================ */
+
+[data-theme="dark"] .schedule-class { color: var(--text-muted); }
+[data-theme="dark"] .schedule-status { background: var(--border); }
+[data-theme="dark"] .time-end { color: var(--text-muted); }
+
+/* ============================
+   DARK MODE — EXAM ITEMS
+   ============================ */
+
+[data-theme="dark"] .exam-item { background: #1e2f42; border-color: var(--border); }
+[data-theme="dark"] .exam-day { color: #9fa8da; }
+[data-theme="dark"] .exam-month { color: var(--text-muted); }
+[data-theme="dark"] .exam-name { color: var(--text); }
+[data-theme="dark"] .exam-meta { color: var(--text-muted); }
+
+/* ============================
+   DARK MODE — FEE ITEMS
+   ============================ */
+
+[data-theme="dark"] .fee-row-item { border-color: var(--border); }
+[data-theme="dark"] .fee-type { color: var(--text); }
+[data-theme="dark"] .fee-amount-sm { color: var(--text-muted); }
+
+/* ============================
+   DARK MODE — REPORT CARD
+   ============================ */
+
+[data-theme="dark"] .rc-wrap { background: var(--card); color: var(--text); }
+[data-theme="dark"] .rc-footer { border-color: var(--border); color: var(--text-muted); }
+[data-theme="dark"] .summary-box { background: #1e2f42; border-color: var(--border); }
+[data-theme="dark"] .grade-badge { background: rgba(57,73,171,0.2); color: #9fa8da; }
+[data-theme="dark"] .grade-ref-pill { background: #1e2f42; border-color: var(--border); }
+[data-theme="dark"] .grade-ref-gpa { color: #9fa8da; }
+
+/* ============================
+   DARK MODE — MARKS INPUT
+   ============================ */
+
+[data-theme="dark"] .marks-input { background: #162030; border-color: var(--border); color: var(--text); }
+
+/* ============================
+   DARK MODE — NOTICE PRIORITY DOT
+   ============================ */
+
+[data-theme="dark"] .notice-priority-dot { opacity: 0.85; }
+
+/* ============================
+   DARK MODE — MODAL (modern)
+   ============================ */
+
+[data-theme="dark"] .modal-modern { background: var(--card); border-color: var(--border); }
+
+/* ============================
+   DARK MODE — EMPTY STATE
+   ============================ */
+
+[data-theme="dark"] .empty-state-sm { color: var(--text-muted); }
+
+/* ============================
+   DARK MODE — ATTENDANCE STATS
+   ============================ */
+
+[data-theme="dark"] .att-stats-row { border-color: var(--border); }
+[data-theme="dark"] .att-label { color: var(--text-muted); }
+[data-theme="dark"] .present-stat .att-num { color: #86efac; }
+[data-theme="dark"] .absent-stat  .att-num { color: #fca5a5; }
+[data-theme="dark"] .total-stat   .att-num { color: #9fa8da; }
+
+/* ============================
+   DARK MODE — RING CHART TEXT
+   ============================ */
+
+[data-theme="dark"] .ring-pct { color: var(--text); }
+[data-theme="dark"] .ring-sub { color: var(--text-muted); }
+
+/* ============================
+   DARK MODE — EXAM TYPE BADGES
+   ============================ */
+
+[data-theme="dark"] .badge.exam-type-terminal { background: rgba(239,68,68,0.2) !important; color: #fca5a5 !important; }
+[data-theme="dark"] .badge.exam-type-unit     { background: rgba(245,158,11,0.2) !important; color: #fcd34d !important; }
+[data-theme="dark"] .badge.exam-type-practice { background: rgba(34,197,94,0.2) !important; color: #86efac !important; }
+
+/* ============================
+   DARK MODE — NEB GRADE BADGES
+   ============================ */
+
+[data-theme="dark"] [class*="neb-grade-"] { filter: brightness(0.8) saturate(0.9); }
+
+/* ============================
+   DARK MODE — bg-primary-light
+   ============================ */
+
+[data-theme="dark"] .bg-primary-light { background: rgba(57,73,171,0.2) !important; }
+[data-theme="dark"] .text-primary { color: #9fa8da !important; }
+
+/* ============================
+   DARK MODE — HR in cards
+   ============================ */
+
+[data-theme="dark"] hr { border-color: var(--border) !important; }
+
+/* ============================
+   DARK MODE — strong text in cards
+   ============================ */
+
+[data-theme="dark"] .info-card strong { color: var(--text); }
+[data-theme="dark"] p strong { color: var(--text); }
+
+/* ============================
+   NOTE TYPE ICONS (teacher notes page)
+   ============================ */
+.note-type-icon {
+  width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  background: rgba(13,71,161,0.1); color: var(--primary);
+}
+.note-type-icon.pdf  { background: rgba(239,68,68,0.12); color: #ef4444; }
+.note-type-icon.doc,
+.note-type-icon.docx { background: rgba(13,71,161,0.12); color: #1565c0; }
+.note-type-icon.ppt,
+.note-type-icon.pptx { background: rgba(245,101,7,0.12); color: #d84315; }
+.note-type-icon.xls,
+.note-type-icon.xlsx { background: rgba(34,197,94,0.12); color: #16a34a; }
+.note-type-icon.zip  { background: rgba(99,102,241,0.12); color: #4f46e5; }
+
+[data-theme="dark"] .note-type-icon       { background: rgba(57,73,171,0.2); color: #9fa8da; }
+[data-theme="dark"] .note-type-icon.pdf   { background: rgba(239,68,68,0.18); color: #fca5a5; }
+[data-theme="dark"] .note-type-icon.doc,
+[data-theme="dark"] .note-type-icon.docx  { background: rgba(57,73,171,0.2); color: #9fa8da; }
+[data-theme="dark"] .note-type-icon.ppt,
+[data-theme="dark"] .note-type-icon.pptx  { background: rgba(245,101,7,0.18); color: #fdba74; }
+[data-theme="dark"] .note-type-icon.xls,
+[data-theme="dark"] .note-type-icon.xlsx  { background: rgba(34,197,94,0.18); color: #86efac; }
+[data-theme="dark"] .note-type-icon.zip   { background: rgba(99,102,241,0.18); color: #a5b4fc; }

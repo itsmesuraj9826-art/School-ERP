@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from functools import wraps
-from models import db, Student, User, Class, Subject, Attendance, Exam, Result, Fee, Notice, Assignment, TimeTable, LeaveRequest, Event, Notification
+from models import db, Student, User, Class, Subject, Attendance, Exam, Result, Fee, Notice, Assignment, TimeTable, LeaveRequest, Event, Notification, Note, Teacher
 from datetime import datetime, date
 from sqlalchemy import func
 
@@ -481,3 +481,77 @@ def notifications():
     Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
     db.session.commit()
     return render_template('student/notifications.html', notifs=notifs)
+
+
+# ── NOTES ─────────────────────────────────────────────────────────────────────
+
+import os
+from flask import send_from_directory, abort
+
+NOTES_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'static', 'uploads', 'notes')
+
+def _get_student():
+    from models import Student
+    return Student.query.filter_by(user_id=current_user.id, status='active').first()
+
+@student_bp.route('/notes')
+@login_required
+@student_required
+def notes():
+    student = _get_student()
+    if not student:
+        flash('Student record not found.', 'danger')
+        return redirect(url_for('student.dashboard'))
+
+    # Notes for student's class OR notes shared with all classes by teacher
+    from sqlalchemy import or_
+    notes_list = Note.query\
+        .filter(or_(Note.class_id == student.class_id, Note.class_id == None))\
+        .order_by(Note.created_at.desc()).all()
+
+    # Attach teacher user info
+    enriched = []
+    for note in notes_list:
+        teacher_user = User.query.get(note.teacher.user_id) if note.teacher else None
+        enriched.append((note, teacher_user))
+
+    subject_filter = request.args.get('subject', '')
+    if subject_filter:
+        enriched = [(n, u) for n, u in enriched if n.subject and subject_filter.lower() in n.subject.lower()]
+
+    # Unique subjects for filter
+    all_subjects = sorted(set(n.subject for n, _ in Note.query.filter(
+        or_(Note.class_id == student.class_id, Note.class_id == None)
+    ).all() if n.subject))
+
+    return render_template('student/notes.html',
+        notes=enriched,
+        subject_filter=subject_filter,
+        all_subjects=all_subjects)
+
+
+@student_bp.route('/notes/<int:note_id>/download')
+@login_required
+@student_required
+def download_note(note_id):
+    student = _get_student()
+    if not student:
+        abort(403)
+
+    note = Note.query.get_or_404(note_id)
+    # Verify student has access (same class or open)
+    if note.class_id and note.class_id != student.class_id:
+        abort(403)
+
+    path = os.path.join(NOTES_FOLDER, note.filename)
+    if not os.path.exists(path):
+        flash('File not found on server.', 'danger')
+        return redirect(url_for('student.notes'))
+
+    # Increment download count
+    note.download_count = (note.download_count or 0) + 1
+    db.session.commit()
+
+    return send_from_directory(NOTES_FOLDER, note.filename,
+                               as_attachment=True,
+                               download_name=note.original_filename)

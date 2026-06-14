@@ -125,32 +125,52 @@
 
     <div class="row g-4">
         <div class="col-xl-3">
-            <div class="info-card h-100">
+            <div class="info-card">
                 <div class="card-head"><h6 class="card-head-title"><i class="fas fa-user-graduate me-2 text-primary"></i>Child Profile</h6></div>
-                <div class="child-profile text-center p-3">
-                    <div class="child-avatar-lg mb-3">{{ student_user.full_name[0] }}</div>
+                <div class="child-profile text-center p-3 pb-2">
+                    <!-- Photo / avatar -->
+                    <div class="cp-photo-wrap mb-2">
+                        {% if student.profile_image and student.profile_image != 'default.png' %}
+                        <img src="{{ url_for('static', filename=student.profile_image) }}"
+                             class="cp-photo" alt="{{ student_user.full_name }}"
+                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                        <div class="child-avatar-lg" style="display:none;">{{ student_user.full_name[0] }}</div>
+                        {% else %}
+                        <div class="child-avatar-lg">{{ student_user.full_name[0] }}</div>
+                        {% endif %}
+                    </div>
                     <div class="child-name mb-0">{{ student_user.full_name }}</div>
                     <div class="child-roll text-muted small">{{ student.roll_no }}</div>
-                    {% if student.class_ref %}<div class="mt-2"><span class="badge bg-primary">{{ student.class_ref.full_name }}</span></div>{% endif %}
-                    <div class="child-stats-mini mt-3">
-                        <div class="cs-item"><span class="cs-val">{{ attendance_pct }}%</span><span class="cs-key">Attendance</span></div>
-                        <div class="cs-item"><span class="cs-val">{{ avg_gpa }}</span><span class="cs-key">GPA</span></div>
-                    </div>
-                    <div class="attendance-ring-wrap mt-3">
-                        <div class="ring-chart">
-                            <canvas id="attDonut" width="140" height="140"></canvas>
-                            <div class="ring-center"><span class="ring-pct">{{ attendance_pct }}%</span></div>
+                    {% if student.class_ref %}<div class="mt-1 mb-2"><span class="badge bg-primary" style="font-size:.7rem;">{{ student.class_ref.full_name }}</span></div>{% endif %}
+
+                    <!-- Donut + stats row -->
+                    <div class="d-flex align-items-center justify-content-center gap-3 my-2">
+                        <div class="ring-chart" style="width:80px;height:80px;position:relative;flex-shrink:0;">
+                            <canvas id="attDonut" width="80" height="80"></canvas>
+                            <div class="ring-center" style="font-size:.75rem;font-weight:700;">{{ attendance_pct }}%</div>
+                        </div>
+                        <div class="text-start">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
+                                <span class="small fw-semibold">{{ present_att }} Present</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span style="width:8px;height:8px;border-radius:50%;background:#ef4444;display:inline-block;"></span>
+                                <span class="small fw-semibold">{{ total_att - present_att }} Absent</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span style="width:8px;height:8px;border-radius:50%;background:#6366f1;display:inline-block;"></span>
+                                <span class="small fw-semibold">GPA {{ avg_gpa }}</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="att-stats-row mt-2">
-                        <div class="att-stat present-stat"><span class="att-num">{{ present_att }}</span><span class="att-label">Present</span></div>
-                        <div class="att-stat absent-stat"><span class="att-num">{{ total_att - present_att }}</span><span class="att-label">Absent</span></div>
+
+                    <!-- Info pills -->
+                    <div class="cp-info-grid mt-2">
+                        <div class="cp-info-item"><i class="fas fa-venus-mars text-primary me-1"></i><span>{{ student.gender|title if student.gender else '—' }}</span></div>
+                        <div class="cp-info-item"><i class="fas fa-tint text-danger me-1"></i><span>{{ student.blood_group or '—' }}</span></div>
+                        <div class="cp-info-item cp-info-full"><i class="fas fa-user-shield text-success me-1"></i><span>{{ student.guardian_name or '—' }}</span></div>
                     </div>
-                    <table class="table table-sm table-borderless text-start mt-3 mb-0">
-                        <tr><td class="text-muted small">Gender</td><td class="fw-semibold small">{{ student.gender|title if student.gender else '—' }}</td></tr>
-                        <tr><td class="text-muted small">Blood</td><td class="fw-semibold small">{{ student.blood_group or '—' }}</td></tr>
-                        <tr><td class="text-muted small">Guardian</td><td class="fw-semibold small">{{ student.guardian_name or '—' }}</td></tr>
-                    </table>
                 </div>
             </div>
         </div>

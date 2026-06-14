@@ -196,3 +196,12 @@ def notifications():
     Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
     db.session.commit()
     return render_template('parent/notifications.html', notifs=notifs)
+
+
+@parent_bp.route('/notifications/count')
+@login_required
+@parent_required
+def notif_count():
+    from flask import jsonify
+    count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
+    return jsonify({'count': count})
