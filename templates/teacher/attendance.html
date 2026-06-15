@@ -564,27 +564,17 @@ document.getElementById('notifyAllBtn')?.addEventListener('click', function() {
         hasStudents.style.display = '';
 
         // Build group message
-        var msg = '📋 *Attendance Alert — ' + (className || 'Class') + '*
-';
-        msg += '📅 Date: ' + (dateStr || new Date().toLocaleDateString('en-NP')) + '
-
-';
+        var msg = '📋 *Attendance Alert — ' + (className || 'Class') + '*\n';
+        msg += '📅 Date: ' + (dateStr || new Date().toLocaleDateString('en-NP')) + '\n\n';
         if (absentNames.length) {
-            msg += '❌ *Absent (' + absentNames.length + '):*
-';
-            absentNames.forEach(function(n, i) { msg += (i+1) + '. ' + n + '
-'; });
+            msg += '❌ *Absent (' + absentNames.length + '):*\n';
+            absentNames.forEach(function(n, i) { msg += (i+1) + '. ' + n + '\n'; });
         }
         if (leaveNames.length) {
-            msg += '
-🗓️ *On Leave (' + leaveNames.length + '):*
-';
-            leaveNames.forEach(function(n, i) { msg += (i+1) + '. ' + n + '
-'; });
+            msg += '\n🗓️ *On Leave (' + leaveNames.length + '):*\n';
+            leaveNames.forEach(function(n, i) { msg += (i+1) + '. ' + n + '\n'; });
         }
-        msg += '
-Kindly ensure your ward attends school regularly.
-— Martyrs Memorial +2 School';
+        msg += '\nKindly ensure your ward attends school regularly.\n— Martyrs Memorial +2 School';
 
         document.getElementById('waMsgPreview').value = msg;
     }

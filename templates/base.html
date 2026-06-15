@@ -23,8 +23,13 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body class="preload">
-<script>/* Prevent sidebar transition on load */
-(function(){document.body.classList.add("preload");window.addEventListener("load",function(){setTimeout(function(){document.body.classList.remove("preload");},50);});})();
+<script>/* Prevent sidebar transition on load + apply saved theme instantly */
+(function(){
+  document.body.classList.add("preload");
+  window.addEventListener("load",function(){setTimeout(function(){document.body.classList.remove("preload");},50);});
+  var t=localStorage.getItem('theme');
+  if(t==='dark'){document.documentElement.setAttribute('data-theme','dark');}
+})();
 </script>
 
 {% if current_user.is_authenticated %}
@@ -348,7 +353,7 @@
                     <span>2081-2082</span>
                 </div>
                 <div class="dark-mode-toggle" id="darkModeToggle" title="Toggle Dark Mode">
-                    <i class="fas fa-moon"></i>
+                    <i class="fas fa-moon" id="darkModeIcon"></i>
                 </div>
                 {% if current_user.is_authenticated %}
                 <a href="{% if current_user.role == 'admin' %}{{ url_for('admin.notifications') }}
@@ -423,12 +428,20 @@ document.getElementById('sidebarToggle')?.addEventListener('click', () => {
 
 // Dark mode
 const dmToggle = document.getElementById('darkModeToggle');
+const dmIcon  = document.getElementById('darkModeIcon');
 const html = document.documentElement;
-if (localStorage.getItem('theme') === 'dark') { html.setAttribute('data-theme', 'dark'); }
+function applyThemeIcon() {
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    if (dmIcon) {
+        dmIcon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+    }
+}
+applyThemeIcon();
 dmToggle?.addEventListener('click', () => {
     const isDark = html.getAttribute('data-theme') === 'dark';
     html.setAttribute('data-theme', isDark ? 'light' : 'dark');
     localStorage.setItem('theme', isDark ? 'light' : 'dark');
+    applyThemeIcon();
 });
 
 // Bell notification count — all roles
