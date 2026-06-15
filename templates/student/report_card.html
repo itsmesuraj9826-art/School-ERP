@@ -21,23 +21,36 @@ body { font-family: "Times New Roman", Times, serif; background: #fff; color: #1
 /* ── Toolbar (screen only) ── */
 .toolbar {
   background: #1a237e;
-  padding: 8px 20px;
+  padding: 10px 24px;
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   font-family: Arial, sans-serif;
 }
-.toolbar button {
-  background: #fff;
-  color: #1a237e;
-  border: none;
-  padding: 6px 18px;
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 18px;
   font-weight: 700;
   font-size: 12px;
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: 6px;
+  border: none;
+  transition: opacity .15s;
+  text-decoration: none;
+  white-space: nowrap;
 }
-.toolbar a { color: #fff; font-size: 12px; text-decoration: none; }
+.toolbar-btn:hover { opacity: .85; }
+.toolbar-btn-print {
+  background: #fff;
+  color: #1a237e;
+}
+.toolbar-btn-back {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border: 1.5px solid rgba(255,255,255,0.4) !important;
+}
 
 /* ── Outer border ── */
 .outer-border {
@@ -247,8 +260,8 @@ body { font-family: "Times New Roman", Times, serif; background: #fff; color: #1
 <body>
 
 <div class="toolbar">
-  <button onclick="window.print()">&#128424; Print / Save PDF</button>
-  <a href="javascript:history.back()">&#8592; Back</a>
+  <button class="toolbar-btn toolbar-btn-print" onclick="window.print()">&#128424; Print / Save PDF</button>
+  <a href="{{ url_for('student.results') }}" class="toolbar-btn toolbar-btn-back">&#8592; Back to My Results</a>
 </div>
 
 <div class="page">
@@ -366,9 +379,9 @@ body { font-family: "Times New Roman", Times, serif; background: #fff; color: #1
         <td>{{ th_p }}</td>
         <td>{% if pr_f %}{{ pr_p }}{% else %}—{% endif %}</td>
         <td>{{ tot_p }}</td>
-        <td>{% if not result %}—{% elif ab %}<span class="absent">A</span>{% else %}<b{% if thf %} style="text-decoration:underline;"{% endif %}>{{ th_m | int }}</b>{% endif %}</td>
-        <td>{% if not pr_f %}—{% elif not result %}—{% elif ab %}<span class="absent">A</span>{% else %}<b{% if prf %} style="text-decoration:underline;"{% endif %}>{{ pr_m | int }}</b>{% endif %}</td>
-        <td><b>{% if not result %}—{% elif ab %}—{% else %}{{ tot_m | int }}{% endif %}</b></td>
+        <td>{% if not result %}—{% elif ab %}<span class="absent">A</span>{% else %}<b{% if thf %} style="text-decoration:underline;"{% endif %}>{{ th_m | snap_marks }}</b>{% endif %}</td>
+        <td>{% if not pr_f %}—{% elif not result %}—{% elif ab %}<span class="absent">A</span>{% else %}<b{% if prf %} style="text-decoration:underline;"{% endif %}>{{ pr_m | snap_marks }}</b>{% endif %}</td>
+        <td><b>{% if not result %}—{% elif ab %}—{% else %}{{ tot_m | snap_marks }}{% endif %}</b></td>
         <td><b>{% if not result %}—{% elif ab %}ABSENT{% elif thf or prf %}FAIL ✗{% else %}PASS{% endif %}</b></td>
       </tr>
       {% endfor %}
@@ -407,9 +420,9 @@ body { font-family: "Times New Roman", Times, serif; background: #fff; color: #1
         <td>{{ th_p }}</td>
         <td>{% if pr_f %}{{ pr_p }}{% else %}—{% endif %}</td>
         <td>{{ tot_p }}</td>
-        <td>{% if not result %}—{% elif ab %}<span class="absent">A</span>{% else %}<b{% if thf %} style="text-decoration:underline;"{% endif %}>{{ th_m | int }}</b>{% endif %}</td>
-        <td>{% if not pr_f %}—{% elif not result %}—{% elif ab %}<span class="absent">A</span>{% else %}<b{% if prf %} style="text-decoration:underline;"{% endif %}>{{ pr_m | int }}</b>{% endif %}</td>
-        <td><b>{% if not result %}—{% elif ab %}—{% else %}{{ tot_m | int }}{% endif %}</b></td>
+        <td>{% if not result %}—{% elif ab %}<span class="absent">A</span>{% else %}<b{% if thf %} style="text-decoration:underline;"{% endif %}>{{ th_m | snap_marks }}</b>{% endif %}</td>
+        <td>{% if not pr_f %}—{% elif not result %}—{% elif ab %}<span class="absent">A</span>{% else %}<b{% if prf %} style="text-decoration:underline;"{% endif %}>{{ pr_m | snap_marks }}</b>{% endif %}</td>
+        <td><b>{% if not result %}—{% elif ab %}—{% else %}{{ tot_m | snap_marks }}{% endif %}</b></td>
         <td><b>{% if not result %}—{% elif ab %}ABSENT{% elif thf or prf %}FAIL ✗{% else %}PASS{% endif %}</b></td>
       </tr>
       {% endfor %}

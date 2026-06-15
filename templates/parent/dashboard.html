@@ -171,6 +171,10 @@
                         <div class="cp-info-item"><i class="fas fa-tint text-danger me-1"></i><span>{{ student.blood_group or '—' }}</span></div>
                         <div class="cp-info-item cp-info-full"><i class="fas fa-user-shield text-success me-1"></i><span>{{ student.guardian_name or '—' }}</span></div>
                     </div>
+
+                    <a href="{{ url_for('parent.report_card') }}" class="btn btn-primary-custom btn-sm w-100 mt-3">
+                        <i class="fas fa-file-alt me-2"></i>View Report Card
+                    </a>
                 </div>
             </div>
         </div>

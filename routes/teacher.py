@@ -285,40 +285,60 @@ def attendance():
 
             if should_notify:
                 student = db.session.get(Student, sid)
-                if student and student.parents:
+                if student:
                     student_user = db.session.get(User, student.user_id)
                     student_name = student_user.full_name if student_user else f"Roll {student.roll_no}"
-                    for parent in student.parents:
-                        parent_user = db.session.get(User, parent.user_id)
-                        if parent_user:
-                            # In-app notification for parent portal
-                            status_label = 'Absent' if new_status == 'absent' else 'On Leave'
-                            reason_text = f" (Reason: {leave_reason})" if leave_reason else ""
-                            notif_msg = (
-                                f"{student_name} was marked {status_label} on "
-                                f"{att_date.strftime('%d %B %Y')}"
-                                f" in {class_name}{reason_text}."
-                            )
-                            notif = Notification(
-                                user_id=parent_user.id,
-                                title=f"Attendance Alert — {student_name}",
-                                message=notif_msg,
-                                notif_type='warning',
-                                link=url_for('parent.dashboard')
-                            )
-                            db.session.add(notif)
+                    status_label = 'Absent' if new_status == 'absent' else 'On Leave'
+                    reason_text = f" (Reason: {leave_reason})" if leave_reason else ""
+                    notif_msg = (
+                        f"{student_name} was marked {status_label} on "
+                        f"{att_date.strftime('%d %B %Y')}"
+                        f" in {class_name}{reason_text}."
+                    )
 
-                            # Email notification
-                            if parent_user.email:
-                                try:
-                                    send_attendance_notification(
-                                        mail, parent_user.email, parent_user.full_name,
-                                        student_name, att_date, new_status,
-                                        class_name, leave_reason
-                                    )
-                                    notify_count += 1
-                                except Exception:
-                                    pass
+                    # Track emails already notified to avoid duplicate sends
+                    notified_emails = set()
+
+                    # Notify via parent portal accounts
+                    if student.parents:
+                        for parent in student.parents:
+                            parent_user = db.session.get(User, parent.user_id)
+                            if parent_user:
+                                # In-app notification
+                                notif = Notification(
+                                    user_id=parent_user.id,
+                                    title=f"Attendance Alert — {student_name}",
+                                    message=notif_msg,
+                                    notif_type='warning',
+                                    link=url_for('parent.dashboard')
+                                )
+                                db.session.add(notif)
+
+                                # Email via portal account
+                                if parent_user.email:
+                                    try:
+                                        send_attendance_notification(
+                                            mail, parent_user.email, parent_user.full_name,
+                                            student_name, att_date, new_status,
+                                            class_name, leave_reason
+                                        )
+                                        notified_emails.add(parent_user.email.lower())
+                                        notify_count += 1
+                                    except Exception:
+                                        pass
+
+                    # Also notify guardian_email if set and not already notified
+                    if student.guardian_email and student.guardian_email.lower() not in notified_emails:
+                        try:
+                            send_attendance_notification(
+                                mail, student.guardian_email,
+                                student.guardian_name or 'Parent/Guardian',
+                                student_name, att_date, new_status,
+                                class_name, leave_reason
+                            )
+                            notify_count += 1
+                        except Exception:
+                            pass
 
                 existing_rec.notif_sent = True
 
@@ -505,6 +525,9 @@ def enter_marks(eid):
     teacher = get_teacher()
     exam = Exam.query.get_or_404(eid)
 
+    # Preserve the filter page URL so Back / Save return to it
+    back_url = request.args.get('back') or request.referrer or url_for('teacher.marks')
+
     if exam.class_id:
         students_data = db.session.query(Student, User)\
             .join(User, Student.user_id == User.id)\
@@ -516,10 +539,18 @@ def enter_marks(eid):
     existing = {r.student_id: r for r in Result.query.filter_by(exam_id=eid).all()}
 
     if request.method == 'POST':
+        back_url = request.form.get('back_url') or url_for('teacher.marks')
         try:
+            def snap(v):
+                """Round to nearest 0.5 — prevents values like 68.3 being stored."""
+                try:
+                    return round(round(float(v or 0) * 2) / 2, 1)
+                except (ValueError, TypeError):
+                    return 0.0
+
             for student, _ in students_data:
-                marks_val = float(request.form.get(f'marks_{student.id}', 0) or 0)
-                practical = float(request.form.get(f'practical_{student.id}', 0) or 0)
+                marks_val = snap(request.form.get(f'marks_{student.id}', 0))
+                practical  = snap(request.form.get(f'practical_{student.id}', 0))
                 is_absent = f'absent_{student.id}' in request.form
 
                 pct = (marks_val / exam.max_marks * 100) if exam.max_marks else 0
@@ -542,13 +573,13 @@ def enter_marks(eid):
 
             db.session.commit()
             flash('Marks saved successfully!', 'success')
-            return redirect(url_for('teacher.marks'))
+            return redirect(back_url)
         except Exception as e:
             db.session.rollback()
             flash(f'Error: {str(e)}', 'danger')
 
     return render_template('teacher/enter_marks.html',
-        exam=exam, students_data=students_data, existing=existing)
+        exam=exam, students_data=students_data, existing=existing, back_url=back_url)
 
 # ------------------------------------------------------------
 

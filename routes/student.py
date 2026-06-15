@@ -163,6 +163,28 @@ def results():
         ('practical', 'Practical'),
     ]
 
+    # ── Build subject-consolidated summary (same logic as report card) ──
+    TYPE_PRIO = {'final_board': 0, 'pre_board': 1, 'mid_term': 2,
+                 'first_terminal': 3, 'unit_test': 4, 'internal': 5, 'practical': 6}
+    subjects = Subject.query.filter_by(class_id=student.class_id)\
+        .order_by(Subject.is_optional, Subject.name).all() if student.class_id else []
+    exams_raw = Exam.query.filter_by(class_id=student.class_id).all() if student.class_id else []
+    exam_by_subj = {}
+    for ex in exams_raw:
+        if not ex.subject_id:
+            continue
+        p = TYPE_PRIO.get(ex.exam_type, 9)
+        if ex.subject_id not in exam_by_subj or p < exam_by_subj[ex.subject_id][0]:
+            exam_by_subj[ex.subject_id] = (p, ex)
+    exam_by_subj = {sid: ex for sid, (_, ex) in exam_by_subj.items()}
+    result_by_exam = {r.exam_id: r for r in Result.query.filter_by(student_id=student.id).all()}
+    report_summary = []
+    for subj in subjects:
+        exam = exam_by_subj.get(subj.id)
+        result = result_by_exam.get(exam.id) if exam else None
+        if exam or result:
+            report_summary.append({'subj': subj, 'exam': exam, 'result': result})
+
     return render_template('student/results.html',
                            student=student,
                            all_results=all_results,
@@ -170,7 +192,8 @@ def results():
                            total_results=total_results,
                            passed=passed,
                            exam_type_filter=exam_type_filter,
-                           exam_types=exam_types
+                           exam_types=exam_types,
+                           report_summary=report_summary,
                            )
 
 

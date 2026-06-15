@@ -1,0 +1,744 @@
+{% extends 'base.html' %}
+{% block title %}Document Settings — Admin{% endblock %}
+{% block page_title %}Document Settings{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="ds-page-header">
+        <div>
+            <h5 class="page-sub-title">Document Customisation</h5>
+            <p class="ds-subtitle">Edit on the left — live preview updates on the right</p>
+        </div>
+        <a href="{{ url_for('admin.students') }}" class="ds-btn-back">
+            <i class="fas fa-arrow-left me-2"></i>Back
+        </a>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="ds-tabs">
+        <button class="ds-tab active" onclick="switchTab('idcard',this)">
+            <i class="fas fa-id-card"></i><span>ID Card</span>
+        </button>
+        <button class="ds-tab" onclick="switchTab('bonafide',this)">
+            <i class="fas fa-certificate"></i><span>Bonafide</span>
+        </button>
+        <button class="ds-tab" onclick="switchTab('character',this)">
+            <i class="fas fa-award"></i><span>Character</span>
+        </button>
+        <button class="ds-tab" onclick="switchTab('admit',this)">
+            <i class="fas fa-file-invoice"></i><span>Admit Card</span>
+        </button>
+        <button class="ds-tab" onclick="switchTab('signatory',this)">
+            <i class="fas fa-signature"></i><span>Signatory</span>
+        </button>
+    </div>
+
+    <form method="POST">
+        <div class="ds-layout">
+
+            <!-- ══════════════════════════════════════
+                 LEFT  –  EDITOR PANEL
+            ══════════════════════════════════════ -->
+            <div class="ds-editor">
+
+                <!-- ── ID CARD ── -->
+                <div class="ds-panel active" id="panel-idcard">
+                    <div class="ds-section-head">
+                        <i class="fas fa-id-card text-primary"></i> ID Card Settings
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label">Card Primary Colour</label>
+                        <div class="color-row">
+                            <input type="color" name="doc_id_color" id="doc_id_color"
+                                   value="{{ cfg.doc_id_color or '#1565c0' }}"
+                                   class="color-swatch"
+                                   oninput="syncHex(this,'hex_id_color');updatePreview()">
+                            <input type="text"  id="hex_id_color" class="ds-input color-hex"
+                                   value="{{ cfg.doc_id_color or '#1565c0' }}" maxlength="7"
+                                   oninput="syncColor(this,'doc_id_color');updatePreview()">
+                        </div>
+                        <p class="ds-hint">Sets the header and footer colour on the identity card</p>
+                    </div>
+                    <div class="ds-tip">
+                        <i class="fas fa-lightbulb me-1"></i>
+                        The school logo (uploaded in <a href="{{ url_for('admin.report_settings') }}">Report Settings</a>) also appears on the ID card header.
+                    </div>
+                </div>
+
+                <!-- ── BONAFIDE ── -->
+                <div class="ds-panel" id="panel-bonafide">
+                    <div class="ds-section-head">
+                        <i class="fas fa-certificate text-success"></i> Bonafide Certificate
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label">Certificate Body Text</label>
+                        <div class="placeholder-chips">
+                            <span class="chip" onclick="insertPlaceholder('doc_bonafide_text','{name}')">{name}</span>
+                            <span class="chip" onclick="insertPlaceholder('doc_bonafide_text','{roll}')">{roll}</span>
+                            <span class="chip" onclick="insertPlaceholder('doc_bonafide_text','{class}')">{class}</span>
+                            <span class="chip" onclick="insertPlaceholder('doc_bonafide_text','{year}')">{year}</span>
+                            <span class="chip" onclick="insertPlaceholder('doc_bonafide_text','{school}')">{school}</span>
+                        </div>
+                        <p class="ds-hint">Click a placeholder chip to insert it at the cursor</p>
+                        <textarea name="doc_bonafide_text" id="doc_bonafide_text"
+                                  class="ds-textarea" rows="9" oninput="updatePreview()"
+                                  placeholder="This is to certify that {name}, Roll No. {roll}, is a bonafide student of {class} at {school} for the academic year {year}. This certificate is issued on request for official purposes.">{{ cfg.doc_bonafide_text or '' }}</textarea>
+                    </div>
+                </div>
+
+                <!-- ── CHARACTER ── -->
+                <div class="ds-panel" id="panel-character">
+                    <div class="ds-section-head">
+                        <i class="fas fa-award text-warning"></i> Character Certificate
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label">Certificate Body Text</label>
+                        <div class="placeholder-chips">
+                            <span class="chip" onclick="insertPlaceholder('doc_character_text','{name}')">{name}</span>
+                            <span class="chip" onclick="insertPlaceholder('doc_character_text','{roll}')">{roll}</span>
+                            <span class="chip" onclick="insertPlaceholder('doc_character_text','{class}')">{class}</span>
+                            <span class="chip" onclick="insertPlaceholder('doc_character_text','{year}')">{year}</span>
+                            <span class="chip" onclick="insertPlaceholder('doc_character_text','{school}')">{school}</span>
+                        </div>
+                        <p class="ds-hint">Click a placeholder chip to insert it at the cursor</p>
+                        <textarea name="doc_character_text" id="doc_character_text"
+                                  class="ds-textarea" rows="9" oninput="updatePreview()"
+                                  placeholder="This is to certify that {name}, Roll No. {roll}, was a student of {class} at {school}. During the period of study, their conduct and character were found to be good. We wish them success in future endeavours.">{{ cfg.doc_character_text or '' }}</textarea>
+                    </div>
+                </div>
+
+                <!-- ── ADMIT CARD ── -->
+                <div class="ds-panel" id="panel-admit">
+                    <div class="ds-section-head">
+                        <i class="fas fa-file-invoice text-danger"></i> Exam Admit Card
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label">Exam Instructions</label>
+                        <textarea name="doc_admit_instructions" id="doc_admit_instructions"
+                                  class="ds-textarea" rows="7" oninput="updatePreview()"
+                                  placeholder="Candidates must bring this admit card to every examination. Mobile phones and electronic devices are strictly prohibited. Report 15 minutes before the scheduled start time.">{{ cfg.doc_admit_instructions or '' }}</textarea>
+                        <p class="ds-hint">Appears at the bottom of every admit card as examination rules</p>
+                    </div>
+                    <div class="ds-bulk-box">
+                        <div class="ds-label"><i class="fas fa-print me-1" style="color:#DC2626;"></i>Bulk Admit Cards</div>
+                        <p class="ds-hint mb-2">Print admit cards for an entire class in one go.</p>
+                        <a href="{{ url_for('admin.admit_cards') }}" class="ds-btn-danger">
+                            <i class="fas fa-print me-2"></i>Open Bulk Printer
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ── SIGNATORY ── -->
+                <div class="ds-panel" id="panel-signatory">
+                    <div class="ds-section-head">
+                        <i class="fas fa-signature"></i> Signatory Details
+                    </div>
+                    <div class="ds-field-row">
+                        <div class="ds-field">
+                            <label class="ds-label">Principal Name</label>
+                            <input type="text" name="doc_principal_name" id="doc_principal_name"
+                                   class="ds-input"
+                                   value="{{ cfg.doc_principal_name or '' }}"
+                                   placeholder="Mr. Ram Prasad Sharma"
+                                   oninput="updatePreview()">
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-label">Principal Title</label>
+                            <input type="text" name="doc_principal_title" id="doc_principal_title"
+                                   class="ds-input"
+                                   value="{{ cfg.doc_principal_title or 'Principal' }}"
+                                   placeholder="Principal"
+                                   oninput="updatePreview()">
+                        </div>
+                    </div>
+                    <div class="ds-field-row">
+                        <div class="ds-field">
+                            <label class="ds-label">Exam Controller Name</label>
+                            <input type="text" name="doc_exam_controller" id="doc_exam_controller"
+                                   class="ds-input"
+                                   value="{{ cfg.doc_exam_controller or '' }}"
+                                   placeholder="Mrs. Sita Devi"
+                                   oninput="updatePreview()">
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-label">Exam Controller Title</label>
+                            <input type="text" name="doc_exam_controller_title" id="doc_exam_controller_title"
+                                   class="ds-input"
+                                   value="{{ cfg.doc_exam_controller_title or 'Controller of Examinations' }}"
+                                   placeholder="Controller of Examinations"
+                                   oninput="updatePreview()">
+                        </div>
+                    </div>
+                    <p class="ds-hint">These names appear as signing authority on all certificates and admit cards.</p>
+                </div>
+
+                <!-- Save button -->
+                <div class="ds-save-row">
+                    <button type="submit" class="ds-btn-save">
+                        <i class="fas fa-save me-2"></i>Save All Settings
+                    </button>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════
+                 RIGHT  –  LIVE PREVIEW PANE
+            ══════════════════════════════════════ -->
+            <div class="ds-preview-pane">
+                <div class="preview-toolbar">
+                    <span class="preview-toolbar-label">
+                        <i class="fas fa-eye me-1"></i>Live Preview
+                    </span>
+                    <span class="preview-sample-tag">
+                        <i class="fas fa-user me-1"></i>Sample: Ramesh Kumar Sharma · Roll 15
+                    </span>
+                </div>
+
+                <div class="preview-canvas">
+
+                    <!-- ── ID CARD ── -->
+                    <div class="preview-doc active" id="preview-idcard">
+                        <div class="id-card-scene">
+                            <div class="id-card" id="idCard">
+                                <div class="idc-header" id="idcHeader">
+                                    <div id="idcLogoWrap"></div>
+                                    <div class="idc-school-name" id="idcSchoolName">{{ cfg.school_name or 'School Name' }}</div>
+                                    <div class="idc-school-addr" id="idcSchoolAddr">{{ cfg.school_subtitle or 'Address · Phone' }}</div>
+                                </div>
+                                <div class="idc-body">
+                                    <div class="idc-photo-circle">
+                                        <i class="fas fa-user" style="font-size:28px;color:#aaa;"></i>
+                                    </div>
+                                    <div class="idc-info">
+                                        <div class="idc-name">Ramesh Kumar Sharma</div>
+                                        <div class="idc-detail"><span class="idc-key">Class</span> XI-A Science</div>
+                                        <div class="idc-detail"><span class="idc-key">Roll No</span> 15</div>
+                                        <div class="idc-detail"><span class="idc-key">DOB</span> Jan 15, 2007</div>
+                                        <div class="idc-detail"><span class="idc-key">Blood</span> B+</div>
+                                    </div>
+                                </div>
+                                <div class="idc-footer" id="idcFooter">
+                                    STUDENT IDENTITY CARD &nbsp;·&nbsp; {{ cfg.school_name or 'SCHOOL' | upper }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── BONAFIDE CERTIFICATE ── -->
+                    <div class="preview-doc" id="preview-bonafide">
+                        <div class="a4-paper">
+                            <div id="bona-letterhead" class="cert-letterhead"></div>
+                            <div class="cert-doc-title">BONAFIDE CERTIFICATE</div>
+                            <div class="cert-meta">
+                                <span>Ref. No: &nbsp;_________</span>
+                                <span>Date: <span id="bona-today"></span></span>
+                            </div>
+                            <div class="cert-salutation">To Whomsoever It May Concern,</div>
+                            <div class="cert-body" id="bona-body"></div>
+                            <div class="cert-closing">Issued in good faith for official purposes.</div>
+                            <div class="cert-sig-area" id="bona-sig"></div>
+                        </div>
+                    </div>
+
+                    <!-- ── CHARACTER CERTIFICATE ── -->
+                    <div class="preview-doc" id="preview-character">
+                        <div class="a4-paper">
+                            <div id="char-letterhead" class="cert-letterhead"></div>
+                            <div class="cert-doc-title">CHARACTER CERTIFICATE</div>
+                            <div class="cert-meta">
+                                <span>Ref. No: &nbsp;_________</span>
+                                <span>Date: <span id="char-today"></span></span>
+                            </div>
+                            <div class="cert-salutation">To Whomsoever It May Concern,</div>
+                            <div class="cert-body" id="char-body"></div>
+                            <div class="cert-closing">Issued on request for official purposes.</div>
+                            <div class="cert-sig-area" id="char-sig"></div>
+                        </div>
+                    </div>
+
+                    <!-- ── ADMIT CARD ── -->
+                    <div class="preview-doc" id="preview-admit">
+                        <div class="a4-paper">
+                            <div id="admit-letterhead" class="cert-letterhead"></div>
+                            <div class="cert-doc-title" style="letter-spacing:2px;font-size:13px;">
+                                EXAMINATION ADMIT CARD — 2081-2082
+                            </div>
+                            <table class="admit-table">
+                                <tr><td>Student Name</td><td><strong>Ramesh Kumar Sharma</strong></td></tr>
+                                <tr><td>Roll Number</td><td><strong>15</strong></td></tr>
+                                <tr><td>Class / Section</td><td>XI-A Science</td></tr>
+                                <tr><td>Date of Birth</td><td>January 15, 2007</td></tr>
+                                <tr><td>Gender</td><td>Male</td></tr>
+                                <tr><td>Academic Year</td><td>2081-2082</td></tr>
+                            </table>
+                            <div class="admit-notice" id="admit-notice"></div>
+                            <div class="cert-sig-area" id="admit-sig"></div>
+                        </div>
+                    </div>
+
+                    <!-- ── SIGNATORY ── -->
+                    <div class="preview-doc" id="preview-signatory">
+                        <div class="a4-paper">
+                            <div id="sig-letterhead" class="cert-letterhead"></div>
+                            <div class="cert-doc-title">SIGNATORY BLOCKS PREVIEW</div>
+                            <div class="cert-body" style="color:#888;font-style:italic;text-align:center;padding:18px 0 0;">
+                                These signature blocks appear on all certificates and admit cards
+                            </div>
+                            <div class="sig-preview-grid" id="sig-preview-grid"></div>
+                        </div>
+                    </div>
+
+                </div><!-- /preview-canvas -->
+            </div><!-- /ds-preview-pane -->
+
+        </div><!-- /ds-layout -->
+    </form>
+</div>
+
+<!-- ─────────────── STYLES ─────────────── -->
+<style>
+/* Page header */
+.page-sub-title { font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px; }
+.ds-subtitle    { font-size:12.5px;color:var(--text-muted);margin:0; }
+.ds-page-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:20px; }
+.ds-btn-back {
+    display:inline-flex;align-items:center;padding:8px 16px;border-radius:8px;
+    border:1.5px solid var(--border);color:var(--text-muted);font-size:13px;
+    font-weight:600;text-decoration:none;background:transparent;
+    transition:background .15s;
+}
+.ds-btn-back:hover { background:var(--bg); }
+
+/* ── Tabs ── */
+.ds-tabs {
+    display:flex;gap:4px;flex-wrap:wrap;
+    background:var(--card);padding:6px;
+    border-radius:12px;border:1px solid var(--border);
+    margin-bottom:20px;
+}
+.ds-tab {
+    display:flex;align-items:center;gap:7px;
+    padding:8px 16px;border:none;border-radius:8px;
+    font-size:13px;font-weight:600;cursor:pointer;
+    color:var(--text-muted);background:transparent;
+    transition:all .15s;
+}
+.ds-tab i { font-size:13px; }
+.ds-tab:hover { background:var(--bg);color:var(--text); }
+.ds-tab.active { background:#1A56DB;color:#fff; }
+
+/* ── Split layout ── */
+.ds-layout {
+    display:grid;
+    grid-template-columns: 380px 1fr;
+    gap:24px;
+    align-items:start;
+}
+@media (max-width:960px) {
+    .ds-layout { grid-template-columns:1fr; }
+}
+
+/* ── Editor panel ── */
+.ds-editor {
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:20px;
+}
+.ds-panel { display:none; }
+.ds-panel.active { display:block; }
+
+.ds-section-head {
+    font-size:14px;font-weight:700;color:var(--text);
+    margin-bottom:18px;padding-bottom:10px;
+    border-bottom:2px solid var(--border);
+    display:flex;align-items:center;gap:8px;
+}
+.ds-field { margin-bottom:16px; }
+.ds-field-row { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+@media (max-width:480px) { .ds-field-row { grid-template-columns:1fr; } }
+
+.ds-label { font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:.4px; }
+.ds-hint  { font-size:11.5px;color:var(--text-muted);margin-top:4px;margin-bottom:0; }
+.ds-input {
+    width:100%;padding:9px 12px;
+    border:1.5px solid var(--border);border-radius:8px;
+    font-size:13.5px;color:var(--text);background:var(--card);
+    font-family:inherit;transition:border-color .15s;
+}
+.ds-input:focus { border-color:#1A56DB;outline:none;box-shadow:0 0 0 3px rgba(26,86,219,.1); }
+.ds-textarea {
+    width:100%;padding:11px 13px;
+    border:1.5px solid var(--border);border-radius:8px;
+    font-size:13px;color:var(--text);background:var(--card);
+    font-family:inherit;resize:vertical;line-height:1.6;
+    transition:border-color .15s;
+}
+.ds-textarea:focus { border-color:#1A56DB;outline:none;box-shadow:0 0 0 3px rgba(26,86,219,.1); }
+
+/* Color picker */
+.color-row { display:flex;gap:10px;align-items:center; }
+.color-swatch {
+    width:48px;height:42px;border:1.5px solid var(--border);
+    border-radius:8px;padding:3px;cursor:pointer;background:transparent;flex-shrink:0;
+}
+.color-hex { flex:1;font-family:monospace; }
+
+/* Placeholder chips */
+.placeholder-chips { display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px; }
+.chip {
+    padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:700;
+    background:rgba(26,86,219,.1);color:#1A56DB;cursor:pointer;
+    border:1px solid rgba(26,86,219,.2);font-family:monospace;
+    transition:background .15s;
+}
+.chip:hover { background:rgba(26,86,219,.2); }
+
+/* Tip box */
+.ds-tip {
+    background:rgba(26,86,219,.07);border:1px solid rgba(26,86,219,.15);
+    border-radius:8px;padding:10px 13px;font-size:12px;color:var(--text-muted);
+    margin-top:8px;
+}
+.ds-tip a { color:#1A56DB;text-decoration:none; }
+.ds-tip a:hover { text-decoration:underline; }
+
+/* Bulk print box */
+.ds-bulk-box {
+    background:var(--bg);border:1px solid var(--border);
+    border-radius:8px;padding:14px;margin-top:4px;
+}
+.ds-btn-danger {
+    display:inline-flex;align-items:center;
+    background:#DC2626;border:none;color:#fff;
+    padding:8px 16px;border-radius:8px;font-weight:600;
+    font-size:13px;cursor:pointer;text-decoration:none;
+    transition:background .15s;
+}
+.ds-btn-danger:hover { background:#b91c1c;color:#fff; }
+
+/* Save button */
+.ds-save-row { margin-top:24px;padding-top:16px;border-top:1px solid var(--border); }
+.ds-btn-save {
+    width:100%;padding:11px;border:none;border-radius:8px;
+    background:#1A56DB;color:#fff;font-size:14px;font-weight:700;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:background .15s;
+}
+.ds-btn-save:hover { background:#1648c0; }
+
+/* ── Preview pane ── */
+.ds-preview-pane {
+    position:sticky;top:80px;
+}
+.preview-toolbar {
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--card);border:1px solid var(--border);
+    border-radius:10px 10px 0 0;padding:10px 16px;
+    border-bottom:none;
+}
+.preview-toolbar-label {
+    font-size:13px;font-weight:700;color:var(--text);
+}
+.preview-sample-tag {
+    font-size:11px;background:rgba(26,86,219,.1);color:#1A56DB;
+    padding:3px 10px;border-radius:20px;font-weight:600;
+}
+.preview-canvas {
+    background:#d1d5db;
+    border-radius:0 0 10px 10px;
+    border:1px solid var(--border);
+    padding:28px 24px;
+    min-height:480px;
+    max-height:calc(100vh - 200px);
+    overflow-y:auto;
+}
+
+/* ── Preview document switch ── */
+.preview-doc { display:none; }
+.preview-doc.active { display:block; }
+
+/* ── ID Card ── */
+.id-card-scene {
+    display:flex;justify-content:center;align-items:center;
+    padding:20px 0;
+}
+.id-card {
+    width:320px;border-radius:14px;overflow:hidden;
+    box-shadow:0 8px 32px rgba(0,0,0,.25);
+    background:#fff;font-family:Arial,sans-serif;
+}
+.idc-header {
+    padding:14px 16px;text-align:center;
+    background:#1565c0;color:#fff;
+}
+.idc-school-name { font-size:14px;font-weight:800;letter-spacing:.4px; }
+.idc-school-addr { font-size:10px;opacity:.85;margin-top:2px; }
+.idc-body {
+    display:flex;gap:14px;align-items:center;
+    padding:16px;background:#fff;
+}
+.idc-photo-circle {
+    width:72px;height:72px;border-radius:50%;
+    background:#edf2f7;display:flex;align-items:center;
+    justify-content:center;flex-shrink:0;
+    border:3px solid #e3e8f7;
+}
+.idc-info { flex:1; }
+.idc-name  { font-size:14px;font-weight:800;color:#1a237e;margin-bottom:5px; }
+.idc-detail{ font-size:11px;color:#444;margin-top:3px; }
+.idc-key   { font-weight:700;margin-right:4px;color:#666; }
+.idc-footer{
+    text-align:center;padding:7px 14px;
+    font-size:9.5px;letter-spacing:.8px;
+    font-weight:600;color:#fff;
+    background:#1565c0;
+}
+
+/* ── A4 Paper ── */
+.a4-paper {
+    background:#fff;width:100%;max-width:580px;margin:0 auto;
+    padding:40px 44px;
+    box-shadow:0 6px 28px rgba(0,0,0,.22);
+    border-radius:2px;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size:12px;color:#1a1a1a;line-height:1.75;
+}
+
+/* Letterhead */
+.cert-letterhead {
+    text-align:center;
+    padding-bottom:14px;
+    margin-bottom:18px;
+    border-bottom:3px double #1a237e;
+}
+
+/* Certificate elements */
+.cert-doc-title {
+    text-align:center;font-size:14px;font-weight:800;
+    letter-spacing:2px;text-decoration:underline;
+    text-transform:uppercase;margin-bottom:14px;
+    color:#1a237e;font-family:Arial,sans-serif;
+}
+.cert-meta {
+    display:flex;justify-content:space-between;
+    font-size:11px;color:#555;margin-bottom:16px;
+    font-family:Arial,sans-serif;
+}
+.cert-salutation {
+    font-size:12px;font-weight:700;margin-bottom:12px;
+    color:#222;
+}
+.cert-body {
+    margin-bottom:14px;
+    text-align:justify;
+    font-size:12.5px;
+    line-height:1.85;
+}
+.cert-body strong { color:#000;font-weight:700; }
+.cert-closing {
+    font-size:11.5px;color:#555;
+    border-top:1px solid #ddd;padding-top:10px;
+    margin-top:4px;font-style:italic;
+}
+.cert-sig-area { margin-top:32px; }
+
+/* Signature block */
+.sig-block {
+    display:inline-block;text-align:center;
+    border-top:1.5px solid #333;padding-top:7px;
+    min-width:170px;
+    font-family:Arial,sans-serif;
+}
+.sig-block strong { display:block;font-size:12px;color:#111; }
+.sig-block span   { font-size:10.5px;color:#555; }
+
+/* Admit card table */
+.admit-table {
+    width:100%;border-collapse:collapse;margin:14px 0;
+    font-family:Arial,sans-serif;
+}
+.admit-table td {
+    padding:7px 10px;border:1px solid #c0c0c0;font-size:12px;
+}
+.admit-table td:first-child {
+    background:#f4f4f4;font-weight:700;width:38%;color:#333;
+}
+.admit-notice {
+    background:#fef9e7;border:1px solid #f0c040;
+    border-radius:4px;padding:10px 13px;font-size:11.5px;
+    margin-top:14px;line-height:1.65;color:#5a4000;
+    font-family:Arial,sans-serif;
+}
+.admit-notice strong { color:#333; }
+
+/* Signatory grid */
+.sig-preview-grid {
+    display:grid;grid-template-columns:1fr 1fr;
+    gap:40px;margin-top:56px;
+    font-family:Arial,sans-serif;
+}
+.sig-preview-block {
+    text-align:center;border-top:1.5px solid #333;
+    padding-top:8px;
+}
+.sig-preview-block strong { display:block;font-size:12.5px;color:#111; }
+.sig-preview-block span   { font-size:11px;color:#555; }
+
+/* Utilities */
+.me-1 { margin-right:4px; }
+.me-2 { margin-right:8px; }
+.mb-2 { margin-bottom:8px; }
+.mt-3 { margin-top:12px; }
+.text-success { color:#16a34a; }
+.text-primary  { color:#1A56DB; }
+.text-warning  { color:#d97706; }
+.text-danger   { color:#dc2626; }
+</style>
+
+<!-- ─────────────── SCRIPT ─────────────── -->
+<script>
+var CFG = {
+    school: {{ (cfg.school_name or 'School Name') | tojson }},
+    addr:   {{ (cfg.school_subtitle or '') | tojson }},
+    logo:   "{% if cfg and cfg.logo_filename %}{{ url_for('static', filename='uploads/logos/' ~ cfg.logo_filename) }}{% endif %}"
+};
+
+var SAMPLE = {
+    name:  'Ramesh Kumar Sharma',
+    roll:  '15',
+    cls:   'XI-A Science',
+    year:  '2081-2082'
+};
+
+/* ── Tab switching ─────────────────────── */
+function switchTab(name, btn) {
+    document.querySelectorAll('.ds-panel').forEach(function(p)  { p.classList.remove('active'); });
+    document.querySelectorAll('.ds-tab').forEach(function(b)    { b.classList.remove('active'); });
+    document.querySelectorAll('.preview-doc').forEach(function(d){ d.classList.remove('active'); });
+    document.getElementById('panel-'   + name).classList.add('active');
+    document.getElementById('preview-' + name).classList.add('active');
+    btn.classList.add('active');
+}
+
+/* ── Color helpers ─────────────────────── */
+function syncHex(colorInput, hexId) {
+    document.getElementById(hexId).value = colorInput.value;
+}
+function syncColor(hexInput, colorId) {
+    if (/^#[0-9A-Fa-f]{6}$/.test(hexInput.value)) {
+        document.getElementById(colorId).value = hexInput.value;
+    }
+}
+
+/* ── Placeholder insert ─────────────────── */
+function insertPlaceholder(textareaId, token) {
+    var ta = document.getElementById(textareaId);
+    var s = ta.selectionStart, e = ta.selectionEnd;
+    ta.value = ta.value.slice(0, s) + token + ta.value.slice(e);
+    ta.selectionStart = ta.selectionEnd = s + token.length;
+    ta.focus();
+    updatePreview();
+}
+
+/* ── Escape HTML ───────────────────────── */
+function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ── Fill placeholders with sample data ── */
+function fillPlaceholders(text, defaultText) {
+    var t = (text || '').trim() || defaultText;
+    return t
+        .replace(/\{name\}/g,   '<strong>' + esc(SAMPLE.name) + '</strong>')
+        .replace(/\{roll\}/g,   '<strong>' + esc(SAMPLE.roll) + '</strong>')
+        .replace(/\{class\}/g,  '<strong>' + esc(SAMPLE.cls)  + '</strong>')
+        .replace(/\{year\}/g,   '<strong>' + esc(SAMPLE.year) + '</strong>')
+        .replace(/\{school\}/g, '<strong>' + esc(CFG.school)  + '</strong>');
+}
+
+/* ── Build letterhead HTML ─────────────── */
+function letterheadHtml() {
+    var logoHtml = CFG.logo
+        ? '<img src="' + CFG.logo + '" style="height:52px;object-fit:contain;margin-bottom:6px;display:block;margin-left:auto;margin-right:auto;">'
+        : '';
+    return logoHtml
+        + '<div style="font-size:19px;font-weight:900;color:#1a237e;letter-spacing:.4px;">' + esc(CFG.school) + '</div>'
+        + (CFG.addr ? '<div style="font-size:11px;color:#555;margin-top:3px;">' + esc(CFG.addr) + '</div>' : '');
+}
+
+/* ── Build sig block HTML ──────────────── */
+function sigBlockHtml(name, title) {
+    var n = (name || '').trim() || '___________________________';
+    return '<div class="sig-block"><strong>' + esc(n) + '</strong><span>' + esc(title) + '</span></div>';
+}
+
+/* ── Master update ─────────────────────── */
+function updatePreview() {
+    var color           = document.getElementById('doc_id_color').value           || '#1565c0';
+    var bonaTxt         = document.getElementById('doc_bonafide_text').value;
+    var charTxt         = document.getElementById('doc_character_text').value;
+    var admitTxt        = document.getElementById('doc_admit_instructions').value;
+    var principal       = (document.getElementById('doc_principal_name')         || {}).value || '';
+    var principalTitle  = (document.getElementById('doc_principal_title')        || {}).value || 'Principal';
+    var examCtrl        = (document.getElementById('doc_exam_controller')        || {}).value || '';
+    var examCtrlTitle   = (document.getElementById('doc_exam_controller_title')  || {}).value || 'Controller of Examinations';
+
+    /* ID Card */
+    document.getElementById('idcHeader').style.background = color;
+    document.getElementById('idcFooter').style.background = color;
+    var logoWrap = document.getElementById('idcLogoWrap');
+    if (CFG.logo) {
+        logoWrap.innerHTML = '<img src="' + CFG.logo + '" style="height:36px;object-fit:contain;margin-bottom:5px;display:block;margin-left:auto;margin-right:auto;">';
+    }
+
+    /* Letterheads */
+    var lh = letterheadHtml();
+    ['bona-letterhead','char-letterhead','admit-letterhead','sig-letterhead'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.innerHTML = lh;
+    });
+
+    /* Dates */
+    var today = new Date().toLocaleDateString('en-IN', {day:'numeric',month:'long',year:'numeric'});
+    ['bona-today','char-today'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = today;
+    });
+
+    /* Certificate bodies */
+    var defaultBona = 'This is to certify that {name}, Roll No. {roll}, is a bonafide student of {class} at {school} for the academic year {year}. This certificate is issued on request for official purposes.';
+    var defaultChar = 'This is to certify that {name}, Roll No. {roll}, was a student of {class} at {school}. During the period of study, their conduct and character were found to be good. We wish them success in future endeavours.';
+    document.getElementById('bona-body').innerHTML = '<p>' + fillPlaceholders(bonaTxt, defaultBona) + '</p>';
+    document.getElementById('char-body').innerHTML = '<p>' + fillPlaceholders(charTxt, defaultChar) + '</p>';
+
+    /* Signature blocks on certificates */
+    var principalSig = sigBlockHtml(principal, principalTitle);
+    document.getElementById('bona-sig').innerHTML = '<div style="text-align:right;">' + principalSig + '</div>';
+    document.getElementById('char-sig').innerHTML = '<div style="text-align:right;">' + principalSig + '</div>';
+
+    /* Admit card instructions */
+    var defaultInstr = 'Candidates must bring this admit card to every examination. Mobile phones and electronic devices are strictly prohibited. Report 15 minutes before the scheduled start time.';
+    var instr = (admitTxt || '').trim() || defaultInstr;
+    document.getElementById('admit-notice').innerHTML = '<strong>Instructions:</strong> ' + esc(instr);
+
+    /* Exam controller sig on admit card */
+    document.getElementById('admit-sig').innerHTML = '<div style="text-align:right;">' + sigBlockHtml(examCtrl, examCtrlTitle) + '</div>';
+
+    /* Signatory grid */
+    document.getElementById('sig-preview-grid').innerHTML =
+        '<div class="sig-preview-block">'
+        + '<strong>' + esc((principal || '').trim() || 'Principal Name') + '</strong>'
+        + '<span>' + esc(principalTitle) + '</span>'
+        + '</div>'
+        + '<div class="sig-preview-block">'
+        + '<strong>' + esc((examCtrl || '').trim() || 'Exam Controller Name') + '</strong>'
+        + '<span>' + esc(examCtrlTitle) + '</span>'
+        + '</div>';
+}
+
+/* ── Init ──────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function() {
+    updatePreview();
+});
+</script>
+{% endblock %}

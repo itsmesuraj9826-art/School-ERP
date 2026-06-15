@@ -4,93 +4,73 @@
 
 {% block content %}
 <div class="dashboard-content">
-    <!-- Summary Cards -->
-    <div class="row g-4 mb-4">
-        <div class="col-xl-3 col-md-6">
-            <div class="stat-card stat-blue">
-                <div class="stat-icon"><i class="fas fa-star"></i></div>
-                <div class="stat-info">
-                    <div class="stat-value">{{ avg_gpa }}</div>
-                    <div class="stat-label">Overall GPA</div>
-                    <div class="stat-change">NEB 4.0 Scale</div>
-                </div>
+
+    <!-- ── Page Header ── -->
+    <div class="res-header-row">
+        <div>
+            <h5 class="res-page-title">My Results</h5>
+            <p class="res-page-sub">All exam scores · {{ student.class_ref.full_name if student.class_ref else '' }}</p>
+        </div>
+        <a href="{{ url_for('student.report_card') }}" class="btn-view-rc">
+            <i class="fas fa-file-alt me-2"></i>View / Print Report Card
+        </a>
+    </div>
+
+    <!-- ── Summary Cards ── -->
+    <div class="res-stats-row">
+        <div class="res-stat res-stat-blue">
+            <div class="res-stat-icon"><i class="fas fa-star"></i></div>
+            <div>
+                <div class="res-stat-val">{{ avg_gpa }}</div>
+                <div class="res-stat-lbl">Overall GPA</div>
+                <div class="res-stat-sub">NEB 4.0 Scale</div>
             </div>
         </div>
-        <div class="col-xl-3 col-md-6">
-            <div class="stat-card stat-green">
-                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                <div class="stat-info">
-                    <div class="stat-value">{{ passed }}</div>
-                    <div class="stat-label">Passed Exams</div>
-                    <div class="stat-change">out of {{ total_results }}</div>
-                </div>
+        <div class="res-stat res-stat-green">
+            <div class="res-stat-icon"><i class="fas fa-check-circle"></i></div>
+            <div>
+                <div class="res-stat-val">{{ passed }}</div>
+                <div class="res-stat-lbl">Passed</div>
+                <div class="res-stat-sub">out of {{ total_results }}</div>
             </div>
         </div>
-        <div class="col-xl-3 col-md-6">
-            <div class="stat-card stat-red">
-                <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
-                <div class="stat-info">
-                    <div class="stat-value">{{ total_results - passed }}</div>
-                    <div class="stat-label">Failed / Absent</div>
-                    <div class="stat-change">Needs improvement</div>
-                </div>
+        <div class="res-stat res-stat-red">
+            <div class="res-stat-icon"><i class="fas fa-times-circle"></i></div>
+            <div>
+                <div class="res-stat-val">{{ total_results - passed }}</div>
+                <div class="res-stat-lbl">Failed / Absent</div>
+                <div class="res-stat-sub">Needs improvement</div>
             </div>
         </div>
-        <div class="col-xl-3 col-md-6">
-            <div class="stat-card stat-purple">
-                <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
-                <div class="stat-info">
-                    <div class="stat-value">{{ total_results }}</div>
-                    <div class="stat-label">Total Exams</div>
-                    <div class="stat-change">{{ student.class_ref.full_name if student.class_ref else 'N/A' }}</div>
-                </div>
+        <div class="res-stat res-stat-purple">
+            <div class="res-stat-icon"><i class="fas fa-file-alt"></i></div>
+            <div>
+                <div class="res-stat-val">{{ total_results }}</div>
+                <div class="res-stat-lbl">Total Exams</div>
+                <div class="res-stat-sub">all types</div>
             </div>
         </div>
     </div>
 
-    <!-- NEB Grade Reference -->
-    <div class="info-card mb-4">
-        <div class="card-head">
-            <h6 class="card-head-title"><i class="fas fa-info-circle me-2 text-primary"></i>NEB Grading Scale</h6>
-        </div>
-        <div class="d-flex flex-wrap gap-2 p-3">
-            {% for grade, gpa, range in [('A+','4.0','90–100'),('A','3.6','80–89'),('B+','3.2','70–79'),('B','2.8','60–69'),('C+','2.4','50–59'),('C','2.0','40–49'),('D','1.6','35–39'),('F','0.0','<35')] %}
-            <div class="grade-ref-pill grade-ref-{{ grade.replace('+','p') }}">
-                <span class="grade-ref-label">{{ grade }}</span>
-                <span class="grade-ref-gpa">{{ gpa }} GPA</span>
-                <span class="grade-ref-range">{{ range }}%</span>
-            </div>
+    <!-- ── Exam Type Tabs + Table ── -->
+    <div class="res-card">
+        <div class="res-tabs">
+            <button class="res-tab active" data-type="all">All</button>
+            {% set seen_types = namespace(v=[]) %}
+            {% for result, exam, subj in all_results %}
+            {% if exam.exam_type not in seen_types.v %}
+            {% set _ = seen_types.v.append(exam.exam_type) %}
+            <button class="res-tab" data-type="{{ exam.exam_type }}">
+                {{ exam.exam_type.replace('_',' ').title() }}
+            </button>
+            {% endif %}
             {% endfor %}
         </div>
-    </div>
 
-    <!-- Filter -->
-    <div class="info-card mb-4">
-        <form method="GET" class="row g-3 align-items-end">
-            <div class="col-md-5">
-                <label class="form-label fw-semibold small">Filter by Exam Type</label>
-                <select name="exam_type" class="form-select form-select-sm">
-                    <option value="">All Exam Types</option>
-                    {% for val, label in exam_types %}
-                    <option value="{{ val }}" {% if exam_type_filter == val %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3">
-                <button type="submit" class="btn btn-primary-custom btn-sm w-100">
-                    <i class="fas fa-filter me-2"></i>Filter
-                </button>
-            </div>
-        </form>
-    </div>
+        <div class="res-tab-note" id="resTabNote" style="display:none;"></div>
 
-    <!-- Results Table -->
-    <div class="info-card">
-        <div class="card-head">
-            <h6 class="card-head-title"><i class="fas fa-chart-bar me-2 text-primary"></i>Detailed Results</h6>
-        </div>
         <div class="table-responsive">
-            <table class="table table-hover modern-table data-table">
+            <table class="res-table">
                 <thead>
                     <tr>
                         <th>#</th>
@@ -102,55 +82,342 @@
                         <th>Max</th>
                         <th>%</th>
                         <th>Grade</th>
-                        <th>GPA</th>
                         <th>Status</th>
+                        <th title="This mark appears on your Report Card">RC</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="resTbody">
                     {% for result, exam, subj in all_results %}
                     {% set pct = (result.marks_obtained / exam.max_marks * 100)|round(1) if exam.max_marks else 0 %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
+                    {% set on_rc = namespace(v=false) %}
+                    {% for row in report_summary %}
+                        {% if row.result and row.result.id == result.id %}{% set on_rc.v = true %}{% endif %}
+                    {% endfor %}
+                    <tr data-type="{{ exam.exam_type }}">
+                        <td class="res-idx">{{ loop.index }}</td>
                         <td><strong>{{ exam.name }}</strong></td>
-                        <td><span class="badge exam-type-{{ exam.exam_type }}">{{ exam.exam_type.replace('_',' ').title() }}</span></td>
-                        <td>{{ subj.name if subj else '—' }}</td>
-                        <td>{{ exam.exam_date.strftime('%d %b %Y') if exam.exam_date else '—' }}</td>
                         <td>
-                            <span class="fw-semibold">{{ result.marks_obtained }}</span>
-                            {% if result.practical_marks %}<span class="text-muted small">+{{ result.practical_marks }}(P)</span>{% endif %}
+                            <span class="etype-badge etype-{{ exam.exam_type }}">
+                                {{ exam.exam_type.replace('_',' ').title() }}
+                            </span>
+                        </td>
+                        <td>{{ subj.name if subj else '—' }}</td>
+                        <td class="text-nowrap">{{ exam.exam_date.strftime('%d %b %Y') if exam.exam_date else '—' }}</td>
+                        <td>
+                            <strong>{{ result.marks_obtained | snap_marks }}</strong>
+                            {% if result.practical_marks and result.practical_marks > 0 %}
+                            <span class="text-muted small">+{{ result.practical_marks | snap_marks }}P</span>
+                            {% endif %}
                         </td>
                         <td>{{ exam.max_marks }}</td>
                         <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="progress flex-grow-1" style="height:6px; min-width:50px;">
-                                    <div class="progress-bar {% if pct >= 60 %}bg-success{% elif pct >= 40 %}bg-warning{% else %}bg-danger{% endif %}"
-                                        style="width:{{ pct }}%"></div>
+                            <div class="pct-cell">
+                                <div class="pct-bar-wrap">
+                                    <div class="pct-bar {% if pct >= 60 %}pct-green{% elif pct >= 40 %}pct-yellow{% else %}pct-red{% endif %}"
+                                         style="width:{{ [pct,100]|min }}%"></div>
                                 </div>
-                                <small>{{ pct }}%</small>
+                                <span class="pct-num">{{ pct }}%</span>
                             </div>
                         </td>
                         <td>
-                            <span class="badge neb-grade-{{ (result.grade or 'F').replace('+','p') }}">
+                            <span class="neb-grade neb-{{ (result.grade or 'F').replace('+','p') }}">
                                 {{ result.grade or '—' }}
                             </span>
                         </td>
-                        <td>{{ result.gpa or '—' }}</td>
                         <td>
-                            {% if result.is_absent %}
-                            <span class="badge bg-secondary">Absent</span>
-                            {% elif result.grade == 'F' %}
-                            <span class="badge bg-danger">Failed</span>
-                            {% else %}
-                            <span class="badge bg-success">Passed</span>
+                            {% if result.is_absent %}<span class="res-status absent">Absent</span>
+                            {% elif result.grade == 'F' %}<span class="res-status failed">Failed</span>
+                            {% else %}<span class="res-status passed">Passed</span>
                             {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if on_rc.v %}
+                            <span class="rc-chip" title="This mark appears on your Report Card">
+                                <i class="fas fa-file-alt"></i> RC
+                            </span>
+                            {% else %}<span class="text-muted" style="font-size:11px;">—</span>{% endif %}
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="11" class="text-center text-muted py-4">No results found yet.</td></tr>
+                    <tr><td colspan="11" class="text-center text-muted" style="padding:28px;">No results yet.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
+
+    <!-- ── Report Card Preview ── -->
+    {% if report_summary %}
+    <div class="res-card" style="margin-top:20px;">
+        <div class="rc-preview-head">
+            <div>
+                <span class="rc-preview-title"><i class="fas fa-file-alt me-2 text-primary"></i>Report Card Preview</span>
+                <span class="rc-preview-sub"> — one mark per subject (highest-priority exam)</span>
+            </div>
+            <a href="{{ url_for('student.report_card') }}" class="btn-view-rc btn-view-rc-sm">
+                <i class="fas fa-print me-1"></i>Print Full Report Card
+            </a>
+        </div>
+        <div class="table-responsive">
+            <table class="res-table">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Exam Used</th>
+                        <th>Theory</th>
+                        <th>Practical</th>
+                        <th>Total</th>
+                        <th>Max</th>
+                        <th>%</th>
+                        <th>Grade</th>
+                        <th>GPA</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in report_summary %}
+                    {% set subj   = row.subj %}
+                    {% set exam   = row.exam %}
+                    {% set result = row.result %}
+                    {% set th_max = exam.max_marks if exam else (subj.max_marks or 100) %}
+                    {% set pr_max = subj.practical_marks or 0 %}
+                    {% set th  = (result.marks_obtained or 0)  if result else none %}
+                    {% set pr  = (result.practical_marks or 0) if result else none %}
+                    {% set tot = (th + pr) if th is not none else none %}
+                    {% set mx  = th_max + pr_max %}
+                    {% set pct = ((tot / mx * 100)|round(1)) if (tot is not none and mx) else none %}
+                    <tr>
+                        <td>
+                            <strong>{{ subj.name }}</strong>
+                            {% if subj.is_optional %}<span class="opt-tag">Optional</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if exam %}
+                            <span class="etype-badge etype-{{ exam.exam_type }}">{{ exam.exam_type.replace('_',' ').title() }}</span>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if result %}
+                                {% if result.is_absent %}<span class="res-status absent">Absent</span>
+                                {% else %}<strong>{{ th | snap_marks }}</strong>/{{ th_max }}{% endif %}
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if result and pr_max > 0 and not result.is_absent %}
+                                <strong>{{ pr | snap_marks }}</strong>/{{ pr_max }}
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if tot is not none and result and not result.is_absent %}
+                                <strong>{{ tot | snap_marks }}</strong>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td>{{ mx }}</td>
+                        <td>
+                            {% if pct is not none and result and not result.is_absent %}
+                            <div class="pct-cell">
+                                <div class="pct-bar-wrap">
+                                    <div class="pct-bar {% if pct >= 60 %}pct-green{% elif pct >= 40 %}pct-yellow{% else %}pct-red{% endif %}"
+                                         style="width:{{ [pct,100]|min }}%"></div>
+                                </div>
+                                <span class="pct-num">{{ pct }}%</span>
+                            </div>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td>
+                            {% if result and result.grade %}
+                            <span class="neb-grade neb-{{ result.grade.replace('+','p') }}">{{ result.grade }}</span>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td>{{ result.gpa if result and result.gpa else '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="rc-footer-note">
+            <i class="fas fa-info-circle me-1"></i>
+            Report card uses the highest-priority exam per subject: Final Board → Pre-Board → Mid-Term → First Terminal → Unit Test.
+            <a href="{{ url_for('student.report_card') }}">Open &amp; print the full report card →</a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── NEB Grade Reference ── -->
+    <div class="res-card" style="margin-top:20px;">
+        <div class="rc-preview-head" style="border-bottom:none;">
+            <span class="rc-preview-title"><i class="fas fa-info-circle me-2 text-primary"></i>NEB Grading Scale</span>
+        </div>
+        <div class="neb-pills">
+            {% for grade, gpa, rng, color in [
+                ('A+','4.0','90–100','#1B5E20'),('A','3.6','80–89','#2E7D32'),
+                ('B+','3.2','70–79','#1565C0'),('B','2.8','60–69','#1976D2'),
+                ('C+','2.4','50–59','#F57F17'),('C','2.0','40–49','#E65100'),
+                ('D','1.6','35–39','#BF360C'), ('F','0.0','<35','#B71C1C')
+            ] %}
+            <div class="neb-pill" style="border-color:{{ color }}30;">
+                <span class="neb-pill-grade" style="background:{{ color }};">{{ grade }}</span>
+                <span class="neb-pill-gpa">{{ gpa }}</span>
+                <span class="neb-pill-range">{{ rng }}%</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
 </div>
+
+<style>
+.res-header-row { display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px; }
+.res-page-title { font-size:20px;font-weight:800;color:var(--text);margin:0; }
+.res-page-sub   { font-size:12px;color:var(--text-muted);margin:2px 0 0; }
+
+.btn-view-rc {
+    display:inline-flex;align-items:center;
+    background:linear-gradient(135deg,#1A56DB,#0D47A1);
+    color:#fff !important;border:none;border-radius:10px;
+    padding:10px 20px;font-size:13px;font-weight:700;
+    text-decoration:none !important;
+    box-shadow:0 3px 12px rgba(26,86,219,.3);
+    transition:opacity .15s;
+}
+.btn-view-rc:hover { opacity:.88; }
+.btn-view-rc-sm { padding:7px 14px;font-size:12px; }
+
+.res-stats-row { display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px; }
+@media(max-width:768px){ .res-stats-row { grid-template-columns:repeat(2,1fr); } }
+.res-stat {
+    background:var(--card);border:1px solid var(--border);
+    border-radius:12px;padding:14px 16px;
+    display:flex;align-items:center;gap:12px;
+}
+.res-stat-icon {
+    width:42px;height:42px;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:17px;color:#fff;flex-shrink:0;
+}
+.res-stat-blue   .res-stat-icon { background:linear-gradient(135deg,#1565C0,#1A56DB); }
+.res-stat-green  .res-stat-icon { background:linear-gradient(135deg,#2E7D32,#388E3C); }
+.res-stat-red    .res-stat-icon { background:linear-gradient(135deg,#C62828,#E53935); }
+.res-stat-purple .res-stat-icon { background:linear-gradient(135deg,#6A1B9A,#8E24AA); }
+.res-stat-val { font-size:24px;font-weight:800;color:var(--text);line-height:1; }
+.res-stat-lbl { font-size:11.5px;font-weight:600;color:var(--text);margin-top:3px; }
+.res-stat-sub { font-size:10.5px;color:var(--text-muted); }
+
+.res-card { background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden; }
+
+.res-tabs { display:flex;flex-wrap:wrap;gap:2px;padding:12px 14px 0;border-bottom:1px solid var(--border); }
+.res-tab {
+    padding:7px 15px;border:none;background:transparent;
+    font-size:12.5px;font-weight:600;color:var(--text-muted);
+    cursor:pointer;border-radius:7px 7px 0 0;
+    border-bottom:2.5px solid transparent;margin-bottom:-1px;
+    transition:all .12s;
+}
+.res-tab:hover  { color:var(--text); }
+.res-tab.active { color:#1A56DB;border-bottom-color:#1A56DB; }
+
+.res-tab-note {
+    padding:7px 16px;font-size:12px;font-weight:600;
+    color:#1A56DB;background:rgba(26,86,219,.07);
+    border-bottom:1px solid var(--border);
+}
+
+.res-table { width:100%;border-collapse:collapse;font-size:13px; }
+.res-table thead th {
+    background:var(--bg);padding:10px 12px;
+    border-bottom:2px solid var(--border);
+    font-size:10.5px;font-weight:700;color:var(--text-muted);
+    text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;
+}
+.res-table tbody td { padding:11px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle; }
+.res-table tbody tr:last-child td { border-bottom:none; }
+.res-table tbody tr:hover { background:var(--bg); }
+.res-idx { color:var(--text-muted);font-size:11px;width:28px; }
+.text-nowrap { white-space:nowrap; }
+.text-center { text-align:center; }
+.text-muted  { color:var(--text-muted) !important; }
+
+.etype-badge { display:inline-block;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap; }
+.etype-unit_test      { background:#dbeafe;color:#1e40af; }
+.etype-first_terminal { background:#dcfce7;color:#166534; }
+.etype-mid_term       { background:#fef9c3;color:#854d0e; }
+.etype-pre_board      { background:#fce7f3;color:#9d174d; }
+.etype-final_board    { background:#ede9fe;color:#5b21b6; }
+.etype-internal       { background:#f0fdf4;color:#166534; }
+.etype-practical      { background:#fff7ed;color:#92400e; }
+
+.pct-cell { display:flex;align-items:center;gap:6px;min-width:80px; }
+.pct-bar-wrap { flex:1;height:5px;background:var(--border);border-radius:3px;min-width:36px; }
+.pct-bar { height:100%;border-radius:3px; }
+.pct-green  { background:#16a34a; }
+.pct-yellow { background:#d97706; }
+.pct-red    { background:#dc2626; }
+.pct-num { font-size:11px;font-weight:600;color:var(--text-muted);white-space:nowrap; }
+
+.neb-grade { display:inline-block;padding:3px 9px;border-radius:6px;font-size:12px;font-weight:800;color:#fff; }
+.neb-Ap{background:#1B5E20;} .neb-A{background:#2E7D32;} .neb-Bp{background:#1565C0;}
+.neb-B{background:#1976D2;}  .neb-Cp{background:#F57F17;} .neb-C{background:#E65100;}
+.neb-D{background:#BF360C;}  .neb-F{background:#B71C1C;}
+
+.res-status { display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700; }
+.res-status.passed { background:#dcfce7;color:#166534; }
+.res-status.failed { background:#fee2e2;color:#991b1b; }
+.res-status.absent { background:#f3f4f6;color:#374151; }
+
+.rc-chip {
+    display:inline-flex;align-items:center;gap:3px;
+    background:linear-gradient(135deg,#1A56DB,#0D47A1);
+    color:#fff;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;
+}
+
+.rc-preview-head { display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border); }
+.rc-preview-title { font-size:14px;font-weight:700;color:var(--text); }
+.rc-preview-sub   { font-size:12px;color:var(--text-muted); }
+.rc-footer-note {
+    padding:11px 16px;font-size:12px;color:var(--text-muted);
+    border-top:1px solid var(--border);background:var(--bg);
+}
+.rc-footer-note a { color:#1A56DB;text-decoration:none;font-weight:600; }
+
+.opt-tag { display:inline-block;font-size:9.5px;padding:1px 6px;background:rgba(107,114,128,.12);color:var(--text-muted);border-radius:4px;margin-left:5px;vertical-align:middle; }
+
+.neb-pills { display:flex;flex-wrap:wrap;gap:8px;padding:14px 16px; }
+.neb-pill { display:flex;align-items:center;gap:7px;border:1.5px solid;border-radius:8px;padding:6px 12px; }
+.neb-pill-grade { width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:800;color:#fff; }
+.neb-pill-gpa   { font-size:12px;font-weight:700;color:var(--text); }
+.neb-pill-range { font-size:11px;color:var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+(function() {
+    var tabs = document.querySelectorAll('.res-tab');
+    var rows = document.querySelectorAll('#resTbody tr[data-type]');
+    var note = document.getElementById('resTabNote');
+
+    tabs.forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            tabs.forEach(function(t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            var type = tab.getAttribute('data-type');
+            var shown = 0, n = 1;
+
+            rows.forEach(function(row) {
+                var match = (type === 'all') || (row.getAttribute('data-type') === type);
+                row.style.display = match ? '' : 'none';
+                if (match) {
+                    var idx = row.querySelector('.res-idx');
+                    if (idx) idx.textContent = n++;
+                    shown++;
+                }
+            });
+
+            if (type !== 'all') {
+                note.style.display = 'block';
+                note.innerHTML = '<i class="fas fa-filter me-1"></i>Showing <strong>' + shown + '</strong> result' + (shown !== 1 ? 's' : '') + ' &nbsp;·&nbsp; <strong>' + tab.textContent.trim() + '</strong>';
+            } else {
+                note.style.display = 'none';
+            }
+        });
+    });
+})();
 {% endblock %}

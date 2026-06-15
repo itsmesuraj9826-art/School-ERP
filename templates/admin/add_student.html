@@ -15,25 +15,26 @@
     </div>
 
     <div class="info-card">
-        <form method="POST">
+        <form method="POST" id="addStudentForm">
             <div class="form-section-title"><i class="fas fa-user me-2"></i>Account Information</div>
             <div class="row g-3 mb-4">
                 <div class="col-md-6">
-                    <label class="form-label">Full Name *</label>
+                    <label class="form-label">Full Name <span class="text-danger">*</span></label>
                     <input type="text" name="full_name" class="form-control" required>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Email *</label>
-                    <input type="email" name="email" class="form-control" required>
+                    <label class="form-label">Student Email <span class="text-muted fw-normal">(optional)</span></label>
+                    <input type="email" name="email" id="studentEmail" class="form-control"
+                           placeholder="Leave blank if student has no email">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Phone</label>
                     <input type="text" name="phone" class="form-control">
                 </div>
                 <div class="col-md-6">
-                    <div class="alert alert-info mt-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <small>Username and password will be automatically generated and sent to the email address above.</small>
+                    <div class="alert-info-box" id="emailInfoBox">
+                        <i class="fas fa-info-circle me-2" id="emailInfoIcon"></i>
+                        <span id="emailInfoText">If student has email, credentials will be sent there. Otherwise you can send via WhatsApp after saving.</span>
                     </div>
                 </div>
             </div>
@@ -41,7 +42,7 @@
             <div class="form-section-title"><i class="fas fa-graduation-cap me-2"></i>Academic Information</div>
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
-                    <label class="form-label">Roll No. *</label>
+                    <label class="form-label">Roll No. <span class="text-danger">*</span></label>
                     <input type="text" name="roll_no" class="form-control" required>
                 </div>
                 <div class="col-md-4">
@@ -70,31 +71,38 @@
                     <label class="form-label">Blood Group</label>
                     <select name="blood_group" class="form-select">
                         <option value="">Select</option>
-                        <option value="A+">A+</option>
-                        <option value="A-">A-</option>
-                        <option value="B+">B+</option>
-                        <option value="B-">B-</option>
-                        <option value="AB+">AB+</option>
-                        <option value="AB-">AB-</option>
-                        <option value="O+">O+</option>
-                        <option value="O-">O-</option>
+                        <option value="A+">A+</option><option value="A-">A-</option>
+                        <option value="B+">B+</option><option value="B-">B-</option>
+                        <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                        <option value="O+">O+</option><option value="O-">O-</option>
                     </select>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Admission Date</label>
-                    <input type="date" name="admission_date" class="form-control" value="{{ today if today else '' }}">
+                    <input type="date" name="admission_date" class="form-control">
                 </div>
             </div>
 
-            <div class="form-section-title"><i class="fas fa-users me-2"></i>Guardian Information</div>
+            <div class="form-section-title"><i class="fas fa-users me-2"></i>Guardian / Parent Information</div>
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
                     <label class="form-label">Guardian Name</label>
                     <input type="text" name="guardian_name" class="form-control">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Guardian Phone</label>
-                    <input type="text" name="guardian_phone" class="form-control">
+                    <label class="form-label">
+                        Guardian Phone
+                        <span class="badge-wa"><i class="fab fa-whatsapp"></i> WhatsApp</span>
+                    </label>
+                    <input type="text" name="guardian_phone" class="form-control" placeholder="98XXXXXXXX">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">
+                        Parent / Guardian Email
+                        <span class="badge-notify">Notifications</span>
+                    </label>
+                    <input type="email" name="guardian_email" class="form-control" placeholder="parent@email.com">
+                    <div class="field-hint">Absence alerts &amp; credential copy sent here</div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Address</label>
@@ -113,132 +121,40 @@
 </div>
 
 <style>
-.info-card {
-    background: white;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 2px 8px rgba(13,71,161,0.08);
-    border: 1px solid #e8eaed;
-}
-
-.form-section-title {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 700;
-    font-size: 14px;
-    color: #0D47A1;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 16px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid rgba(13,71,161,0.1);
-}
-
-.form-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #263238;
-    margin-bottom: 6px;
-    display: block;
-}
-
-.form-control, .form-select {
-    background: #ffffff;
-    border: 1.5px solid #e8eaed;
-    border-radius: 8px;
-    padding: 9px 14px;
-    font-size: 13.5px;
-    transition: all 0.2s ease;
-    width: 100%;
-}
-
-.form-control:focus, .form-select:focus {
-    border-color: #0D47A1;
-    box-shadow: 0 0 0 3px rgba(13,71,161,0.12);
-    outline: none;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #0D47A1, #1565C0);
-    border: none;
-    padding: 10px 24px;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 13px;
-    color: white;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-primary:hover {
-    background: linear-gradient(135deg, #0a3880, #0D47A1);
-    transform: translateY(-1px);
-}
-
-.btn-outline-secondary {
-    background: transparent;
-    border: 1.5px solid #e8eaed;
-    padding: 10px 24px;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 13px;
-    color: #6c757d;
-    cursor: pointer;
-    text-decoration: none;
-    display: inline-block;
-    transition: all 0.2s ease;
-}
-
-.btn-outline-secondary:hover {
-    background: #f8f9fa;
-    border-color: #adb5bd;
-    color: #495057;
-    text-decoration: none;
-}
-
-.page-header-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-}
-
-.page-sub-title {
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 4px;
-}
-
-.text-muted {
-    color: #78909C !important;
-    font-size: 13px;
-}
-
-.alert-info {
-    background: rgba(13,71,161,0.05);
-    border: 1px solid rgba(13,71,161,0.1);
-    border-radius: 8px;
-    padding: 12px 16px;
-    color: #0D47A1;
-}
-
-.alert-info i {
-    color: #0D47A1;
-}
-
-.d-flex {
-    display: flex;
-}
-
-.gap-3 {
-    gap: 12px;
-}
-
-.mt-4 {
-    margin-top: 20px;
-}
-
-.mb-4 {
-    margin-bottom: 20px;
-}
+.info-card { background: var(--card); border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(13,71,161,.08); border: 1px solid var(--border); }
+.form-section-title { font-weight: 700; font-size: 13px; color: #1A56DB; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid rgba(26,86,219,.1); }
+.form-label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 5px; display: block; }
+.text-danger { color: #ef4444; } .text-muted { color: var(--text-muted) !important; font-size: 13px; } .fw-normal { font-weight: 400; }
+.form-control, .form-select { background: var(--card); border: 1.5px solid var(--border); border-radius: 8px; padding: 9px 14px; font-size: 13.5px; color: var(--text); width: 100%; transition: border-color .2s; }
+.form-control:focus, .form-select:focus { border-color: #1A56DB; box-shadow: 0 0 0 3px rgba(26,86,219,.1); outline: none; }
+.form-control::placeholder { color: var(--text-muted); }
+.alert-info-box { background: rgba(26,86,219,.06); border: 1px solid rgba(26,86,219,.15); border-radius: 8px; padding: 12px 14px; font-size: 12.5px; line-height: 1.5; transition: all .3s; color: #1A56DB; }
+.field-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.badge-wa { background: #25D366; color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 600; margin-left: 5px; }
+.badge-notify { background: rgba(26,86,219,.12); color: #1A56DB; font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 600; margin-left: 5px; }
+.btn-primary { background: linear-gradient(135deg,#0D47A1,#1565C0); border: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 13px; color: #fff; cursor: pointer; }
+.btn-primary:hover { background: linear-gradient(135deg,#0a3880,#0D47A1); }
+.btn-outline-secondary { background: transparent; border: 1.5px solid var(--border); padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 13px; color: var(--text-muted); text-decoration: none; display: inline-block; }
+.page-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.page-sub-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+.d-flex { display: flex; } .gap-3 { gap: 12px; } .mt-4 { margin-top: 20px; } .mb-4 { margin-bottom: 20px; }
 </style>
+
+<script>
+var emailInput = document.getElementById('studentEmail');
+var infoBox    = document.getElementById('emailInfoBox');
+var infoText   = document.getElementById('emailInfoText');
+
+function updateInfoBox() {
+    if (emailInput.value.trim()) {
+        infoBox.style.cssText = 'background:rgba(5,150,105,.06);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.5;color:#059669;';
+        infoText.innerHTML = '<i class="fas fa-check-circle me-1"></i>Credentials will be emailed to the student.';
+    } else {
+        infoBox.style.cssText = 'background:rgba(217,119,6,.06);border:1px solid rgba(217,119,6,.2);border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.5;color:#D97706;';
+        infoText.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>No student email — you can send credentials via WhatsApp to the guardian after saving.';
+    }
+}
+emailInput.addEventListener('input', updateInfoBox);
+updateInfoBox();
+</script>
 {% endblock %}

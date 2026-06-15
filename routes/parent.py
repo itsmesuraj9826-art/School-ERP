@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from functools import wraps
-from models import db, Parent, Student, User, Attendance, Result, Exam, Fee, Notice, Subject, Assignment, TimeTable, LeaveRequest, Event, Notification
+from models import db, Parent, Student, User, Attendance, Result, Exam, Fee, Notice, Subject, Assignment, TimeTable, LeaveRequest, Event, Notification, SchoolConfig, Class
 from datetime import datetime, date
 from sqlalchemy import func
 
@@ -205,3 +205,63 @@ def notif_count():
     from flask import jsonify
     count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
     return jsonify({'count': count})
+
+
+@parent_bp.route('/report-card')
+@login_required
+@parent_required
+def report_card():
+    parent = get_parent()
+    if not parent or not parent.child:
+        flash('Parent profile not linked to a student.', 'warning')
+        return redirect(url_for('parent.dashboard'))
+
+    student = parent.child
+    student_user = db.session.get(User, student.user_id)
+    cls = db.session.get(Class, student.class_id) if student.class_id else None
+
+    subjects = Subject.query.filter_by(class_id=student.class_id)\
+        .order_by(Subject.is_optional, Subject.name).all() if student.class_id else []
+    TYPE_PRIO = {'final': 0, 'terminal': 1, 'mid_term': 2, 'unit': 3}
+    exams_raw = Exam.query.filter_by(class_id=student.class_id).all() if student.class_id else []
+    exam_by_subj = {}
+    for ex in exams_raw:
+        if not ex.subject_id:
+            continue
+        p = TYPE_PRIO.get(ex.exam_type, 5)
+        if ex.subject_id not in exam_by_subj or p < exam_by_subj[ex.subject_id][0]:
+            exam_by_subj[ex.subject_id] = (p, ex)
+    exam_by_subj = {sid: ex for sid, (_, ex) in exam_by_subj.items()}
+    result_by_exam = {r.exam_id: r for r in Result.query.filter_by(student_id=student.id).all()}
+    all_results = []
+    grand_total = 0
+    max_total = 0
+    for subj in subjects:
+        exam = exam_by_subj.get(subj.id)
+        result = result_by_exam.get(exam.id) if exam else None
+        all_results.append((subj, exam, result))
+        if result and not getattr(result, 'is_absent', False):
+            grand_total += (result.marks_obtained or 0) + (result.practical_marks or 0)
+        th_f = exam.max_marks if exam else (subj.max_marks or 100)
+        pr_f = subj.practical_marks or 0
+        max_total += th_f + pr_f
+    overall_pct = round(grand_total / max_total * 100, 1) if max_total else 0
+
+    attendances = Attendance.query.filter_by(student_id=student.id).all()
+    total_att = len(attendances)
+    present_att = sum(1 for a in attendances if a.status == 'present')
+    att_pct = round((present_att / total_att * 100), 1) if total_att else 0
+
+    avg_gpa = db.session.query(func.avg(Result.gpa))\
+        .filter(Result.student_id == student.id, Result.gpa > 0).scalar()
+    avg_gpa = round(float(avg_gpa), 2) if avg_gpa else 0.0
+
+    cfg = SchoolConfig.query.first()
+    from datetime import datetime as _dt
+    return render_template('student/report_card.html',
+                           student=student, student_user=student_user, cls=cls,
+                           all_results=all_results,
+                           grand_total=grand_total, max_total=max_total,
+                           overall_pct=overall_pct,
+                           total_att=total_att, present_att=present_att, att_pct=att_pct,
+                           avg_gpa=avg_gpa, now=_dt.now(), cfg=cfg)

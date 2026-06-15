@@ -4,6 +4,41 @@
 
 {% block content %}
 <div class="dashboard-content">
+
+    {# ── WhatsApp credentials modal (shows once after adding student with no email) ── #}
+    {% if pending_wa %}
+    <div class="modal fade" id="waCredsModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius:16px;border:none;">
+                <div class="modal-header" style="background:#25D366;border-radius:16px 16px 0 0;border:none;">
+                    <h5 class="modal-title text-white"><i class="fab fa-whatsapp me-2"></i>Send Credentials via WhatsApp</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p style="font-size:13px;color:var(--text-muted);">Student <strong>{{ pending_wa.full_name }}</strong> has no email. Copy the credentials below and send via WhatsApp to the guardian.</p>
+                    <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-family:monospace;font-size:13px;margin-bottom:16px;">
+                        <div><span style="color:var(--text-muted);">Roll No : </span><strong>{{ pending_wa.roll_no }}</strong></div>
+                        <div><span style="color:var(--text-muted);">Username: </span><strong>{{ pending_wa.username }}</strong></div>
+                        <div><span style="color:var(--text-muted);">Password: </span><strong>{{ pending_wa.password }}</strong></div>
+                    </div>
+                    {% if pending_wa.guardian_phone %}
+                    {% set wa_msg = "Hello " ~ pending_wa.guardian_name ~ "! Your child " ~ pending_wa.full_name ~ " (Roll: " ~ pending_wa.roll_no ~ ") has been enrolled. Login credentials: Username: " ~ pending_wa.username ~ " | Password: " ~ pending_wa.password ~ " | Please keep these safe." %}
+                    {% set wa_phone = pending_wa.guardian_phone | replace('+','') | replace('-','') | replace(' ','') %}
+                    {% if wa_phone.startswith('0') %}{% set wa_phone = '977' ~ wa_phone[1:] %}{% elif not wa_phone.startswith('977') %}{% set wa_phone = '977' ~ wa_phone %}{% endif %}
+                    <a href="https://wa.me/{{ wa_phone }}?text={{ wa_msg | urlencode }}"
+                       target="_blank"
+                       class="btn btn-wa w-100">
+                        <i class="fab fa-whatsapp me-2"></i>Open WhatsApp — {{ pending_wa.guardian_name }}
+                    </a>
+                    {% else %}
+                    <div class="alert alert-warning mt-2" style="font-size:12.5px;">No guardian phone on file. Please add it in Edit Student, then send manually.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="page-header-row">
         <div>
             <h5 class="page-sub-title">All Students</h5>
@@ -16,17 +51,25 @@
 
     <!-- Filters -->
     <div class="info-card mb-4">
-        <form method="GET" class="row g-3 align-items-end">
+        <form method="GET" id="filterForm" class="row g-3 align-items-end">
             <div class="col-md-5">
                 <label class="form-label">Search</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="fas fa-search"></i></span>
-                    <input type="text" name="search" class="form-control" placeholder="Name or Roll No..." value="{{ search }}">
+                    <input type="text" name="search" id="liveSearch" class="form-control"
+                           placeholder="Type a name or roll no…" value="{{ search }}"
+                           autocomplete="off">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="clearSearch"
+                            style="display:{% if search %}flex{% else %}none{% endif %};align-items:center;padding:0 10px;"
+                            onclick="document.getElementById('liveSearch').value='';liveFilter();this.style.display='none';">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
+                <div id="liveMatchCount" class="live-match-count" style="display:none;"></div>
             </div>
             <div class="col-md-4">
                 <label class="form-label">Filter by Class</label>
-                <select name="class_id" class="form-select">
+                <select name="class_id" class="form-select" onchange="this.form.submit()">
                     <option value="">All Classes</option>
                     {% for cls in classes %}
                     <option value="{{ cls.id }}" {% if class_filter == cls.id|string %}selected{% endif %}>{{ cls.name }}-{{ cls.section }}</option>
@@ -35,15 +78,12 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label">Filter by Stream</label>
-                <select name="stream_id" class="form-select">
+                <select name="stream_id" class="form-select" onchange="this.form.submit()">
                     <option value="">All Streams</option>
                     {% for stream in streams %}
                     <option value="{{ stream.id }}" {% if stream_filter == stream.id|string %}selected{% endif %}>{{ stream.name }}</option>
                     {% endfor %}
                 </select>
-            </div>
-            <div class="col-md-12">
-                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-2"></i>Filter</button>
             </div>
         </form>
     </div>
@@ -63,9 +103,11 @@
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="studentTableBody">
                     {% for student, user, cls in students_data.items %}
-                    <tr id="student-row-{{ student.id }}">
+                    <tr id="student-row-{{ student.id }}"
+                        data-name="{{ user.full_name | lower }}"
+                        data-roll="{{ student.roll_no | lower }}">
                         <td>{{ loop.index + (students_data.page - 1) * students_data.per_page }}</td>
                         <td>
                             <div class="student-cell">
@@ -78,7 +120,7 @@
                                 <div class="student-avatar">{{ user.full_name[0]|upper }}</div>
                                 {% endif %}
                                 <div>
-                                    <div class="fw-600">{{ user.full_name }}</div>
+                                    <div class="fw-600 live-name" data-orig="{{ user.full_name }}">{{ user.full_name }}</div>
                                     <small class="text-muted">{{ user.email }}</small>
                                 </div>
                             </div>
@@ -108,7 +150,7 @@
                                 <a href="{{ url_for('admin.view_student', sid=student.id) }}" class="btn-icon-sm" title="View Student">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="{{ url_for('admin.edit_student', sid=student.id) }}" class="btn-icon-sm edit" title="Edit Student">
+                                <a href="{{ url_for('admin.edit_student', sid=student.id, back=request.url) }}" class="btn-icon-sm edit" title="Edit Student">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 <button type="button" class="btn-icon-sm danger" title="Delete Student" onclick="showDeleteModal({{ student.id }}, '{{ user.full_name }}')">
@@ -312,6 +354,20 @@
 .modern-table tbody tr:hover {
     background: #f8f9fa;
 }
+.btn-wa {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #25D366; color: #fff; border: none; border-radius: 10px;
+    padding: 11px 18px; font-size: 14px; font-weight: 600; text-decoration: none;
+    transition: background .2s;
+}
+.btn-wa:hover { background: #1ebe5b; color: #fff; text-decoration: none; }
+
+/* Live search feedback */
+.live-match-count {
+    font-size: 11.5px; margin-top: 4px; font-weight: 600;
+}
+.live-match-count.found { color: #1A56DB; }
+.live-match-count.none  { color: #dc2626; }
 </style>
 {% endblock %}
 
@@ -319,16 +375,51 @@
 function showDeleteModal(studentId, studentName) {
     document.getElementById('deleteStudentName').innerHTML = studentName;
     document.getElementById('deleteStudentForm').action = '/admin/students/' + studentId + '/delete';
-    var deleteModal = new bootstrap.Modal(document.getElementById('deleteStudentModal'));
-    deleteModal.show();
+    new bootstrap.Modal(document.getElementById('deleteStudentModal')).show();
 }
 
+var _searchTimer = null;
+
 document.addEventListener('DOMContentLoaded', function() {
-    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('.btn-icon-sm'));
-        tooltipTriggerList.forEach(function(tooltipTriggerEl) {
-            new bootstrap.Tooltip(tooltipTriggerEl);
-        });
+    var input    = document.getElementById('liveSearch');
+    var clearBtn = document.getElementById('clearSearch');
+    var matchEl  = document.getElementById('liveMatchCount');
+    var form     = document.getElementById('filterForm');
+
+    // ── Auto-submit to server so search spans ALL pages ──
+    input.addEventListener('input', function() {
+        clearBtn.style.display = input.value ? 'flex' : 'none';
+
+        // Show "Searching…" while waiting
+        if (matchEl) {
+            matchEl.style.display = 'block';
+            matchEl.textContent   = 'Searching…';
+            matchEl.className     = 'live-match-count found';
+        }
+
+        clearTimeout(_searchTimer);
+        _searchTimer = setTimeout(function() { form.submit(); }, 380);
+    });
+
+    // ── Clear button ──
+    clearBtn.addEventListener('click', function() {
+        input.value = '';
+        clearBtn.style.display = 'none';
+        if (matchEl) matchEl.style.display = 'none';
+        clearTimeout(_searchTimer);
+        form.submit();
+    });
+
+    // ── On load: show how many rows the server returned ──
+    var rowCount = document.querySelectorAll('#studentTableBody tr[data-name]').length;
+    if (input.value && matchEl) {
+        matchEl.style.display = 'block';
+        matchEl.textContent   = rowCount + ' student' + (rowCount !== 1 ? 's' : '') + ' found';
+        matchEl.className     = 'live-match-count ' + (rowCount === 0 ? 'none' : 'found');
     }
+
+    {% if pending_wa %}
+    new bootstrap.Modal(document.getElementById('waCredsModal')).show();
+    {% endif %}
 });
 {% endblock %}

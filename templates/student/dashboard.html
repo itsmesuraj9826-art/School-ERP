@@ -184,7 +184,7 @@
                             <tr>
                                 <td>{{ subj.name if subj else '—' }}</td>
                                 <td>{{ exam.name }}</td>
-                                <td>{{ result.marks_obtained }}/{{ exam.max_marks }}</td>
+                                <td>{{ result.marks_obtained | snap_marks }}/{{ exam.max_marks }}</td>
                                 <td>{{ ((result.marks_obtained / exam.max_marks * 100) | round(1)) if exam.max_marks else 0 }}%</td>
                                 <td>
                                     <span class="grade-badge grade-{{ result.grade[0] if result.grade else 'F' }}">

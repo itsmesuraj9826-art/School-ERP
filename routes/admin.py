@@ -225,13 +225,18 @@ def students():
     classes = Class.query.order_by(Class.name, Class.section).all()
     streams = Stream.query.filter_by(is_active=True).all()
 
+    # Pop pending WhatsApp credentials (set after adding student with no email)
+    from flask import session as _session
+    pending_wa = _session.pop('pending_wa_creds', None)
+
     return render_template('admin/students.html',
                            students_data=students_data,
                            classes=classes,
                            streams=streams,
                            search=search,
                            class_filter=class_filter,
-                           stream_filter=stream_filter)
+                           stream_filter=stream_filter,
+                           pending_wa=pending_wa)
 
 
 @admin_bp.route('/students/<int:sid>')
@@ -250,10 +255,11 @@ def view_student(sid):
     parent = Parent.query.filter_by(student_id=sid).first()
     parent_user = db.session.get(User, parent.user_id) if parent else None
 
+    cfg = SchoolConfig.query.first()
     return render_template('admin/view_student.html',
                            student=student, user=user, cls=cls, fees=fees,
                            results=results, attendances=attendances,
-                           parent=parent, parent_user=parent_user)
+                           parent=parent, parent_user=parent_user, cfg=cfg)
 
 
 @admin_bp.route('/students/add', methods=['GET', 'POST'])
@@ -264,9 +270,10 @@ def add_student():
     if request.method == 'POST':
         roll_no = request.form['roll_no'].strip()
         full_name = request.form['full_name'].strip()
-        email = request.form['email'].strip()
+        email = request.form.get('email', '').strip() or None
+        guardian_email = request.form.get('guardian_email', '').strip() or None
 
-        # Create user
+        # Create user (email may be None — username uses roll_no)
         user, password = create_user_and_get_credentials('student', full_name, email, request.form.get('phone'),
                                                          roll_no)
         db.session.add(user)
@@ -281,6 +288,7 @@ def add_student():
             address=request.form.get('address'),
             guardian_name=request.form.get('guardian_name'),
             guardian_phone=request.form.get('guardian_phone'),
+            guardian_email=guardian_email,
             blood_group=request.form.get('blood_group'),
             date_of_birth=parse_date(request.form.get('date_of_birth')),
             admission_date=parse_date(request.form.get('admission_date')) or date.today()
@@ -288,11 +296,52 @@ def add_student():
         db.session.add(student)
         db.session.commit()
 
-        # Send credentials
         extra_info = f"Roll No: {roll_no}"
-        send_credentials_or_fallback(email, full_name, 'student', user.username, password, extra_info)
-        flash(f'Student {full_name} added successfully!', 'success')
-        return redirect(url_for('admin.students'))
+
+        if email:
+            # Send credentials to student email
+            send_credentials_or_fallback(email, full_name, 'student', user.username, password, extra_info)
+            # Also notify parent email if provided
+            if guardian_email:
+                try:
+                    from utils.mail_helpers import send_credentials_email as _sce
+                    _sce(mail, guardian_email,
+                         student.guardian_name or 'Parent/Guardian',
+                         'parent',
+                         user.username, password,
+                         f"This account belongs to your child: {full_name} (Roll No: {roll_no})")
+                except Exception:
+                    pass
+            flash(f'Student {full_name} added! Credentials sent to {email}.', 'success')
+            return redirect(url_for('admin.students'))
+        else:
+            # No student email — store creds in session for WhatsApp send
+            from flask import session as _session
+            _session['pending_wa_creds'] = {
+                'student_id': student.id,
+                'full_name': full_name,
+                'roll_no': roll_no,
+                'username': user.username,
+                'password': password,
+                'guardian_phone': student.guardian_phone or '',
+                'guardian_name': student.guardian_name or 'Parent/Guardian',
+                'guardian_email': guardian_email or '',
+            }
+            # Send to guardian email if available
+            if guardian_email:
+                try:
+                    from utils.mail_helpers import send_credentials_email as _sce
+                    _sce(mail, guardian_email,
+                         student.guardian_name or 'Parent/Guardian',
+                         'parent',
+                         user.username, password,
+                         f"This account belongs to your child: {full_name} (Roll No: {roll_no})")
+                    flash(f'Student {full_name} added! Credentials sent to parent email {guardian_email}.', 'success')
+                except Exception:
+                    flash(f'Student {full_name} added! Could not email parent. Send via WhatsApp below.', 'warning')
+            else:
+                flash(f'Student {full_name} added! No email provided — send credentials via WhatsApp.', 'warning')
+            return redirect(url_for('admin.students'))
 
     classes = Class.query.order_by(Class.name, Class.section).all()
     return render_template('admin/add_student.html', classes=classes)
@@ -321,6 +370,7 @@ def edit_student(sid):
             student.address = request.form.get('address')
             student.guardian_name = request.form.get('guardian_name')
             student.guardian_phone = request.form.get('guardian_phone')
+            student.guardian_email = request.form.get('guardian_email', '').strip() or None
             student.blood_group = request.form.get('blood_group')
             student.status = request.form.get('status', 'active')
 
@@ -1183,6 +1233,9 @@ def results():
 def enter_marks(eid):
     exam = db.get_or_404(Exam, eid)
 
+    # Preserve the filter page URL so Back / Save return to it
+    back_url = request.args.get('back') or request.referrer or url_for('admin.results')
+
     # Get students for this exam's class
     students_data = []
     if exam.class_id:
@@ -1195,10 +1248,19 @@ def enter_marks(eid):
     existing = {r.student_id: r for r in Result.query.filter_by(exam_id=eid).all()}
 
     if request.method == 'POST':
+        back_url = request.form.get('back_url') or url_for('admin.results')
+
+        def snap(v):
+            """Round to nearest 0.5."""
+            try:
+                return round(round(float(v or 0) * 2) / 2, 1)
+            except (ValueError, TypeError):
+                return 0.0
+
         for student, _ in students_data:
             is_absent = f'absent_{student.id}' in request.form
-            marks = float(request.form.get(f'marks_{student.id}', 0) or 0)
-            practical = float(request.form.get(f'practical_{student.id}', 0) or 0)
+            marks = snap(request.form.get(f'marks_{student.id}', 0))
+            practical = snap(request.form.get(f'practical_{student.id}', 0))
 
             # Calculate grade
             percentage = (marks / exam.max_marks * 100) if exam.max_marks else 0
@@ -1225,10 +1287,11 @@ def enter_marks(eid):
 
         db.session.commit()
         flash(f'Marks saved for {len(students_data)} students!', 'success')
-        return redirect(url_for('admin.results'))
+        return redirect(back_url)
 
     return render_template('admin/enter_marks.html',
-                           exam=exam, students_data=students_data, existing=existing)
+                           exam=exam, students_data=students_data,
+                           existing=existing, back_url=back_url)
 
 
 # ============================================================================
@@ -2031,6 +2094,89 @@ def report_settings():
         gb = {}
     streams = Stream.query.filter_by(is_active=True).order_by(Stream.name).all()
     return render_template('admin/report_settings.html', cfg=cfg, gb=gb, streams=streams)
+
+
+# ── One-time marks cleanup: round all stored floats to nearest 0.5 ───────────
+@admin_bp.route('/cleanup-marks', methods=['POST'])
+@login_required
+@admin_required
+def cleanup_marks():
+    def snap(v):
+        try:
+            return round(round(float(v or 0) * 2) / 2, 1)
+        except (ValueError, TypeError):
+            return 0.0
+
+    results = Result.query.all()
+    fixed = 0
+    for r in results:
+        new_m = snap(r.marks_obtained)
+        new_p = snap(r.practical_marks)
+        if new_m != (r.marks_obtained or 0) or new_p != (r.practical_marks or 0):
+            r.marks_obtained  = new_m
+            r.practical_marks = new_p
+            fixed += 1
+    db.session.commit()
+    flash(f'Marks cleanup done — {fixed} record(s) rounded to nearest 0.5.', 'success')
+    return redirect(request.referrer or url_for('admin.results'))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  DOCUMENT SETTINGS
+# ─────────────────────────────────────────────────────────────────────────────
+
+@admin_bp.route('/document-settings', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def document_settings():
+    cfg = SchoolConfig.query.first()
+    if not cfg:
+        cfg = SchoolConfig()
+        db.session.add(cfg)
+        db.session.commit()
+
+    if request.method == 'POST':
+        cfg.doc_id_color              = request.form.get('doc_id_color', '#1565c0').strip()
+        cfg.doc_principal_name        = request.form.get('doc_principal_name', '').strip()
+        cfg.doc_principal_title       = request.form.get('doc_principal_title', 'Principal').strip()
+        cfg.doc_exam_controller       = request.form.get('doc_exam_controller', '').strip()
+        cfg.doc_exam_controller_title = request.form.get('doc_exam_controller_title', 'Controller of Examinations').strip()
+        cfg.doc_bonafide_text         = request.form.get('doc_bonafide_text', '').strip()
+        cfg.doc_character_text        = request.form.get('doc_character_text', '').strip()
+        cfg.doc_admit_instructions    = request.form.get('doc_admit_instructions', '').strip()
+        db.session.commit()
+        flash('Document settings saved!', 'success')
+        return redirect(url_for('admin.document_settings'))
+
+    return render_template('admin/document_settings.html', cfg=cfg)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  BULK ADMIT CARDS
+# ─────────────────────────────────────────────────────────────────────────────
+
+@admin_bp.route('/admit-cards')
+@login_required
+@admin_required
+def admit_cards():
+    classes = Class.query.order_by(Class.name, Class.section).all()
+    selected_class_id = request.args.get('class_id', type=int)
+    selected_class = None
+    students_data = []
+
+    if selected_class_id:
+        selected_class = db.session.get(Class, selected_class_id)
+        students_data = (db.session.query(Student, User)
+                         .join(User, Student.user_id == User.id)
+                         .filter(Student.class_id == selected_class_id, Student.status == 'active')
+                         .order_by(Student.roll_no).all())
+
+    cfg = SchoolConfig.query.first()
+    return render_template('admin/admit_cards.html',
+                           classes=classes,
+                           selected_class=selected_class,
+                           students_data=students_data,
+                           cfg=cfg)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

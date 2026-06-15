@@ -58,6 +58,16 @@ def create_app():
 
     app.jinja_env.globals['enumerate'] = enumerate
 
+    # ── snap_marks filter: round to nearest 0.5, show as int if whole ──────
+    def _snap_marks(v):
+        """49.1 → '49'   65.5 → '65.5'   0.0 → '0'"""
+        try:
+            s = round(round(float(v or 0) * 2) / 2, 1)
+            return str(int(s)) if s == int(s) else str(s)
+        except (ValueError, TypeError):
+            return '0'
+    app.jinja_env.filters['snap_marks'] = _snap_marks
+
     @app.context_processor
     def inject_global_context():
         """Inject sidebar profile image, random greeting, and parent WhatsApp link."""

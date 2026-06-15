@@ -33,7 +33,7 @@ class Config:
     # ── File Upload Configurations ───────────────────────────────────────────
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
     TEACHER_UPLOAD_FOLDER = os.path.join(UPLOAD_FOLDER, 'teachers')
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+    MAX_CONTENT_LENGTH = 32 * 1024 * 1024  # 32MB (signatures sent as base64 can be large)
 
     # Allowed extensions
     ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'}

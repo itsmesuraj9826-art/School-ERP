@@ -132,6 +132,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a href="{{ url_for('admin.document_settings') }}" class="nav-link {% if 'document_settings' in request.endpoint or 'admit_cards' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-file-alt"></i><span>Document Settings</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="{{ url_for('admin.timetable') }}" class="nav-link {% if 'timetable' in request.endpoint %}active{% endif %}">
                     <i class="fas fa-calendar-week"></i><span>Timetable</span>
                 </a>
@@ -442,15 +447,69 @@
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
 
 <script>
-// Sidebar toggle
-document.getElementById('menuToggle')?.addEventListener('click', () => {
-    document.getElementById('sidebar').classList.toggle('collapsed');
-    document.getElementById('mainContent').classList.toggle('expanded');
-});
-document.getElementById('sidebarToggle')?.addEventListener('click', () => {
-    document.getElementById('sidebar').classList.toggle('collapsed');
-    document.getElementById('mainContent').classList.toggle('expanded');
-});
+// ── Sidebar: fixed scroll position + toggle ─────────────────────────────────
+(function() {
+    var sb        = document.getElementById('sidebar');
+    var mc        = document.getElementById('mainContent');
+    var isMobile  = function() { return window.innerWidth < 1024; };
+
+    // Inject overlay element once
+    var overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    overlay.id = 'sidebarOverlay';
+    document.body.appendChild(overlay);
+
+    // ── Restore scroll position ──
+    var savedScroll = sessionStorage.getItem('sidebarScroll');
+    if (sb && savedScroll) {
+        sb.scrollTop = parseInt(savedScroll, 10);
+    } else if (sb) {
+        // Scroll active item into view on first visit
+        var activeLink = sb.querySelector('.nav-link.active');
+        if (activeLink) {
+            setTimeout(function() {
+                activeLink.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+            }, 0);
+        }
+    }
+
+    // Save scroll position whenever sidebar scrolls
+    sb && sb.addEventListener('scroll', function() {
+        sessionStorage.setItem('sidebarScroll', sb.scrollTop);
+    }, { passive: true });
+
+    // ── Toggle function ──
+    function toggleSidebar() {
+        if (isMobile()) {
+            // Mobile: slide in/out using 'open' class
+            var isOpen = sb.classList.toggle('open');
+            overlay.classList.toggle('visible', isOpen);
+        } else {
+            // Desktop: collapse to icon-only using 'collapsed' class
+            sb.classList.toggle('collapsed');
+            mc.classList.toggle('expanded');
+        }
+    }
+
+    // Close on overlay click (mobile)
+    overlay.addEventListener('click', function() {
+        sb.classList.remove('open');
+        overlay.classList.remove('visible');
+    });
+
+    document.getElementById('menuToggle')?.addEventListener('click', toggleSidebar);
+    document.getElementById('sidebarToggle')?.addEventListener('click', toggleSidebar);
+
+    // Close mobile sidebar on nav link click
+    sb && sb.querySelectorAll('.nav-link').forEach(function(link) {
+        link.addEventListener('click', function() {
+            if (isMobile()) {
+                sb.classList.remove('open');
+                overlay.classList.remove('visible');
+            }
+        });
+    });
+})();
 
 // Dark mode
 const dmToggle = document.getElementById('darkModeToggle');

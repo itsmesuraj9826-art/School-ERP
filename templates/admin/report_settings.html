@@ -414,31 +414,38 @@ function uploadSig(id, input, hiddenName, previewId, placeholderId) {
     reader.onload = function(e) {
         var img = new Image();
         img.onload = function() {
+            /* ── Step 1: resize to max 700px wide to keep file small ── */
+            var MAX_W = 700, MAX_H = 300;
+            var w = img.width, h = img.height;
+            if (w > MAX_W) { h = Math.round(h * MAX_W / w); w = MAX_W; }
+            if (h > MAX_H) { w = Math.round(w * MAX_H / h); h = MAX_H; }
+
             var canvas = document.createElement('canvas');
-            canvas.width  = img.width;
-            canvas.height = img.height;
+            canvas.width = w; canvas.height = h;
             var ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, w, h);
+
+            /* ── Step 2: remove near-white background ── */
+            var imgData = ctx.getImageData(0, 0, w, h);
             var px = imgData.data;
             for (var i = 0; i < px.length; i += 4) {
                 var r = px[i], g = px[i+1], b = px[i+2];
-                /* Remove pixels that are near-white (background paper) */
                 if (r > 210 && g > 210 && b > 210) {
-                    px[i+3] = 0;  /* fully transparent */
-                } else if (r > 180 && g > 180 && b > 180) {
-                    /* Semi-transparent for anti-aliased edges */
-                    px[i+3] = Math.round(px[i+3] * ((255 - r) / 75));
+                    px[i+3] = 0;                                      /* fully transparent */
+                } else if (r > 175 && g > 175 && b > 175) {
+                    px[i+3] = Math.round(px[i+3] * ((255 - r) / 80)); /* soft edge */
                 }
             }
             ctx.putImageData(imgData, 0, 0);
+
+            /* ── Step 3: export as PNG (transparent) ── */
             var dataUrl = canvas.toDataURL('image/png');
 
-            /* Store in hidden field so form submits the processed PNG */
+            /* Store in hidden field */
             var hidden = document.getElementById(hiddenName);
             if (hidden) hidden.value = dataUrl;
 
-            /* Show preview on checkered background */
+            /* Update preview */
             var prev = document.getElementById(previewId);
             var ph   = document.getElementById(placeholderId);
             if (prev) { prev.src = dataUrl; prev.style.display = ''; }
