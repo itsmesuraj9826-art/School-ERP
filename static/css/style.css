@@ -2687,3 +2687,70 @@ code { background: rgba(13,71,161,0.08); color: var(--primary); padding: 2px 6px
 [data-theme="dark"] .note-type-icon.xls,
 [data-theme="dark"] .note-type-icon.xlsx  { background: rgba(34,197,94,0.18); color: #86efac; }
 [data-theme="dark"] .note-type-icon.zip   { background: rgba(99,102,241,0.18); color: #a5b4fc; }
+
+/* ── Dashboard dark mode — missing element rules ── */
+[data-theme="dark"] .welcome-banner { background: linear-gradient(135deg, #0a2a5e 0%, #0d3a7a 60%, #0f4a9e 100%); }
+[data-theme="dark"] .welcome-banner h4,
+[data-theme="dark"] .welcome-text p { color: #E8EAED !important; }
+[data-theme="dark"] .welcome-date { background: rgba(255,255,255,0.10); color: #E8EAED; }
+
+[data-theme="dark"] .stat-card { background: var(--card); border-color: var(--border); }
+[data-theme="dark"] .stat-value { color: var(--text) !important; }
+[data-theme="dark"] .stat-label { color: var(--text-muted) !important; }
+[data-theme="dark"] .stat-change { color: var(--text-muted) !important; }
+[data-theme="dark"] .stat-icon { opacity: 0.9; }
+
+[data-theme="dark"] .info-card { background: var(--card); border-color: var(--border); color: var(--text); }
+[data-theme="dark"] .card-head { border-bottom-color: var(--border); }
+[data-theme="dark"] .card-head-title { color: var(--text) !important; }
+[data-theme="dark"] .badge-date { background: rgba(255,255,255,0.10); color: var(--text-muted); }
+
+[data-theme="dark"] .schedule-subject { color: var(--text) !important; }
+[data-theme="dark"] .schedule-class,
+[data-theme="dark"] .schedule-room,
+[data-theme="dark"] .schedule-details { color: var(--text-muted) !important; }
+[data-theme="dark"] .time-end { color: var(--text-muted) !important; }
+[data-theme="dark"] .schedule-item { border-bottom-color: var(--border); }
+
+[data-theme="dark"] .class-mini-card { background: rgba(255,255,255,0.04); border-color: var(--border); }
+[data-theme="dark"] .class-badge { color: var(--text) !important; }
+[data-theme="dark"] .class-section,
+[data-theme="dark"] .class-count { color: var(--text-muted) !important; }
+
+[data-theme="dark"] .notice-card { background: rgba(255,255,255,0.03); border-color: var(--border); }
+[data-theme="dark"] .notice-title { color: var(--text) !important; }
+[data-theme="dark"] .notice-preview { color: var(--text-muted) !important; }
+[data-theme="dark"] .notice-meta { color: var(--text-muted) !important; }
+[data-theme="dark"] .notice-content { color: var(--text); }
+
+[data-theme="dark"] .exam-date-badge { background: var(--primary); }
+[data-theme="dark"] .exam-info .exam-name { color: var(--text) !important; }
+
+[data-theme="dark"] .assignment-item { border-bottom-color: var(--border); }
+[data-theme="dark"] .assignment-title { color: var(--text) !important; }
+[data-theme="dark"] .assignment-meta,
+[data-theme="dark"] .assignment-due,
+[data-theme="dark"] .due-date { color: var(--text-muted) !important; }
+
+[data-theme="dark"] .fee-row-item { border-bottom-color: var(--border); }
+[data-theme="dark"] .fee-type { color: var(--text) !important; }
+[data-theme="dark"] .fee-amount-sm { color: var(--text-muted) !important; }
+[data-theme="dark"] .fee-row-info { color: var(--text); }
+
+[data-theme="dark"] .ring-pct { color: var(--text) !important; }
+[data-theme="dark"] .ring-sub { color: var(--text-muted) !important; }
+[data-theme="dark"] .att-num { color: var(--text) !important; }
+[data-theme="dark"] .att-label { color: var(--text-muted) !important; }
+
+[data-theme="dark"] .empty-state-sm p { color: var(--text-muted) !important; }
+
+/* Bootstrap overrides in dark mode */
+[data-theme="dark"] .text-dark { color: var(--text) !important; }
+[data-theme="dark"] strong { color: inherit; }
+[data-theme="dark"] p { color: inherit; }
+[data-theme="dark"] h1,[data-theme="dark"] h2,[data-theme="dark"] h3,
+[data-theme="dark"] h4,[data-theme="dark"] h5,[data-theme="dark"] h6 { color: var(--text); }
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select { color: var(--text) !important; }
+[data-theme="dark"] .form-control::placeholder { color: var(--text-muted); }
+[data-theme="dark"] .input-group-text { background: #162030; border-color: var(--border); color: var(--text-muted); }

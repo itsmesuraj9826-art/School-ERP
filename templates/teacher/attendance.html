@@ -77,6 +77,10 @@
 .hs-late    { background:#fef9c3; color:#92400e; }
 .hs-leave   { background:#e0e7ff; color:#3730a3; }
 
+/* ── WhatsApp button ── */
+.wa-btn-row { transition: transform .15s, box-shadow .15s; }
+.wa-btn-row:hover { transform: scale(1.15); box-shadow: 0 4px 12px rgba(37,211,102,.4); }
+
 /* ── Responsive ── */
 @media (max-width:768px) {
   .att-tabs .att-tab { padding:8px 14px; font-size:.8rem; }
@@ -169,6 +173,7 @@
                             <th class="text-center" style="width:70px">Late</th>
                             <th class="text-center" style="width:70px">Leave</th>
                             <th style="min-width:180px">Reason (absent/leave)</th>
+                            <th class="text-center" style="width:56px">Notify</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -256,6 +261,28 @@
                                               placeholder="Optional reason…">{{ current_reason or '' }}</textarea>
                                 </div>
                             </td>
+                            <!-- WhatsApp notify -->
+                            <td class="text-center" style="vertical-align:middle;">
+                                {% if student.id in parent_phones %}
+                                {% set pdata = parent_phones[student.id] %}
+                                <button type="button"
+                                    class="wa-btn-row btn btn-sm p-1"
+                                    id="wa-btn-{{ student.id }}"
+                                    data-phone="{{ pdata.phone }}"
+                                    data-student="{{ pdata.student_name }}"
+                                    data-parent="{{ pdata.parent_name }}"
+                                    data-date="{{ selected_date }}"
+                                    data-class="{{ selected_class.full_name if selected_class else '' }}"
+                                    title="Notify parent via WhatsApp"
+                                    style="display:{% if current_status in ('absent','leave') %}inline-flex{% else %}none{% endif %};
+                                           background:#25D366;border:none;border-radius:50%;width:32px;height:32px;
+                                           align-items:center;justify-content:center;color:#fff;font-size:.95rem;">
+                                    <i class="fab fa-whatsapp"></i>
+                                </button>
+                                {% else %}
+                                <span class="text-muted small" id="wa-btn-{{ student.id }}" style="display:none;">—</span>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -269,9 +296,15 @@
                     <div class="att-count-badge acb-late"><i class="fas fa-clock"></i><span id="lateCount">0</span> Late</div>
                     <div class="att-count-badge acb-leave"><i class="fas fa-calendar-minus"></i><span id="leaveCount">0</span> Leave</div>
                 </div>
-                <button type="submit" class="btn btn-primary btn-action px-5">
-                    <i class="fas fa-save me-2"></i>Save Attendance
-                </button>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button type="button" class="btn btn-success btn-action" id="notifyAllBtn"
+                            style="background:#25D366;border-color:#25D366;">
+                        <i class="fab fa-whatsapp me-2"></i>Notify All Absent/Leave
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-action px-5">
+                        <i class="fas fa-save me-2"></i>Save Attendance
+                    </button>
+                </div>
             </div>
         </form>
     </div>
@@ -354,6 +387,42 @@
     </div>
     {% endif %}
 </div>
+
+<!-- WhatsApp Bulk Notify Modal -->
+<div class="modal fade" id="waNotifyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#25D366;color:#fff;">
+                <h5 class="modal-title"><i class="fab fa-whatsapp me-2"></i>Notify Parents via WhatsApp</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="waNoStudents" class="text-center py-4 text-muted" style="display:none;">
+                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                    <p>No absent or on-leave students right now.</p>
+                </div>
+                <div id="waHasStudents">
+                    <div class="alert alert-info py-2 small mb-3">
+                        <i class="fas fa-info-circle me-1"></i>
+                        One message will open in WhatsApp. Select your <strong>class parent group</strong> and send.
+                    </div>
+                    <div id="waStudentList" class="mb-3 rounded border p-2" style="font-size:.82rem;max-height:140px;overflow-y:auto;"></div>
+                    <label class="form-label fw-semibold small">Message Preview <span class="text-muted fw-normal">(editable)</span></label>
+                    <textarea id="waMsgPreview" class="form-control" rows="7" style="font-size:.82rem;font-family:monospace;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <a id="waSendGroupBtn" href="#" target="_blank"
+                   class="btn btn-sm"
+                   style="background:#25D366;color:#fff;border:none;"
+                   onclick="this.href='https://wa.me/?text='+encodeURIComponent(document.getElementById('waMsgPreview').value)">
+                    <i class="fab fa-whatsapp me-1"></i>Open WhatsApp &amp; Send
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -416,4 +485,110 @@ document.querySelectorAll('input[id^="hid-"]').forEach(function(h) {
     if (wrap) wrap.classList.toggle('open', status === 'absent' || status === 'leave');
 });
 updateSummary();
+
+// ── WhatsApp per-row button visibility ──
+function updateWaBtn(id, status) {
+    var btn = document.getElementById('wa-btn-' + id);
+    if (!btn) return;
+    btn.style.display = (status === 'absent' || status === 'leave') ? 'inline-flex' : 'none';
+}
+// patch setStatus to also toggle WA btn
+var _origSetStatus = setStatus;
+setStatus = function(id, status) {
+    _origSetStatus(id, status);
+    updateWaBtn(id, status);
+};
+
+// Init WA button visibility on load
+document.querySelectorAll('input[id^="hid-"]').forEach(function(h) {
+    updateWaBtn(h.id.replace('hid-', ''), h.value);
+});
+
+// ── Build WhatsApp URL ──
+function buildWaUrl(phone, studentName, parentName, status, dateStr, className) {
+    var statusWord = status === 'absent' ? 'absent' : 'on leave';
+    var msg = 'Dear ' + parentName + ',\n\nThis is to inform you that *' + studentName +
+              '* was marked *' + statusWord + '* on *' + dateStr +
+              (className ? '* in class *' + className : '*') +
+              '*. Please ensure regular attendance.\n\n— Martyrs Memorial +2 School';
+    return 'https://wa.me/' + phone + '?text=' + encodeURIComponent(msg);
+}
+
+// ── Per-row WA button click ──
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.wa-btn-row');
+    if (!btn) return;
+    var sid = btn.id.replace('wa-btn-', '');
+    var status = document.getElementById('hid-' + sid)?.value || 'absent';
+    var url = buildWaUrl(
+        btn.dataset.phone, btn.dataset.student,
+        btn.dataset.parent, status,
+        btn.dataset.date, btn.dataset.class
+    );
+    window.open(url, '_blank');
+});
+
+// ── Notify All button — one-click group message ──
+document.getElementById('notifyAllBtn')?.addEventListener('click', function() {
+    var list = document.getElementById('waStudentList');
+    var noStudents = document.getElementById('waNoStudents');
+    var hasStudents = document.getElementById('waHasStudents');
+    list.innerHTML = '';
+
+    var absentNames = [], leaveNames = [], dateStr = '', className = '';
+
+    document.querySelectorAll('input[id^="hid-"]').forEach(function(h) {
+        var sid = h.id.replace('hid-', '');
+        var status = h.value;
+        if (status !== 'absent' && status !== 'leave') return;
+        var btn = document.getElementById('wa-btn-' + sid);
+        // Even if no phone, still list the student in the summary
+        var sName = btn ? btn.dataset.student : sid;
+        if (!dateStr && btn) { dateStr = btn.dataset.date; className = btn.dataset.class; }
+        if (status === 'absent') absentNames.push(sName);
+        else leaveNames.push(sName);
+
+        var badge = status === 'absent'
+            ? '<span class="badge bg-danger me-1">Absent</span>'
+            : '<span class="badge bg-primary me-1">Leave</span>';
+        list.innerHTML += '<div class="d-flex align-items-center gap-2 py-1 border-bottom">' +
+            badge + '<span>' + sName + '</span></div>';
+    });
+
+    var total = absentNames.length + leaveNames.length;
+    if (total === 0) {
+        noStudents.style.display = '';
+        hasStudents.style.display = 'none';
+    } else {
+        noStudents.style.display = 'none';
+        hasStudents.style.display = '';
+
+        // Build group message
+        var msg = '📋 *Attendance Alert — ' + (className || 'Class') + '*
+';
+        msg += '📅 Date: ' + (dateStr || new Date().toLocaleDateString('en-NP')) + '
+
+';
+        if (absentNames.length) {
+            msg += '❌ *Absent (' + absentNames.length + '):*
+';
+            absentNames.forEach(function(n, i) { msg += (i+1) + '. ' + n + '
+'; });
+        }
+        if (leaveNames.length) {
+            msg += '
+🗓️ *On Leave (' + leaveNames.length + '):*
+';
+            leaveNames.forEach(function(n, i) { msg += (i+1) + '. ' + n + '
+'; });
+        }
+        msg += '
+Kindly ensure your ward attends school regularly.
+— Martyrs Memorial +2 School';
+
+        document.getElementById('waMsgPreview').value = msg;
+    }
+
+    new bootstrap.Modal(document.getElementById('waNotifyModal')).show();
+});
 {% endblock %}

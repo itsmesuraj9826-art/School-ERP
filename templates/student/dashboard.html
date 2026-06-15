@@ -282,24 +282,22 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-    });
-    new Chart(document.getElementById('attendanceDonut'), {
-        type: 'doughnut',
-        data: {
-            datasets: [{
-                data: [{{ attendance_pct }}, {{ 100 - attendance_pct }}],
-                backgroundColor: ['#0D47A1', '#E8EAF6'],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            cutout: '75%',
-            plugins: { legend: { display: false }, tooltip: { enabled: false } },
-            animation: { animateRotate: true, duration: 1500 }
-        }
-    });
-</script>
+document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+});
+new Chart(document.getElementById('attendanceDonut'), {
+    type: 'doughnut',
+    data: {
+        datasets: [{
+            data: [{{ attendance_pct }}, {{ 100 - attendance_pct }}],
+            backgroundColor: ['#0D47A1', '#E8EAF6'],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        cutout: '75%',
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        animation: { animateRotate: true, duration: 1500 }
+    }
+});
 {% endblock %}

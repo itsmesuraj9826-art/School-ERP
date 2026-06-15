@@ -316,7 +316,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
 function showDeleteModal(studentId, studentName) {
     document.getElementById('deleteStudentName').innerHTML = studentName;
     document.getElementById('deleteStudentForm').action = '/admin/students/' + studentId + '/delete';
@@ -332,5 +331,4 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-</script>
 {% endblock %}

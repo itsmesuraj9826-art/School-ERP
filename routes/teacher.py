@@ -301,6 +301,34 @@ def attendance():
         return redirect(url_for('teacher.attendance', class_id=class_id,
                                 date=att_date.isoformat(), view=view_mode))
 
+    # Build parent phone map for WhatsApp buttons
+    parent_phones = {}  # student_id -> {phone, parent_name, student_name}
+    import re as _re
+    for student, user in students:
+        phone = None
+        parent_name = None
+        if student.parents:
+            for p in student.parents:
+                pu = db.session.get(User, p.user_id)
+                if pu and pu.phone:
+                    phone = pu.phone
+                    parent_name = pu.full_name
+                    break
+        if not phone and student.guardian_phone:
+            phone = student.guardian_phone
+            parent_name = student.guardian_name or 'Guardian'
+        if phone:
+            clean = _re.sub(r'[^\d]', '', phone)
+            if clean.startswith('0'):
+                clean = '977' + clean[1:]
+            elif not clean.startswith('977'):
+                clean = '977' + clean
+            parent_phones[student.id] = {
+                'phone': clean,
+                'parent_name': parent_name or 'Guardian',
+                'student_name': user.full_name,
+            }
+
     return render_template('teacher/attendance.html',
         my_classes=my_classes,
         students=students,
@@ -309,7 +337,9 @@ def attendance():
         selected_date=selected_date,
         view_mode=view_mode,
         history_records=history_records,
-        today=date.today().isoformat()
+        today=date.today().isoformat(),
+        parent_phones=parent_phones,
+        selected_class=db.session.get(Class, selected_class_id) if selected_class_id else None,
     )
 
 # ------------------------------------------------------------

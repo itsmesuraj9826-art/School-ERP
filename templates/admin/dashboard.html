@@ -242,8 +242,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
+document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
 
@@ -314,5 +313,4 @@
             }
         }
     });
-</script>
 {% endblock %}
