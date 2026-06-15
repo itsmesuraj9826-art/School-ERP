@@ -122,6 +122,16 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a href="{{ url_for('admin.reports') }}" class="nav-link {% if 'report' in request.endpoint and 'settings' not in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-file-alt"></i><span>Report Cards</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('admin.report_settings') }}" class="nav-link {% if 'report_settings' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-paint-brush"></i><span>Report Designer</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="{{ url_for('admin.timetable') }}" class="nav-link {% if 'timetable' in request.endpoint %}active{% endif %}">
                     <i class="fas fa-calendar-week"></i><span>Timetable</span>
                 </a>
@@ -223,6 +233,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a href="{{ url_for('teacher.homework') }}" class="nav-link {% if 'homework' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-book"></i><span>Homework Diary</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="{{ url_for('teacher.notifications') }}" class="nav-link {% if 'notification' in request.endpoint %}active{% endif %}">
                     <i class="fas fa-bell"></i><span>Notifications</span>
                 </a>
@@ -285,6 +300,11 @@
             <li class="nav-item">
                 <a href="{{ url_for('student.notes') }}" class="nav-link {% if 'notes' in request.endpoint %}active{% endif %}">
                     <i class="fas fa-folder-open"></i><span>Study Materials</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('student.student_homework') }}" class="nav-link {% if 'homework' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-book"></i><span>Homework Diary</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -356,12 +376,18 @@
                     <i class="fas fa-moon" id="darkModeIcon"></i>
                 </div>
                 {% if current_user.is_authenticated %}
-                <a href="{% if current_user.role == 'admin' %}{{ url_for('admin.notifications') }}
-                         {% elif current_user.role == 'teacher' %}{{ url_for('teacher.notifications') }}
-                         {% elif current_user.role == 'student' %}{{ url_for('student.notifications') }}
-                         {% elif current_user.role == 'parent' %}{{ url_for('parent.notifications') }}
-                         {% else %}#{% endif %}"
-                            id="notifCount" style="font-size:.6rem;display:none;"></span>
+                <a href="{% if current_user.role == 'admin' %}{{ url_for('admin.notifications') }}{% elif current_user.role == 'teacher' %}{{ url_for('teacher.notifications') }}{% elif current_user.role == 'student' %}{{ url_for('student.notifications') }}{% elif current_user.role == 'parent' %}{{ url_for('parent.notifications') }}{% else %}#{% endif %}"
+                   id="notifBellBtn" title="Notifications"
+                   style="position:relative;display:flex;align-items:center;justify-content:center;
+                          width:36px;height:36px;border-radius:50%;background:rgba(99,102,241,.12);
+                          color:var(--text-primary);text-decoration:none;flex-shrink:0;">
+                    <i class="fas fa-bell" style="font-size:1rem;"></i>
+                    <span id="notifCount"
+                          style="display:none;position:absolute;top:1px;right:1px;
+                                 min-width:17px;height:17px;border-radius:9px;
+                                 background:#ef4444;color:#fff;font-size:.6rem;
+                                 font-weight:700;line-height:17px;text-align:center;padding:0 3px;">
+                    </span>
                 </a>
                 {% endif %}
                 <div class="user-profile-nav dropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -446,24 +472,26 @@ dmToggle?.addEventListener('click', () => {
 
 // Bell notification count — all roles
 {% if current_user.is_authenticated %}
-var _notifUrl = "{% if current_user.role == 'admin' %}{{ url_for('admin.notif_count') }}{% elif current_user.role == 'teacher' %}{{ url_for('teacher.notifications') }}{% elif current_user.role == 'parent' %}{{ url_for('parent.notif_count') }}{% elif current_user.role == 'student' %}{{ url_for('student.notifications') }}{% else %}#{% endif %}";
+var _notifUrl = "{% if current_user.role == 'admin' %}{{ url_for('admin.notif_count') }}{% elif current_user.role == 'teacher' %}{{ url_for('teacher.notif_count') }}{% elif current_user.role == 'student' %}{{ url_for('student.notif_count') }}{% elif current_user.role == 'parent' %}{{ url_for('parent.notif_count') }}{% else %}#{% endif %}";
 function refreshNotifCount() {
     if (_notifUrl === '#') return;
     fetch(_notifUrl)
     .then(r => r.ok ? r.json() : null)
     .then(data => {
-        if (data && data.count > 0) {
-            const el = document.getElementById('notifCount');
-            const dot = document.getElementById('notifBadgeDot');
-            if (el) { el.textContent = data.count > 9 ? '9+' : data.count; el.style.display = 'inline-flex'; }
-            if (dot) dot.style.display = '';
+        if (!data) return;
+        const el = document.getElementById('notifCount');
+        if (el) {
+            if (data.count > 0) {
+                el.textContent = data.count > 9 ? '9+' : data.count;
+                el.style.display = 'inline-block';
+            } else {
+                el.style.display = 'none';
+            }
         }
     }).catch(() => {});
 }
-{% if current_user.role in ('admin', 'parent') %}
 refreshNotifCount();
-setInterval(refreshNotifCount, 60000);
-{% endif %}
+setInterval(refreshNotifCount, 45000);
 {% endif %}
 
 // PWA service worker

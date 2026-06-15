@@ -113,6 +113,70 @@
             {% endif %}
         </div>
     </div>
+
+    {% if existing %}
+    <!-- Leaderboard + WhatsApp result alerts -->
+    <div class="row g-4 mt-1">
+        <div class="col-md-5">
+            <div class="info-card">
+                <h6 class="fw-bold mb-3"><i class="fas fa-trophy me-2 text-warning"></i>Class Leaderboard</h6>
+                {% set ranked = existing.values()|list|sort(attribute='marks_obtained', reverse=True) %}
+                <ol class="list-unstyled mb-0">
+                {% for r in ranked[:10] %}
+                {% set s_user = r.student.user if r.student else none %}
+                <li class="d-flex align-items-center gap-2 py-2 border-bottom">
+                    <span class="fw-bold" style="width:22px;color:{% if loop.index==1 %}#f59e0b{% elif loop.index==2 %}#94a3b8{% elif loop.index==3 %}#b45309{% else %}#6c757d{% endif %}">
+                        {% if loop.index <= 3 %}<i class="fas fa-medal"></i>{% else %}{{ loop.index }}{% endif %}
+                    </span>
+                    <span class="flex-grow-1 small fw-semibold">{{ s_user.full_name if s_user else 'Unknown' }}</span>
+                    <span class="badge bg-primary">{{ r.marks_obtained }}/{{ exam.max_marks }}</span>
+                    <span class="badge" style="background:{% if r.grade in ('A+','A') %}#16a34a{% elif r.grade in ('B+','B') %}#2563eb{% elif r.grade in ('C+','C') %}#d97706{% else %}#dc2626{% endif %}">{{ r.grade }}</span>
+                </li>
+                {% endfor %}
+                </ol>
+            </div>
+        </div>
+        <div class="col-md-7">
+            <div class="info-card">
+                <h6 class="fw-bold mb-3"><i class="fab fa-whatsapp me-2 text-success"></i>Send Results to Parents</h6>
+                <div style="max-height:320px;overflow-y:auto;">
+                {% for student, user in students_data %}
+                {% set r = existing.get(student.id) %}
+                {% if r %}
+                {% set phone = none %}
+                {% if student.parents %}{% for p in student.parents %}{% set pu = p.user if p.user else none %}{% if pu and pu.phone %}{% set phone = pu.phone %}{% endif %}{% endfor %}{% endif %}
+                {% if not phone and student.guardian_phone %}{% set phone = student.guardian_phone %}{% endif %}
+                <div class="d-flex align-items-center gap-2 py-2 border-bottom">
+                    <div class="flex-grow-1">
+                        <div class="small fw-semibold">{{ user.full_name }}</div>
+                        <div style="font-size:.72rem;color:#6c757d;">{{ r.marks_obtained }}/{{ exam.max_marks }} · {{ r.grade }}</div>
+                    </div>
+                    {% if phone %}
+                    {% set clean_phone = phone|replace(' ','')|replace('-','')|replace('+','') %}
+                    {% set wa_phone = ('977' + clean_phone[1:]) if clean_phone.startswith('0') else (('977' + clean_phone) if not clean_phone.startswith('977') else clean_phone) %}
+                    {% set pname = student.parents[0].user.full_name if student.parents and student.parents[0].user else student.guardian_name or 'Parent' %}
+                    {% set wa_msg = "Dear " ~ pname ~ ",\n\n" ~ user.full_name ~ "'s result for *" ~ exam.name ~ "*:\nMarks: *" ~ r.marks_obtained ~ "/" ~ exam.max_marks ~ "*\nGrade: *" ~ r.grade ~ "*\n\n— " ~ (exam.class_ref.full_name if exam.class_ref else '') ~ " | Martyrs Memorial +2 School" %}
+                    <a href="https://wa.me/{{ wa_phone }}?text={{ wa_msg|urlencode }}" target="_blank"
+                       class="btn btn-sm" style="background:#25D366;color:#fff;border:none;border-radius:16px;font-size:.75rem;padding:3px 12px;white-space:nowrap;">
+                        <i class="fab fa-whatsapp me-1"></i>Send
+                    </a>
+                    {% else %}
+                    <span class="text-muted small">No phone</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% endfor %}
+                </div>
+                {% if existing|length > 0 %}
+                <button class="btn btn-sm mt-3 fw-semibold" id="sendAllResultsBtn"
+                        style="background:#25D366;color:#fff;border:none;border-radius:20px;">
+                    <i class="fab fa-whatsapp me-1"></i>Send All Results
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 {% block extra_js %}
@@ -138,5 +202,18 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.marks-input').forEach(inp => {
         if (inp.value) { const sid = inp.name.replace('marks_', ''); updateGrade(parseInt(sid), parseInt(inp.max)); }
     });
+});
+
+document.getElementById('sendAllResultsBtn')?.addEventListener('click', function() {
+    var links = document.querySelectorAll('a[href^="https://wa.me/"]');
+    var btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Sending…';
+    links.forEach(function(a, i) {
+        setTimeout(function() { window.open(a.href, '_blank'); }, i * 800);
+    });
+    setTimeout(function() {
+        btn.innerHTML = '<i class="fas fa-check me-1"></i>All Sent!';
+    }, links.length * 800 + 200);
 });
 {% endblock %}

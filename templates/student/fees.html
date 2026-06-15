@@ -53,6 +53,7 @@
                         <th>Method</th>
                         <th>Receipt</th>
                         <th>Status</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -76,9 +77,17 @@
                                 {{ fee.status|title }}
                             </span>
                         </td>
+                        <td>
+                            {% if fee.status == 'paid' %}
+                            <a href="{{ url_for('student.fee_receipt', fid=fee.id) }}" target="_blank"
+                               class="btn btn-sm btn-outline-primary" title="Download Receipt" style="border-radius:16px;font-size:.75rem;">
+                                <i class="fas fa-download me-1"></i>Receipt
+                            </a>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="7" class="text-center text-muted py-4">No fee records found.</td></tr>
+                    <tr><td colspan="8" class="text-center text-muted py-4">No fee records found.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

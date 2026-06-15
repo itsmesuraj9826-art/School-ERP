@@ -81,6 +81,16 @@
 .wa-btn-row { transition: transform .15s, box-shadow .15s; }
 .wa-btn-row:hover { transform: scale(1.15); box-shadow: 0 4px 12px rgba(37,211,102,.4); }
 
+/* ── Attendance % badge ── */
+.att-pct-badge { font-size:.68rem; font-weight:700; padding:1px 7px; border-radius:10px;
+    margin-left:5px; vertical-align:middle; }
+.pct-danger { background:#fee2e2; color:#b91c1c; }
+.pct-warn   { background:#fef9c3; color:#a16207; }
+.pct-good   { background:#dcfce7; color:#15803d; }
+[data-theme="dark"] .pct-danger { background:rgba(239,68,68,.18); color:#fca5a5; }
+[data-theme="dark"] .pct-warn   { background:rgba(234,179,8,.15); color:#fde047; }
+[data-theme="dark"] .pct-good   { background:rgba(34,197,94,.12); color:#86efac; }
+
 /* ── Responsive ── */
 @media (max-width:768px) {
   .att-tabs .att-tab { padding:8px 14px; font-size:.8rem; }
@@ -196,7 +206,20 @@
                                     <div class="student-avatar">{{ user.full_name[0]|upper }}</div>
                                     {% endif %}
                                     <div>
-                                        <div class="student-name">{{ user.full_name }}</div>
+                                        <div class="student-name">{{ user.full_name }}
+                                            {% set pct = att_pct.get(student.id) %}
+                                            {% if pct is not none %}
+                                                {% if pct < 75 %}
+                                                <span class="att-pct-badge pct-danger" title="Attendance {{ pct }}% — below 75%!">
+                                                    <i class="fas fa-exclamation-triangle"></i> {{ pct }}%
+                                                </span>
+                                                {% elif pct < 85 %}
+                                                <span class="att-pct-badge pct-warn" title="Attendance {{ pct }}%">{{ pct }}%</span>
+                                                {% else %}
+                                                <span class="att-pct-badge pct-good" title="Attendance {{ pct }}%">{{ pct }}%</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
                                         <div class="student-roll hide-sm">{{ student.roll_no }}</div>
                                     </div>
                                 </div>
@@ -297,6 +320,9 @@
                     <div class="att-count-badge acb-leave"><i class="fas fa-calendar-minus"></i><span id="leaveCount">0</span> Leave</div>
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-outline-danger btn-action" id="quickDialBtn" onclick="openQuickDial()">
+                        <i class="fas fa-phone-alt me-2"></i>Absent Dial List
+                    </button>
                     <button type="button" class="btn btn-success btn-action" id="notifyAllBtn"
                             style="background:#25D366;border-color:#25D366;">
                         <i class="fab fa-whatsapp me-2"></i>Notify All Absent/Leave
@@ -312,13 +338,32 @@
     {% elif students and view_mode == 'history' %}
     <!-- ─────────────── HISTORY VIEW ─────────────── -->
     <div class="info-card">
-        <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
             <h6 class="mb-0 fw-bold"><i class="fas fa-history me-2 text-primary"></i>Attendance History (last 30 days)</h6>
-            <small class="text-muted">Click a date in the filter to edit that day's attendance</small>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                <small class="text-muted">Click a date to edit</small>
+                <button onclick="exportAttCSV()" class="btn btn-sm btn-outline-success" style="border-radius:16px;font-size:.78rem;">
+                    <i class="fas fa-file-csv me-1"></i>Export CSV
+                </button>
+            </div>
         </div>
+        <!-- Absence heatmap -->
+        {% if history_records %}
+        <div id="absenceHeatmapWrap" class="mb-4 p-3 rounded" style="background:var(--bs-light,#f8f9fa);">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <small class="fw-semibold" style="font-size:.8rem;">Absence / Late Heatmap (last 30 days)</small>
+                <div class="d-flex gap-3" style="font-size:.72rem;">
+                    <span><span style="display:inline-block;width:12px;height:12px;background:#fee2e2;border-radius:3px;"></span> Absent</span>
+                    <span><span style="display:inline-block;width:12px;height:12px;background:#fef9c3;border-radius:3px;"></span> Late</span>
+                    <span><span style="display:inline-block;width:12px;height:12px;background:#dcfce7;border-radius:3px;"></span> All present</span>
+                </div>
+            </div>
+            <div id="absenceHeatmap" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+        </div>
+        {% endif %}
         {% if history_records %}
         <div class="table-responsive">
-            <table class="table modern-table table-hover mb-0">
+            <table class="table modern-table table-hover mb-0" id="attHistTable">
                 <thead>
                     <tr>
                         <th>Date</th>
@@ -390,195 +435,340 @@
 
 <!-- WhatsApp Bulk Notify Modal -->
 <div class="modal fade" id="waNotifyModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header" style="background:#25D366;color:#fff;">
                 <h5 class="modal-title"><i class="fab fa-whatsapp me-2"></i>Notify Parents via WhatsApp</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <div id="waNoStudents" class="text-center py-4 text-muted" style="display:none;">
-                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
-                    <p>No absent or on-leave students right now.</p>
+            <div class="modal-body p-0">
+                <div id="waNoStudents" class="text-center py-5 text-muted" style="display:none;">
+                    <i class="fas fa-check-circle fa-2x text-success mb-2 d-block"></i>
+                    No absent or on-leave students right now.
                 </div>
                 <div id="waHasStudents">
-                    <div class="alert alert-info py-2 small mb-3">
-                        <i class="fas fa-info-circle me-1"></i>
-                        One message will open in WhatsApp. Select your <strong>class parent group</strong> and send.
+                    <div class="px-3 pt-3 pb-2 border-bottom d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                        <span class="small text-muted">
+                            <i class="fas fa-info-circle me-1 text-primary"></i>
+                            Click <strong>Send All</strong> to message every parent, or send individually.
+                        </span>
+                        <button id="waSendAllBtn" class="btn btn-sm fw-semibold"
+                                style="background:#25D366;color:#fff;border:none;border-radius:20px;padding:5px 18px;">
+                            <i class="fab fa-whatsapp me-1"></i>Send All
+                        </button>
                     </div>
-                    <div id="waStudentList" class="mb-3 rounded border p-2" style="font-size:.82rem;max-height:140px;overflow-y:auto;"></div>
-                    <label class="form-label fw-semibold small">Message Preview <span class="text-muted fw-normal">(editable)</span></label>
-                    <textarea id="waMsgPreview" class="form-control" rows="7" style="font-size:.82rem;font-family:monospace;"></textarea>
+                    <div id="waSendAllProgress" style="display:none;" class="px-3 py-2 border-bottom">
+                        <div class="d-flex align-items-center gap-2 small">
+                            <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+                            <span id="waSendAllStatus">Opening WhatsApp chats…</span>
+                        </div>
+                        <div class="progress mt-2" style="height:6px;">
+                            <div id="waSendAllBar" class="progress-bar bg-success" style="width:0%;transition:width .3s;"></div>
+                        </div>
+                    </div>
+                    <div id="waParentRows" style="max-height:420px;overflow-y:auto;"></div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                <a id="waSendGroupBtn" href="#" target="_blank"
-                   class="btn btn-sm"
-                   style="background:#25D366;color:#fff;border:none;"
-                   onclick="this.href='https://wa.me/?text='+encodeURIComponent(document.getElementById('waMsgPreview').value)">
-                    <i class="fab fa-whatsapp me-1"></i>Open WhatsApp &amp; Send
-                </a>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
+<!-- Quick Dial Modal -->
+<div class="modal fade" id="quickDialModal" tabindex="-1">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#dc3545;color:#fff;">
+                <h5 class="modal-title"><i class="fas fa-phone-alt me-2"></i>Today's Absent Students</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="max-height:420px;overflow-y:auto;" id="quickDialList">
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-check-circle fa-2x text-success mb-2 d-block"></i>
+                    No absent/leave students to show. Mark attendance first.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <small class="text-muted me-auto" id="quickDialCount"></small>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-sm fw-semibold" id="quickDialWaAll"
+                        style="background:#25D366;color:#fff;border:none;border-radius:16px;display:none;"
+                        onclick="quickDialWaAll()">
+                    <i class="fab fa-whatsapp me-1"></i>WhatsApp All
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.wa-parent-row { display:flex; align-items:flex-start; gap:12px; padding:12px 16px; border-bottom:1px solid #e8eaf6; }
+[data-theme="dark"] .wa-parent-row { border-bottom-color: var(--border); }
+.wa-parent-row:last-child { border-bottom:none; }
+.wa-parent-avatar { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,#3949ab,#1e88e5);
+    color:#fff; font-weight:700; font-size:.95rem; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.wa-parent-info { flex:1; min-width:0; }
+.wa-parent-name { font-weight:600; font-size:.88rem; }
+.wa-student-name { font-size:.78rem; color:#6c757d; }
+.wa-msg-box { font-size:.75rem; font-family:monospace; background:#f8f9ff; border:1px solid #e0e7ff;
+    border-radius:6px; padding:6px 10px; margin-top:6px; white-space:pre-wrap; color:#333;
+    max-height:80px; overflow-y:auto; resize:none; width:100%; }
+[data-theme="dark"] .wa-msg-box { background:#162030; border-color:var(--border); color:var(--text); }
+.wa-send-btn { background:#25D366; border:none; color:#fff; border-radius:20px; padding:6px 16px;
+    font-size:.82rem; font-weight:600; white-space:nowrap; text-decoration:none; display:inline-flex;
+    align-items:center; gap:6px; flex-shrink:0; }
+.wa-send-btn:hover { background:#1da851; color:#fff; }
+.wa-send-btn.sent { background:#6c757d; pointer-events:none; }
+.wa-sent-check { color:#25D366; font-size:1.1rem; }
+.wa-no-phone { font-size:.75rem; color:#9e9e9e; font-style:italic; }
+</style>
 {% endblock %}
 
 {% block extra_js %}
-var SEL = { present:'selected-present', absent:'selected-absent', late:'selected-late', leave:'selected-leave' };
-
-function setStatus(id, status) {
-    var hid = document.getElementById('hid-' + id);
-    if (hid) hid.value = status;
-
-    var row = document.getElementById('row-' + id);
-    if (row) {
-        row.className = 'att-row row-' + status;
-        row.querySelectorAll('[data-status]').forEach(function(btn) {
-            Object.values(SEL).forEach(function(c) { btn.classList.remove(c); });
-            if (btn.getAttribute('data-status') === status) {
-                btn.classList.add(SEL[status]);
-            }
-        });
-    }
-
-    var wrap = document.getElementById('reason-wrap-' + id);
-    if (wrap) wrap.classList.toggle('open', status === 'absent' || status === 'leave');
-
-    updateSummary();
-}
-
-function markAll(status) {
-    document.querySelectorAll('input[name="student_ids"]').forEach(function(inp) {
-        setStatus(inp.value, status);
+// ── CSV Export ──
+function exportAttCSV() {
+    var rows = [['Date','Student','Roll No','Status','Reason']];
+    document.querySelectorAll('#attHistTable tbody tr').forEach(function(tr) {
+        var cells = tr.querySelectorAll('td');
+        if (cells.length < 5) return;
+        rows.push([
+            cells[0].innerText.trim().split('\n')[0],
+            cells[1].innerText.trim().split('\n')[0],
+            cells[2].innerText.trim(),
+            cells[3].innerText.trim(),
+            cells[4].innerText.trim()
+        ]);
     });
+    var csv = rows.map(function(r){ return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
+    var a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = 'attendance_' + (new Date().toISOString().slice(0,10)) + '.csv';
+    a.click();
 }
 
-function updateSummary() {
-    var counts = { present:0, absent:0, late:0, leave:0 };
-    document.querySelectorAll('input[id^="hid-"]').forEach(function(h) {
-        var v = h.value;
-        if (counts.hasOwnProperty(v)) counts[v]++;
-    });
-    document.getElementById('presentCount').textContent = counts.present;
-    document.getElementById('absentCount').textContent  = counts.absent;
-    document.getElementById('lateCount').textContent    = counts.late;
-    document.getElementById('leaveCount').textContent   = counts.leave;
-}
-
-// Init on load
-document.querySelectorAll('input[id^="hid-"]').forEach(function(h) {
-    var id = h.id.replace('hid-', '');
-    var status = h.value || 'present';
-    var row = document.getElementById('row-' + id);
-    if (row) {
-        row.className = 'att-row row-' + status;
-        row.querySelectorAll('[data-status]').forEach(function(btn) {
-            Object.values(SEL).forEach(function(c) { btn.classList.remove(c); });
-            if (btn.getAttribute('data-status') === status) {
-                btn.classList.add(SEL[status]);
-            }
-        });
-    }
-    var wrap = document.getElementById('reason-wrap-' + id);
-    if (wrap) wrap.classList.toggle('open', status === 'absent' || status === 'leave');
-});
-updateSummary();
-
-// ── WhatsApp per-row button visibility ──
-function updateWaBtn(id, status) {
-    var btn = document.getElementById('wa-btn-' + id);
-    if (!btn) return;
-    btn.style.display = (status === 'absent' || status === 'leave') ? 'inline-flex' : 'none';
-}
-// patch setStatus to also toggle WA btn
-var _origSetStatus = setStatus;
-setStatus = function(id, status) {
-    _origSetStatus(id, status);
-    updateWaBtn(id, status);
-};
-
-// Init WA button visibility on load
-document.querySelectorAll('input[id^="hid-"]').forEach(function(h) {
-    updateWaBtn(h.id.replace('hid-', ''), h.value);
-});
-
-// ── Build WhatsApp URL ──
-function buildWaUrl(phone, studentName, parentName, status, dateStr, className) {
-    var statusWord = status === 'absent' ? 'absent' : 'on leave';
-    var msg = 'Dear ' + parentName + ',\n\nThis is to inform you that *' + studentName +
-              '* was marked *' + statusWord + '* on *' + dateStr +
-              (className ? '* in class *' + className : '*') +
-              '*. Please ensure regular attendance.\n\n— Martyrs Memorial +2 School';
-    return 'https://wa.me/' + phone + '?text=' + encodeURIComponent(msg);
-}
-
-// ── Per-row WA button click ──
-document.addEventListener('click', function(e) {
-    var btn = e.target.closest('.wa-btn-row');
-    if (!btn) return;
-    var sid = btn.id.replace('wa-btn-', '');
-    var status = document.getElementById('hid-' + sid)?.value || 'absent';
-    var url = buildWaUrl(
-        btn.dataset.phone, btn.dataset.student,
-        btn.dataset.parent, status,
-        btn.dataset.date, btn.dataset.class
-    );
-    window.open(url, '_blank');
-});
-
-// ── Notify All button — one-click group message ──
-document.getElementById('notifyAllBtn')?.addEventListener('click', function() {
-    var list = document.getElementById('waStudentList');
-    var noStudents = document.getElementById('waNoStudents');
-    var hasStudents = document.getElementById('waHasStudents');
-    list.innerHTML = '';
-
-    var absentNames = [], leaveNames = [], dateStr = '', className = '';
-
-    document.querySelectorAll('input[id^="hid-"]').forEach(function(h) {
-        var sid = h.id.replace('hid-', '');
-        var status = h.value;
+// ── Absence Heatmap ──
+(function buildHeatmap(){
+    var wrap = document.getElementById('absenceHeatmap');
+    if (!wrap) return;
+    var dayMap = {};
+    document.querySelectorAll('#attHistTable tbody tr').forEach(function(tr) {
+        var cells = tr.querySelectorAll('td');
+        if (cells.length < 4) return;
+        var status = cells[3].innerText.trim().toLowerCase();
         if (status !== 'absent' && status !== 'leave') return;
-        var btn = document.getElementById('wa-btn-' + sid);
-        // Even if no phone, still list the student in the summary
-        var sName = btn ? btn.dataset.student : sid;
-        if (!dateStr && btn) { dateStr = btn.dataset.date; className = btn.dataset.class; }
-        if (status === 'absent') absentNames.push(sName);
-        else leaveNames.push(sName);
+        var dateStr = cells[0].innerText.trim().split('\n')[0];
+        dayMap[dateStr] = (dayMap[dateStr] || 0) + 1;
+    });
+    var entries = Object.entries(dayMap).sort(function(a,b){ return a[0].localeCompare(b[0]); });
+    if (!entries.length) { wrap.innerHTML = '<span class="text-muted small">No absences in last 30 days.</span>'; return; }
+    var max = Math.max.apply(null, entries.map(function(e){ return e[1]; }));
+    entries.forEach(function(e) {
+        var intensity = Math.round((e[1]/max)*5);
+        var colors = ['#e8f5e9','#c8e6c9','#ffcc80','#ff8a65','#e53935'];
+        var cell = document.createElement('div');
+        cell.title = e[0] + ': ' + e[1] + ' absence(s)';
+        cell.style.cssText = 'display:inline-block;width:28px;height:28px;border-radius:4px;margin:2px;background:' + colors[Math.min(intensity,4)] + ';cursor:default;vertical-align:middle;';
+        wrap.appendChild(cell);
+    });
+})();
 
-        var badge = status === 'absent'
-            ? '<span class="badge bg-danger me-1">Absent</span>'
-            : '<span class="badge bg-primary me-1">Leave</span>';
-        list.innerHTML += '<div class="d-flex align-items-center gap-2 py-1 border-bottom">' +
-            badge + '<span>' + sName + '</span></div>';
+// ── Notify All ──
+var _parentPhones = {{ parent_phones | tojson }};
+var _selectedDate = '{{ selected_date }}';
+var _className    = '{% if selected_class_id %}{% for c in my_classes %}{% if c.id == selected_class_id %}{{ c.full_name }}{% endif %}{% endfor %}{% endif %}';
+
+document.getElementById('notifyAllBtn')?.addEventListener('click', function() {
+    var absentRows = [];
+    document.querySelectorAll('.att-btn-group').forEach(function(grp) {
+        var sid = grp.getAttribute('data-sid');
+        var active = grp.querySelector('.att-btn.active');
+        if (!active) return;
+        var status = active.getAttribute('data-status');
+        if (status !== 'absent' && status !== 'leave') return;
+        var name = grp.closest('tr')?.querySelector('.student-name')?.textContent?.trim() || 'Student';
+        absentRows.push({ sid: sid, name: name, status: status });
     });
 
-    var total = absentNames.length + leaveNames.length;
-    if (total === 0) {
-        noStudents.style.display = '';
-        hasStudents.style.display = 'none';
-    } else {
-        noStudents.style.display = 'none';
-        hasStudents.style.display = '';
+    var listEl = document.getElementById('waParentList');
+    var noStudEl = document.getElementById('waNoStudents');
 
-        // Build group message
-        var msg = '📋 *Attendance Alert — ' + (className || 'Class') + '*\n';
-        msg += '📅 Date: ' + (dateStr || new Date().toLocaleDateString('en-NP')) + '\n\n';
-        if (absentNames.length) {
-            msg += '❌ *Absent (' + absentNames.length + '):*\n';
-            absentNames.forEach(function(n, i) { msg += (i+1) + '. ' + n + '\n'; });
-        }
-        if (leaveNames.length) {
-            msg += '\n🗓️ *On Leave (' + leaveNames.length + '):*\n';
-            leaveNames.forEach(function(n, i) { msg += (i+1) + '. ' + n + '\n'; });
-        }
-        msg += '\nKindly ensure your ward attends school regularly.\n— Martyrs Memorial +2 School';
-
-        document.getElementById('waMsgPreview').value = msg;
+    if (!absentRows.length) {
+        listEl.style.display = 'none';
+        noStudEl.style.display = '';
+        new bootstrap.Modal(document.getElementById('waNotifyModal')).show();
+        return;
     }
+
+    listEl.innerHTML = '';
+    listEl.style.display = '';
+    noStudEl.style.display = 'none';
+
+    var progWrap = document.getElementById('waProgressWrap');
+    var progBar  = document.getElementById('waProgressBar');
+    var sendAllBtn = document.getElementById('waSendAllBtn');
+    if (progWrap) progWrap.style.display = 'none';
+    if (sendAllBtn) { sendAllBtn.disabled = false; sendAllBtn.innerHTML = '<i class="fab fa-whatsapp me-1"></i>Send All (' + absentRows.length + ')'; }
+
+    absentRows.forEach(function(row) {
+        var pdata = _parentPhones[row.sid];
+        var phone = pdata ? pdata.phone : null;
+        var parentName = pdata ? pdata.name : 'Parent';
+        var initial = parentName ? parentName[0].toUpperCase() : 'P';
+        var msg = 'Dear ' + parentName + ',\n\nYour ward *' + row.name + '* was marked *' + row.status.toUpperCase() + '* on ' + _selectedDate + ' in class ' + _className + '.\n\nPlease contact the school for details.\n\n— Martyrs Memorial +2 School';
+        var waUrl = phone ? 'https://wa.me/' + phone + '?text=' + encodeURIComponent(msg) : null;
+
+        var div = document.createElement('div');
+        div.className = 'wa-parent-row';
+        div.innerHTML = '<div class="wa-parent-avatar">' + initial + '</div>' +
+            '<div class="wa-parent-info">' +
+                '<div class="wa-parent-name">' + parentName + '</div>' +
+                '<div class="wa-student-name">' + row.name + ' · ' + row.status.charAt(0).toUpperCase()+row.status.slice(1) + '</div>' +
+                '<textarea class="wa-msg-box" id="msg_' + row.sid + '">' + msg + '</textarea>' +
+            '</div>' +
+            (waUrl ? '<a href="' + waUrl + '" target="_blank" class="wa-send-btn" id="sendbtn_' + row.sid + '" onclick="markSent(this)"><i class="fab fa-whatsapp"></i>Send</a>'
+                   : '<span class="wa-no-phone">No phone</span>');
+        listEl.appendChild(div);
+    });
 
     new bootstrap.Modal(document.getElementById('waNotifyModal')).show();
+    document.getElementById('waAbsentCount').textContent = absentRows.length + ' student(s) absent/leave';
 });
+
+function markSent(btn) {
+    setTimeout(function() {
+        btn.classList.add('sent');
+        btn.innerHTML = '<i class="fas fa-check"></i> Sent';
+    }, 800);
+}
+
+document.getElementById('waSendAllBtn')?.addEventListener('click', function() {
+    var links = document.querySelectorAll('#waParentList .wa-send-btn:not(.sent)');
+    if (!links.length) return;
+    var btn = this;
+    var progWrap = document.getElementById('waProgressWrap');
+    var progBar  = document.getElementById('waProgressBar');
+    btn.disabled = true;
+    progWrap.style.display = '';
+    links.forEach(function(a, i) {
+        setTimeout(function() {
+            window.open(a.href, '_blank');
+            markSent(a);
+            var pct = Math.round((i+1)/links.length*100);
+            progBar.style.width = pct + '%';
+            if (i+1 === links.length) {
+                btn.innerHTML = '<i class="fas fa-check me-1"></i>All Sent!';
+                btn.disabled = false;
+            }
+        }, i * 750);
+    });
+});
+
+// ── Attendance counters ──
+function updateCounts() {
+    var p=0,a=0,l=0,lv=0;
+    document.querySelectorAll('.att-btn-group').forEach(function(grp){
+        var active = grp.querySelector('.att-btn.active');
+        if(!active) return;
+        var s = active.getAttribute('data-status');
+        if(s==='present') p++;
+        else if(s==='absent') a++;
+        else if(s==='late') l++;
+        else if(s==='leave') lv++;
+    });
+    var pc=document.getElementById('presentCount'),ac=document.getElementById('absentCount'),
+        lc=document.getElementById('lateCount'),lvc=document.getElementById('leaveCount');
+    if(pc)pc.textContent=p; if(ac)ac.textContent=a; if(lc)lc.textContent=l; if(lvc)lvc.textContent=lv;
+}
+
+document.querySelectorAll('.att-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+        var grp = this.closest('.att-btn-group');
+        grp.querySelectorAll('.att-btn').forEach(function(b){ b.classList.remove('active'); });
+        this.classList.add('active');
+        var sid = grp.getAttribute('data-sid');
+        var hidden = document.getElementById('status_'+sid);
+        if(hidden) hidden.value = this.getAttribute('data-status');
+        var reasonRow = document.getElementById('reason_row_'+sid);
+        if(reasonRow) reasonRow.style.display = (this.getAttribute('data-status')==='leave') ? '' : 'none';
+        updateCounts();
+    });
+});
+
+document.getElementById('markAllPresent')?.addEventListener('click', function(){
+    document.querySelectorAll('.att-btn[data-status="present"]').forEach(function(btn){
+        btn.click();
+    });
+});
+
+updateCounts();
+
+// ── Quick Dial ──
+function openQuickDial() {
+    var absentRows = [];
+    document.querySelectorAll('.att-btn-group').forEach(function(grp) {
+        var sid = grp.getAttribute('data-sid');
+        var active = grp.querySelector('.att-btn.active');
+        if (!active) return;
+        var status = active.getAttribute('data-status');
+        if (status !== 'absent' && status !== 'leave') return;
+        var name = grp.closest('tr')?.querySelector('.student-name')?.textContent?.trim() || 'Student';
+        var pdata = _parentPhones[sid];
+        absentRows.push({
+            name: name,
+            status: status,
+            phone: pdata ? pdata.phone : null,
+            parentName: pdata ? pdata.name : null
+        });
+    });
+
+    var list = document.getElementById('quickDialList');
+    var countEl = document.getElementById('quickDialCount');
+    var waAllBtn = document.getElementById('quickDialWaAll');
+
+    if (!absentRows.length) {
+        list.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-check-circle fa-2x text-success mb-2 d-block"></i>No absent/leave students right now.</div>';
+        countEl.textContent = '';
+        waAllBtn.style.display = 'none';
+        new bootstrap.Modal(document.getElementById('quickDialModal')).show();
+        return;
+    }
+
+    countEl.textContent = absentRows.length + ' student(s) absent/leave';
+    waAllBtn.style.display = absentRows.some(function(r){return r.phone;}) ? '' : 'none';
+    waAllBtn.setAttribute('data-rows', JSON.stringify(absentRows));
+
+    list.innerHTML = absentRows.map(function(r) {
+        var today = _selectedDate;
+        var msg = 'Dear ' + (r.parentName || 'Parent') + ',\n\nYour ward *' + r.name + '* was marked *' + r.status.toUpperCase() + '* on ' + today + '.\n\n— Martyrs Memorial +2 School';
+        var waHref = r.phone ? 'https://wa.me/' + r.phone + '?text=' + encodeURIComponent(msg) : null;
+        var callHref = r.phone ? 'tel:+' + r.phone : null;
+        return '<div class="d-flex align-items-center gap-3 py-2 px-1 border-bottom">' +
+            '<div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#c62828,#ef5350);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;flex-shrink:0;">' + r.name[0].toUpperCase() + '</div>' +
+            '<div class="flex-grow-1">' +
+                '<div class="fw-semibold small">' + r.name + '</div>' +
+                '<div style="font-size:.72rem;color:#9e9e9e;">' + (r.parentName || 'No parent info') + ' · <span class="badge ' + (r.status==='absent'?'bg-danger':'bg-warning text-dark') + '" style="font-size:.65rem;">' + r.status + '</span></div>' +
+            '</div>' +
+            '<div class="d-flex gap-1">' +
+                (callHref ? '<a href="' + callHref + '" class="btn btn-sm btn-outline-danger" style="border-radius:16px;font-size:.75rem;" title="Call parent"><i class="fas fa-phone-alt"></i></a>' : '') +
+                (waHref ? '<a href="' + waHref + '" target="_blank" class="btn btn-sm" style="background:#25D366;color:#fff;border:none;border-radius:16px;font-size:.75rem;padding:3px 10px;"><i class="fab fa-whatsapp"></i></a>' : '<span class="text-muted small">No phone</span>') +
+            '</div>' +
+            '</div>';
+    }).join('');
+
+    new bootstrap.Modal(document.getElementById('quickDialModal')).show();
+}
+
+function quickDialWaAll() {
+    var rows;
+    try { rows = JSON.parse(document.getElementById('quickDialWaAll').getAttribute('data-rows')); }
+    catch(e) { return; }
+    var withPhone = rows.filter(function(r){ return r.phone; });
+    withPhone.forEach(function(r, i) {
+        var msg = 'Dear ' + (r.parentName||'Parent') + ',\n\nYour ward *' + r.name + '* was marked *' + r.status.toUpperCase() + '* today.\n\n— Martyrs Memorial +2 School';
+        setTimeout(function() {
+            window.open('https://wa.me/' + r.phone + '?text=' + encodeURIComponent(msg), '_blank');
+        }, i * 750);
+    });
+}
 {% endblock %}

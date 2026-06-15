@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from functools import wraps
 from models import db, User, Student, Teacher, Parent, Class, Subject, Stream, Attendance, Exam, Result, Fee, Notice, \
-    Assignment, TimeTable, Message, LeaveRequest, Event, Notification
+    Assignment, TimeTable, Message, LeaveRequest, Event, Notification, SchoolConfig
 from datetime import datetime, date, timedelta
 from sqlalchemy import func
 from app import mail
@@ -131,6 +131,44 @@ def dashboard():
                  .count())
         stream_stats.append({'name': stream.name, 'count': count})
 
+    # Birthday widget — students & teachers with birthday in next 7 days
+    upcoming_days = [(today + timedelta(days=i)) for i in range(7)]
+    birthday_people = []
+    for student, user in (db.session.query(Student, User).join(User, Student.user_id == User.id)
+                          .filter(Student.status == 'active', Student.date_of_birth != None).all()):
+        dob = student.date_of_birth
+        for d in upcoming_days:
+            if dob.month == d.month and dob.day == d.day:
+                birthday_people.append({
+                    'name': user.full_name,
+                    'role': 'Student',
+                    'days_until': (d - today).days,
+                    'date_str': d.strftime('%b %d'),
+                    'initial': user.full_name[0].upper()
+                })
+                break
+    for teacher, user in (db.session.query(Teacher, User).join(User, Teacher.user_id == User.id)
+                          .filter(Teacher.status == 'active', Teacher.date_of_birth != None).all()):
+        dob = teacher.date_of_birth
+        for d in upcoming_days:
+            if dob.month == d.month and dob.day == d.day:
+                birthday_people.append({
+                    'name': user.full_name,
+                    'role': 'Teacher',
+                    'days_until': (d - today).days,
+                    'date_str': d.strftime('%b %d'),
+                    'initial': user.full_name[0].upper()
+                })
+                break
+    birthday_people.sort(key=lambda x: x['days_until'])
+
+    # Upcoming events — next 30 days
+    upcoming_events = Event.query.filter(
+        Event.event_date >= today,
+        Event.event_date <= today + timedelta(days=30),
+        Event.is_active == True
+    ).order_by(Event.event_date.asc()).limit(8).all()
+
     return render_template('admin/dashboard.html',
                            total_students=Student.query.filter_by(status='active').count(),
                            total_teachers=Teacher.query.filter_by(status='active').count(),
@@ -145,7 +183,10 @@ def dashboard():
                            upcoming_exams=upcoming_exams,
                            recent_notices=recent_notices,
                            monthly_admissions=monthly_admissions,
-                           stream_stats=stream_stats)
+                           stream_stats=stream_stats,
+                           birthday_people=birthday_people,
+                           upcoming_events=upcoming_events,
+                           today=today)
 
 
 # ============================================================================
@@ -1296,13 +1337,58 @@ def fees():
                 .filter(Student.status == 'active')
                 .order_by(User.full_name).all())
 
+    # Fee defaulters: students with any pending/overdue fee
+    import re as _re2
+    defaulters_raw = (db.session.query(Student, User, func.sum(Fee.amount).label('due_total'))
+                      .join(Fee, Fee.student_id == Student.id)
+                      .join(User, Student.user_id == User.id)
+                      .filter(Fee.status.in_(['pending', 'overdue']))
+                      .group_by(Student.id, User.id)
+                      .order_by(func.sum(Fee.amount).desc()).all())
+
+    defaulters = []
+    for student, user, due_total in defaulters_raw:
+        phone = None
+        parent_name = None
+        if student.parents:
+            for p in student.parents:
+                pu = db.session.get(User, p.user_id)
+                if pu and pu.phone:
+                    phone = pu.phone
+                    parent_name = pu.full_name
+                    break
+        if not phone and student.guardian_phone:
+            phone = student.guardian_phone
+            parent_name = student.guardian_name or 'Guardian'
+        clean_phone = None
+        if phone:
+            clean = _re2.sub(r'[^\d]', '', phone)
+            if clean.startswith('0'):
+                clean = '977' + clean[1:]
+            elif not clean.startswith('977'):
+                clean = '977' + clean
+            clean_phone = clean
+        defaulters.append({
+            'student': student, 'user': user, 'due_total': round(due_total, 2),
+            'phone': clean_phone, 'parent_name': parent_name,
+        })
+
+    # Fee type breakdown for chart
+    fee_type_data = db.session.query(Fee.fee_type, func.sum(Fee.amount))\
+        .filter_by(status='paid').group_by(Fee.fee_type).all()
+    fee_type_labels = [r[0] for r in fee_type_data]
+    fee_type_values = [float(r[1]) for r in fee_type_data]
+
     return render_template('admin/fees.html',
                            fees_data=fees_data,
                            total_collected=total_collected,
                            total_pending=total_pending,
                            total_overdue=total_overdue,
                            status_filter=status_filter,
-                           students=students)
+                           students=students,
+                           defaulters=defaulters,
+                           fee_type_labels=fee_type_labels,
+                           fee_type_values=fee_type_values)
 
 
 @admin_bp.route('/fees/add', methods=['POST'])
@@ -1421,13 +1507,6 @@ def fee_receipt(fid):
 @admin_required
 def send_fee_reminders():
     """Email all parents with pending or overdue fees."""
-    pending_fees = (db.session.query(Fee, Student, User, Parent, User)
-                   .join(Student, Fee.student_id == Student.id)
-                   .join(User, Student.user_id == User.id)
-                   .join(Parent, Parent.student_id == Student.id)
-                   .join(User, Parent.user_id == User.id, isouter=True)
-                   .filter(Fee.status.in_(['pending', 'overdue']))
-                   .all())
 
     # Simpler approach: iterate pending fees, look up parent per student
     fees_q = Fee.query.filter(Fee.status.in_(['pending', 'overdue'])).all()
@@ -1569,27 +1648,86 @@ def student_report_card(sid):
     student_user = db.session.get(User, student.user_id)
     cls = db.session.get(Class, student.class_id) if student.class_id else None
 
-    all_results = (db.session.query(Result, Exam, Subject)
-                   .join(Exam, Result.exam_id == Exam.id)
-                   .outerjoin(Subject, Exam.subject_id == Subject.id)
-                   .filter(Result.student_id == student.id)
-                   .order_by(Exam.exam_date).all())
+    from collections import OrderedDict
+
+    # ── Step 1: All subjects for this class ──
+    subjects = []
+    if student.class_id:
+        subjects = Subject.query.filter_by(class_id=student.class_id)            .order_by(Subject.is_optional, Subject.name).all()
+    if not subjects and cls and cls.stream_id:
+        subjects = Subject.query.filter_by(stream_id=cls.stream_id)            .order_by(Subject.is_optional, Subject.name).all()
+
+    # ── Step 2: Best exam per subject for this class ──
+    TYPE_PRIO = {'final': 0, 'terminal': 1, 'mid_term': 2, 'unit': 3}
+    exams_raw = Exam.query.filter_by(class_id=student.class_id).all() if student.class_id else []
+    exam_by_subj = {}
+    for ex in exams_raw:
+        if not ex.subject_id:
+            continue
+        prio = TYPE_PRIO.get(ex.exam_type, 5)
+        if ex.subject_id not in exam_by_subj or prio < exam_by_subj[ex.subject_id][0]:
+            exam_by_subj[ex.subject_id] = (prio, ex)
+    exam_by_subj = {sid: ex for sid, (_, ex) in exam_by_subj.items()}
+
+    # ── Step 3: Results for this student keyed by exam_id ──
+    result_by_exam = {r.exam_id: r for r in Result.query.filter_by(student_id=student.id).all()}
+
+    # ── Step 4: Subject-first rows (always list every subject) ──
+    all_results = []   # tuples of (subject, exam|None, result|None)
+    for subj in subjects:
+        exam   = exam_by_subj.get(subj.id)
+        result = result_by_exam.get(exam.id) if exam else None
+        all_results.append((subj, exam, result))
+
+    # Fallback: if no subjects configured, use result rows directly
+    if not all_results:
+        seen = OrderedDict()
+        for res, ex, subj in (db.session.query(Result, Exam, Subject)
+                               .join(Exam, Result.exam_id == Exam.id)
+                               .outerjoin(Subject, Exam.subject_id == Subject.id)
+                               .filter(Result.student_id == student.id)
+                               .order_by(Exam.exam_date.desc()).all()):
+            key = subj.id if subj else ex.id
+            if key not in seen:
+                seen[key] = (subj, ex, res)
+        all_results = list(seen.values())
+
+    # ── Totals ──
+    grand_total = sum((r.marks_obtained or 0) + (r.practical_marks or 0) for _, _, r in all_results if r)
+    max_total   = sum((e.max_marks or 0) + (s.practical_marks or 0) for s, e, _ in all_results if e and s)
+    overall_pct = round(grand_total / max_total * 100, 1) if max_total else 0
+    has_fail    = any(
+        r and e and s and (
+            (r.marks_obtained or 0) < (e.pass_marks or 0) or
+            (s.practical_marks and (r.practical_marks or 0) < s.practical_marks * 0.4)
+        )
+        for s, e, r in all_results
+    )
+    overall_result = 'FAIL' if has_fail else 'PASS'
 
     attendances = Attendance.query.filter_by(student_id=student.id).all()
-    total_att = len(attendances)
+    total_att   = len(attendances)
     present_att = sum(1 for a in attendances if a.status == 'present')
-    att_pct = round((present_att / total_att * 100), 1) if total_att else 0
+    att_pct     = round((present_att / total_att * 100), 1) if total_att else 0
 
     avg_gpa = db.session.query(func.avg(Result.gpa))\
         .filter(Result.student_id == student.id, Result.gpa > 0).scalar()
     avg_gpa = round(float(avg_gpa), 2) if avg_gpa else 0.0
 
     from datetime import datetime as _dt
+    import json as _json
+    cfg = _get_config()
+    try:
+        gb = _json.loads(cfg.grade_boundaries or '{}')
+    except Exception:
+        gb = {'A+':90,'A':80,'B+':70,'B':60,'C+':50,'C':40,'D':33}
     return render_template('admin/student_report_card.html',
                            student=student, student_user=student_user, cls=cls,
-                           all_results=all_results,
+                           all_results=all_results, subjects=subjects,
+                           grand_total=grand_total, max_total=max_total,
+                           overall_pct=overall_pct, overall_result=overall_result,
                            total_att=total_att, present_att=present_att, att_pct=att_pct,
-                           avg_gpa=avg_gpa, now=_dt.now())
+                           avg_gpa=avg_gpa, now=_dt.now(), cfg=cfg, gb=gb)
 
 
 # ------------------------------------------------------------
@@ -1627,8 +1765,8 @@ def approve_leave(lid):
         user_id=lr.user_id,
         title='Leave Request Approved',
         message=f'Your leave request from {lr.from_date} to {lr.to_date} has been approved.',
-        notif_type='success',
-        link=url_for('student.leave_requests') if lr.requester.role == 'student' else url_for('teacher.leave_requests')
+        notif_type='leave',
+        is_read=False
     )
     db.session.add(notif)
     db.session.commit()
@@ -1640,10 +1778,7 @@ def approve_leave(lid):
 @login_required
 @admin_required
 def reject_leave(lid):
-    lr = db.session.get(LeaveRequest, lid)
-    if not lr:
-        flash('Leave request not found.', 'danger')
-        return redirect(url_for('admin.leave_requests'))
+    lr = LeaveRequest.query.get_or_404(lid)
     lr.status = 'rejected'
     lr.reviewed_by = current_user.id
     lr.reviewed_at = datetime.utcnow()
@@ -1651,10 +1786,9 @@ def reject_leave(lid):
     notif = Notification(
         user_id=lr.user_id,
         title='Leave Request Rejected',
-        message=f'Your leave request from {lr.from_date} to {lr.to_date} has been rejected. '
-                f'Reason: {lr.review_comment or "Not specified"}',
-        notif_type='danger',
-        link=url_for('student.leave_requests') if lr.requester.role == 'student' else url_for('teacher.leave_requests')
+        message=f'Your leave request from {lr.from_date} to {lr.to_date} has been rejected.',
+        notif_type='leave',
+        is_read=False
     )
     db.session.add(notif)
     db.session.commit()
@@ -1662,37 +1796,74 @@ def reject_leave(lid):
     return redirect(url_for('admin.leave_requests'))
 
 
-# ------------------------------------------------------------
-
-@admin_bp.route('/events')
+@admin_bp.route('/events', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def events():
-    upcoming = (Event.query
-                .filter(Event.event_date >= date.today(), Event.is_active == True)
-                .order_by(Event.event_date.asc()).all())
-    past = (Event.query
-            .filter(Event.event_date < date.today(), Event.is_active == True)
-            .order_by(Event.event_date.desc()).limit(30).all())
-    return render_template('admin/events.html', upcoming=upcoming, past=past)
+    if request.method == 'POST':
+        action = request.form.get('action', 'add')
+        if action == 'delete':
+            eid = request.form.get('event_id', type=int)
+            ev = db.session.get(Event, eid)
+            if ev:
+                db.session.delete(ev)
+                db.session.commit()
+                flash('Event deleted.', 'success')
+        else:
+            title       = request.form.get('title', '').strip()
+            description = request.form.get('description', '').strip()
+            event_date  = request.form.get('event_date')
+            end_date    = request.form.get('end_date') or None
+            event_type  = request.form.get('event_type', 'general')
+            location    = request.form.get('location', '').strip()
+            target_role = request.form.get('target_role', 'all')
+            if title and event_date:
+                ev = Event(
+                    title=title,
+                    description=description,
+                    event_date=datetime.strptime(event_date, '%Y-%m-%d').date(),
+                    end_date=datetime.strptime(end_date, '%Y-%m-%d').date() if end_date else None,
+                    event_type=event_type,
+                    location=location,
+                    target_role=target_role,
+                    created_by=current_user.id
+                )
+                db.session.add(ev)
+                db.session.commit()
+                flash('Event added.', 'success')
+            else:
+                flash('Title and date are required.', 'danger')
+        return redirect(url_for('admin.events'))
+
+    from datetime import date as _date
+    today = _date.today()
+    upcoming = Event.query.filter(Event.event_date >= today).order_by(Event.event_date).all()
+    past     = Event.query.filter(Event.event_date < today).order_by(Event.event_date.desc()).limit(30).all()
+    return render_template('admin/events.html', upcoming=upcoming, past=past, today=today)
 
 
 @admin_bp.route('/events/add', methods=['POST'])
 @login_required
 @admin_required
 def add_event():
-    title = request.form.get('title', '').strip()
-    if not title:
-        flash('Event title is required.', 'danger')
+    title       = request.form.get('title', '').strip()
+    description = request.form.get('description', '').strip()
+    event_date  = request.form.get('event_date')
+    end_date    = request.form.get('end_date') or None
+    event_type  = request.form.get('event_type', 'general')
+    location    = request.form.get('location', '').strip()
+    target_role = request.form.get('target_role', 'all')
+    if not title or not event_date:
+        flash('Title and date are required.', 'danger')
         return redirect(url_for('admin.events'))
     ev = Event(
         title=title,
-        description=request.form.get('description', ''),
-        event_date=datetime.strptime(request.form['event_date'], '%Y-%m-%d').date(),
-        end_date=datetime.strptime(request.form['end_date'], '%Y-%m-%d').date() if request.form.get('end_date') else None,
-        event_type=request.form.get('event_type', 'general'),
-        target_role=request.form.get('target_role', 'all'),
-        location=request.form.get('location', ''),
+        description=description,
+        event_date=datetime.strptime(event_date, '%Y-%m-%d').date(),
+        end_date=datetime.strptime(end_date, '%Y-%m-%d').date() if end_date else None,
+        event_type=event_type,
+        location=location,
+        target_role=target_role,
         created_by=current_user.id
     )
     db.session.add(ev)
@@ -1705,31 +1876,300 @@ def add_event():
 @login_required
 @admin_required
 def delete_event(eid):
-    ev = db.get_or_404(Event, eid)
-    ev.is_active = False
-    db.session.commit()
-    flash('Event removed.', 'success')
+    ev = db.session.get(Event, eid)
+    if ev:
+        db.session.delete(ev)
+        db.session.commit()
+        flash('Event deleted.', 'success')
     return redirect(url_for('admin.events'))
 
-
-# ------------------------------------------------------------
 
 @admin_bp.route('/notifications')
 @login_required
 @admin_required
 def notifications():
-    notifs = (Notification.query
-              .filter_by(user_id=current_user.id)
-              .order_by(Notification.created_at.desc()).limit(50).all())
+    notifs = Notification.query.filter_by(user_id=current_user.id)\
+        .order_by(Notification.created_at.desc()).limit(50).all()
+    # Mark all as read
     Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
     db.session.commit()
-    return render_template('admin/notifications.html', notifs=notifs)
+    return render_template('admin/notifications.html', notifications=notifs)
 
 
-@admin_bp.route('/notifications/count')
+@admin_bp.route('/notif-count')
 @login_required
 @admin_required
 def notif_count():
     from flask import jsonify
     count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
     return jsonify({'count': count})
+
+
+# ── Report Card Settings ──────────────────────────────────────────────────────
+
+def _get_config():
+    cfg = SchoolConfig.query.first()
+    if not cfg:
+        cfg = SchoolConfig()
+        db.session.add(cfg)
+        db.session.commit()
+    return cfg
+
+@admin_bp.route('/report-settings', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def report_settings():
+    import json as _json
+    cfg = _get_config()
+    if request.method == 'POST':
+        import os, uuid
+        logo_file = request.files.get('logo_file')
+        if logo_file and logo_file.filename:
+            ext = os.path.splitext(logo_file.filename)[1].lower()
+            if ext in ('.png','.jpg','.jpeg','.svg','.gif','.webp'):
+                LOGO_DIR = os.path.join(os.path.dirname(__file__), '..', 'static', 'uploads', 'logos')
+                os.makedirs(LOGO_DIR, exist_ok=True)
+                fname = 'school_logo' + ext
+                logo_file.save(os.path.join(LOGO_DIR, fname))
+                cfg.logo_filename = fname
+        cfg.school_name       = request.form.get('school_name', cfg.school_name)
+        cfg.school_subtitle   = request.form.get('school_subtitle', cfg.school_subtitle)
+        cfg.school_icon       = request.form.get('school_icon', cfg.school_icon)
+        cfg.report_title      = request.form.get('report_title', cfg.report_title)
+        cfg.footer_text       = request.form.get('footer_text', cfg.footer_text)
+        cfg.primary_color     = request.form.get('primary_color', cfg.primary_color)
+        cfg.header_text_color = request.form.get('header_text_color', cfg.header_text_color)
+        cfg.accent_color      = request.form.get('accent_color', cfg.accent_color)
+        cfg.sig1_label        = request.form.get('sig1_label', cfg.sig1_label)
+        cfg.sig2_label        = request.form.get('sig2_label', cfg.sig2_label)
+        cfg.sig3_label        = request.form.get('sig3_label', cfg.sig3_label)
+        # Signature image uploads (supports base64 data URL from client-side bg removal)
+        import base64, re as _re
+        SIG_DIR = os.path.join(os.path.dirname(__file__), '..', 'static', 'uploads', 'signatures')
+        os.makedirs(SIG_DIR, exist_ok=True)
+
+        def _save_sig(data_b64, fname_base):
+            """Save a base64 PNG data URL to SIG_DIR. Returns filename or None."""
+            if not data_b64:
+                return None
+            m = _re.match(r'data:image/png;base64,(.+)', data_b64)
+            if not m:
+                return None
+            raw = base64.b64decode(m.group(1))
+            fname = fname_base + '.png'
+            with open(os.path.join(SIG_DIR, fname), 'wb') as f:
+                f.write(raw)
+            return fname
+
+        for idx in ('1', '2', '3'):
+            b64 = request.form.get(f'sig{idx}_image_data', '').strip()
+            if b64:
+                saved = _save_sig(b64, f'sig{idx}')
+                if saved:
+                    setattr(cfg, f'sig{idx}_image', saved)
+            else:
+                sig_file = request.files.get(f'sig{idx}_image')
+                if sig_file and sig_file.filename:
+                    ext = os.path.splitext(sig_file.filename)[1].lower()
+                    if ext in ('.png', '.jpg', '.jpeg', '.gif', '.webp'):
+                        fname = f'sig{idx}{ext}'
+                        sig_file.save(os.path.join(SIG_DIR, fname))
+                        setattr(cfg, f'sig{idx}_image', fname)
+
+        # Per-stream HOD name + signature
+        HOD_DIR = SIG_DIR
+        for stream in Stream.query.filter_by(is_active=True).all():
+            hod_name = request.form.get(f'hod_name_{stream.id}', '').strip()
+            if hod_name:
+                stream.hod_name = hod_name
+            hod_b64 = request.form.get(f'hod_sig_{stream.id}_data', '').strip()
+            if hod_b64:
+                saved = _save_sig(hod_b64, f'hod_stream_{stream.id}')
+                if saved:
+                    stream.hod_signature = saved
+            else:
+                hod_file = request.files.get(f'hod_sig_{stream.id}')
+                if hod_file and hod_file.filename:
+                    ext = os.path.splitext(hod_file.filename)[1].lower()
+                    if ext in ('.png', '.jpg', '.jpeg', '.gif', '.webp'):
+                        fname = f'hod_stream_{stream.id}{ext}'
+                        hod_file.save(os.path.join(HOD_DIR, fname))
+                        stream.hod_signature = fname
+        cfg.show_attendance   = 'show_attendance'  in request.form
+        cfg.show_summary      = 'show_summary'     in request.form
+        cfg.show_signatures   = 'show_signatures'  in request.form
+        cfg.show_gpa          = 'show_gpa'         in request.form
+        cfg.show_grade        = 'show_grade'        in request.form
+        cfg.remarks_ap        = request.form.get('remarks_ap', cfg.remarks_ap)
+        cfg.remarks_a         = request.form.get('remarks_a',  cfg.remarks_a)
+        cfg.remarks_bp        = request.form.get('remarks_bp', cfg.remarks_bp)
+        cfg.remarks_b         = request.form.get('remarks_b',  cfg.remarks_b)
+        cfg.remarks_c         = request.form.get('remarks_c',  cfg.remarks_c)
+        cfg.remarks_d         = request.form.get('remarks_d',  cfg.remarks_d)
+        cfg.remarks_f         = request.form.get('remarks_f',  cfg.remarks_f)
+        # Grade boundaries
+        try:
+            boundaries = {
+                'A+': int(request.form.get('gb_ap', 90)),
+                'A':  int(request.form.get('gb_a',  80)),
+                'B+': int(request.form.get('gb_bp', 70)),
+                'B':  int(request.form.get('gb_b',  60)),
+                'C+': int(request.form.get('gb_cp', 50)),
+                'C':  int(request.form.get('gb_c',  40)),
+                'D':  int(request.form.get('gb_d',  33)),
+            }
+            cfg.grade_boundaries = _json.dumps(boundaries)
+        except Exception:
+            pass
+        db.session.commit()
+        flash('Report card settings saved successfully!', 'success')
+        return redirect(url_for('admin.report_settings'))
+    import json as _json
+    try:
+        gb = _json.loads(cfg.grade_boundaries or '{}')
+    except Exception:
+        gb = {}
+    streams = Stream.query.filter_by(is_active=True).order_by(Stream.name).all()
+    return render_template('admin/report_settings.html', cfg=cfg, gb=gb, streams=streams)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  REPORT SYSTEM
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@admin_bp.route('/reports')
+@login_required
+@admin_required
+def reports():
+    """Report hub — shows all classes with marks completion stats."""
+    classes = Class.query.order_by(Class.name, Class.section).all()
+    class_stats = []
+    for cls in classes:
+        subjects  = Subject.query.filter_by(class_id=cls.id).all()
+        students  = Student.query.filter_by(class_id=cls.id).all()
+        total_stu = len(students)
+        # Count how many students have at least one result
+        students_with_marks = 0
+        for stu in students:
+            has = Result.query.join(Exam).filter(
+                Result.student_id == stu.id,
+                Exam.class_id == cls.id
+            ).first()
+            if has:
+                students_with_marks += 1
+        pct = round(students_with_marks / total_stu * 100) if total_stu else 0
+        class_stats.append({
+            'cls': cls,
+            'subjects': len(subjects),
+            'students': total_stu,
+            'with_marks': students_with_marks,
+            'pct': pct,
+            'ready': pct == 100 and total_stu > 0,
+        })
+    streams = Stream.query.filter_by(is_active=True).all()
+    return render_template('admin/reports.html',
+                           class_stats=class_stats, streams=streams)
+
+
+@admin_bp.route('/reports/class/<int:cid>')
+@login_required
+@admin_required
+def report_class(cid):
+    """Detailed view of one class — subjects, marks completion, student list."""
+    cls      = db.get_or_404(Class, cid)
+    subjects = Subject.query.filter_by(class_id=cid).order_by(
+        Subject.is_optional, Subject.name).all()
+    students = (db.session.query(Student, User)
+                .join(User, Student.user_id == User.id)
+                .filter(Student.class_id == cid)
+                .order_by(Student.roll_no).all())
+
+    # Best exam per subject
+    TYPE_PRIO = {'final':0,'terminal':1,'mid_term':2,'unit':3}
+    exams_raw = Exam.query.filter_by(class_id=cid).all()
+    exam_by_subj = {}
+    for ex in exams_raw:
+        if not ex.subject_id:
+            continue
+        p = TYPE_PRIO.get(ex.exam_type, 5)
+        if ex.subject_id not in exam_by_subj or p < exam_by_subj[ex.subject_id][0]:
+            exam_by_subj[ex.subject_id] = (p, ex)
+    exam_by_subj = {sid: ex for sid, (_, ex) in exam_by_subj.items()}
+
+    # Per-subject completion: how many students have marks
+    subj_stats = []
+    for subj in subjects:
+        exam = exam_by_subj.get(subj.id)
+        if exam:
+            entered = Result.query.filter_by(exam_id=exam.id).count()
+        else:
+            entered = 0
+        total = len(students)
+        subj_stats.append({
+            'subj': subj,
+            'exam': exam,
+            'entered': entered,
+            'total': total,
+            'complete': entered >= total and total > 0,
+        })
+
+    # Per-student marks status
+    stu_status = []
+    for stu, usr in students:
+        results = (Result.query.join(Exam)
+                   .filter(Result.student_id == stu.id, Exam.class_id == cid).all())
+        entered  = len(results)
+        expected = len(subjects)
+        complete = entered >= expected and expected > 0
+        grand    = sum(r.marks_obtained + r.practical_marks for r in results)
+        stu_status.append({
+            'student': stu, 'user': usr,
+            'entered': entered, 'expected': expected,
+            'complete': complete, 'grand': grand,
+        })
+
+    cfg = _get_config()
+    return render_template('admin/report_class.html',
+                           cls=cls, subjects=subjects,
+                           subj_stats=subj_stats, stu_status=stu_status,
+                           cfg=cfg)
+
+
+@admin_bp.route('/reports/class/<int:cid>/publish', methods=['POST'])
+@login_required
+@admin_required
+def publish_reports(cid):
+    """One-click: notify every student + parent that results are published."""
+    cls      = db.get_or_404(Class, cid)
+    students = Student.query.filter_by(class_id=cid).all()
+    cfg      = _get_config()
+    notif_count_sent = 0
+    for stu in students:
+        # URL to student's report card (student panel)
+        report_url = url_for('student.report_card', _external=False)
+        # Notify student
+        db.session.add(Notification(
+            user_id=stu.user_id,
+            title='📋 Your Report Card is Ready!',
+            message=f'Your report card for {cls.full_name} has been published by the school. '
+                    f'Login to view your marks and result.',
+            notif_type='report',
+            link=report_url,
+            is_read=False
+        ))
+        notif_count_sent += 1
+        # Notify parent if linked
+        parent = Parent.query.filter_by(student_id=stu.id).first()
+        if parent:
+            db.session.add(Notification(
+                user_id=parent.user_id,
+                title='📋 Report Card Published',
+                message=f'The report card of your ward has been published for {cls.full_name}. '
+                        f'Login to the parent portal to view the results.',
+                notif_type='report',
+                is_read=False
+            ))
+            notif_count_sent += 1
+    db.session.commit()
+    flash(f'Reports published! {notif_count_sent} notifications sent to students and parents.', 'success')
+    return redirect(url_for('admin.report_class', cid=cid))

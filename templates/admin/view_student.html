@@ -9,12 +9,23 @@
             <h5 class="page-sub-title">Student Profile</h5>
             <p class="text-muted">View complete student information and records</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
+            <div class="dropdown">
+                <button class="btn btn-primary btn-action dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-print me-2"></i>Generate
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="printIDCard()"><i class="fas fa-id-card me-2 text-primary"></i>Student ID Card</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="printCertificate('bonafide')"><i class="fas fa-certificate me-2 text-success"></i>Bonafide Certificate</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="printCertificate('character')"><i class="fas fa-award me-2 text-warning"></i>Character Certificate</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="printAdmitCard()"><i class="fas fa-file-invoice me-2 text-danger"></i>Exam Admit Card</a></li>
+                </ul>
+            </div>
             <a href="{{ url_for('admin.edit_student', sid=student.id) }}" class="btn btn-warning btn-action">
-                <i class="fas fa-edit me-2"></i>Edit Student
+                <i class="fas fa-edit me-2"></i>Edit
             </a>
             <a href="{{ url_for('admin.students') }}" class="btn btn-secondary btn-action">
-                <i class="fas fa-arrow-left me-2"></i>Back to List
+                <i class="fas fa-arrow-left me-2"></i>Back
             </a>
         </div>
     </div>
@@ -204,6 +215,137 @@
         </div>
     </div>
 </div>
+
+<!-- ─── Print Documents ─── -->
+<script>
+var STUDENT = {
+    name:    "{{ user.full_name }}",
+    roll:    "{{ student.roll_no }}",
+    class:   "{% if cls %}{{ cls.full_name }}{% else %}N/A{% endif %}",
+    dob:     "{{ student.date_of_birth.strftime('%B %d, %Y') if student.date_of_birth else 'N/A' }}",
+    blood:   "{{ student.blood_group or 'N/A' }}",
+    gender:  "{{ student.gender or 'N/A' }}",
+    address: "{{ student.address or 'N/A' }}",
+    guardian:"{{ student.guardian_name or 'N/A' }}",
+    phone:   "{{ student.guardian_phone or 'N/A' }}",
+    photo:   "{% if student.profile_image and student.profile_image != 'default.png' %}{{ url_for('static', filename=student.profile_image) }}{% endif %}",
+    year:    "{{ student.academic_year or '2081-2082' }}",
+    school:  "Martyrs Memorial +2 School",
+    addr:    "Kathmandu, Nepal"
+};
+
+function openPrint(html) {
+    var w = window.open('','_blank','width=800,height=600');
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(function(){ w.print(); }, 500);
+}
+
+function printIDCard() {
+    var photoHtml = STUDENT.photo
+        ? '<img src="'+STUDENT.photo+'" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid #fff;">'
+        : '<div style="width:90px;height:90px;border-radius:50%;background:#1565c0;display:flex;align-items:center;justify-content:center;font-size:36px;color:#fff;font-weight:700;">'+STUDENT.name[0]+'</div>';
+    openPrint(`<!DOCTYPE html><html><head><title>ID Card</title>
+    <style>body{margin:20px;font-family:Arial,sans-serif;background:#f0f0f0;}
+    .card{width:340px;min-height:200px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.2);margin:auto;}
+    .card-top{background:linear-gradient(135deg,#1565c0,#0d47a1);color:#fff;padding:16px;text-align:center;}
+    .school-name{font-size:14px;font-weight:700;letter-spacing:.5px;}
+    .school-sub{font-size:10px;opacity:.85;}
+    .card-body{padding:14px;display:flex;gap:14px;align-items:center;}
+    .info-col .name{font-size:15px;font-weight:700;color:#1a237e;}
+    .info-col .field{font-size:11px;color:#555;margin-top:3px;}
+    .card-bottom{background:#1565c0;color:#fff;padding:6px 14px;font-size:10px;text-align:center;letter-spacing:.5px;}
+    </style></head><body>
+    <div class="card">
+        <div class="card-top">
+            <div class="school-name">${STUDENT.school}</div>
+            <div class="school-sub">${STUDENT.addr} &bull; ${STUDENT.year}</div>
+        </div>
+        <div class="card-body">
+            ${photoHtml}
+            <div class="info-col">
+                <div class="name">${STUDENT.name}</div>
+                <div class="field"><b>Class:</b> ${STUDENT.class}</div>
+                <div class="field"><b>Roll No:</b> ${STUDENT.roll}</div>
+                <div class="field"><b>DOB:</b> ${STUDENT.dob}</div>
+                <div class="field"><b>Blood:</b> ${STUDENT.blood}</div>
+            </div>
+        </div>
+        <div class="card-bottom">STUDENT IDENTITY CARD &bull; ${STUDENT.year}</div>
+    </div>
+    </body></html>`);
+}
+
+function printCertificate(type) {
+    var title = type === 'bonafide' ? 'BONAFIDE CERTIFICATE' : 'CHARACTER CERTIFICATE';
+    var body = type === 'bonafide'
+        ? 'This is to certify that <strong>'+STUDENT.name+'</strong>, Roll No. <strong>'+STUDENT.roll+'</strong>, is a bonafide student of <strong>'+STUDENT.class+'</strong> at '+STUDENT.school+' for the academic year <strong>'+STUDENT.year+'</strong>. This certificate is issued on request for official purposes.'
+        : 'This is to certify that <strong>'+STUDENT.name+'</strong>, Roll No. <strong>'+STUDENT.roll+'</strong>, was a student of <strong>'+STUDENT.class+'</strong> at '+STUDENT.school+'. During the period of study, their conduct and character were found to be <strong>good</strong>. We wish them success in future endeavours.';
+    var today = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+    openPrint(`<!DOCTYPE html><html><head><title>${title}</title>
+    <style>body{margin:40px;font-family:'Times New Roman',serif;color:#111;}
+    .header{text-align:center;border-bottom:2px solid #1565c0;padding-bottom:12px;margin-bottom:24px;}
+    .school{font-size:22px;font-weight:700;color:#1565c0;}
+    .sub{font-size:13px;color:#555;}
+    .cert-title{text-align:center;font-size:18px;font-weight:700;letter-spacing:2px;margin:20px 0;text-decoration:underline;}
+    .body{font-size:14px;line-height:2;text-align:justify;}
+    .footer{margin-top:50px;display:flex;justify-content:space-between;font-size:13px;}
+    .seal{width:80px;height:80px;border-radius:50%;border:2px dashed #1565c0;display:flex;align-items:center;justify-content:center;font-size:10px;color:#1565c0;text-align:center;}
+    </style></head><body>
+    <div class="header">
+        <div class="school">${STUDENT.school}</div>
+        <div class="sub">${STUDENT.addr}</div>
+    </div>
+    <div class="cert-title">${title}</div>
+    <p class="body">To Whom It May Concern,</p>
+    <p class="body">${body}</p>
+    <div class="footer">
+        <div><p>Date: ${today}</p></div>
+        <div class="seal">SCHOOL SEAL</div>
+        <div style="text-align:center;"><br><br>___________________<br>Principal<br>${STUDENT.school}</div>
+    </div>
+    </body></html>`);
+}
+
+function printAdmitCard() {
+    var today = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+    openPrint(`<!DOCTYPE html><html><head><title>Admit Card</title>
+    <style>body{margin:30px;font-family:Arial,sans-serif;}
+    .header{text-align:center;border-bottom:3px double #1565c0;padding-bottom:10px;margin-bottom:16px;}
+    .school{font-size:20px;font-weight:700;color:#1565c0;}
+    .title{font-size:15px;font-weight:700;margin:10px 0;letter-spacing:1px;text-decoration:underline;}
+    table{width:100%;border-collapse:collapse;margin:12px 0;}
+    td{padding:7px 10px;border:1px solid #ccc;font-size:13px;}
+    td:first-child{background:#e8eaf6;font-weight:600;width:35%;}
+    .notice{background:#fff8e1;border:1px solid #f59e0b;border-radius:6px;padding:10px;font-size:12px;margin-top:16px;}
+    .footer{margin-top:30px;display:flex;justify-content:space-between;font-size:12px;}
+    </style></head><body>
+    <div class="header">
+        <div class="school">${STUDENT.school}</div>
+        <div style="font-size:12px;color:#555;">${STUDENT.addr}</div>
+        <div class="title">EXAMINATION ADMIT CARD — ${STUDENT.year}</div>
+    </div>
+    <table>
+        <tr><td>Student Name</td><td><strong>${STUDENT.name}</strong></td></tr>
+        <tr><td>Roll Number</td><td><strong>${STUDENT.roll}</strong></td></tr>
+        <tr><td>Class / Section</td><td>${STUDENT.class}</td></tr>
+        <tr><td>Date of Birth</td><td>${STUDENT.dob}</td></tr>
+        <tr><td>Gender</td><td>${STUDENT.gender}</td></tr>
+        <tr><td>Academic Year</td><td>${STUDENT.year}</td></tr>
+    </table>
+    <div class="notice">
+        <strong>Instructions:</strong> Candidates must bring this admit card to every examination.
+        Mobile phones and electronic devices are strictly prohibited in the exam hall.
+        Report 15 minutes before the exam start time.
+    </div>
+    <div class="footer">
+        <div>Date Issued: ${today}</div>
+        <div>___________________<br>Controller of Examinations</div>
+    </div>
+    </body></html>`);
+}
+</script>
 
 <style>
 .grade-badge {

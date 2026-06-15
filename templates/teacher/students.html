@@ -9,11 +9,15 @@
             <h5 class="fw-bold mb-1">My Students</h5>
             <p class="text-muted small mb-0">Students across all your classes</p>
         </div>
-        <div class="d-flex gap-2 align-items-center">
+        <div class="d-flex gap-2 align-items-center flex-wrap">
             <span class="badge bg-primary fs-6" id="visibleCount">{{ students_data|length }} students</span>
             <a href="{{ url_for('teacher.notes') }}" class="btn btn-sm btn-outline-primary">
                 <i class="fas fa-file-upload me-1"></i>My Notes
             </a>
+            <button onclick="openBroadcast()" class="btn btn-sm fw-semibold"
+                    style="background:#25D366;color:#fff;border:none;border-radius:16px;">
+                <i class="fab fa-whatsapp me-1"></i>Broadcast to Parents
+            </button>
         </div>
     </div>
 
@@ -136,6 +140,52 @@
         </div>
     </div>
 </div>
+
+<!-- WhatsApp Broadcast Modal -->
+<div class="modal fade" id="broadcastModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#25D366;color:#fff;">
+                <h5 class="modal-title"><i class="fab fa-whatsapp me-2"></i>Broadcast to Parents</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Filter by Class</label>
+                    <select id="broadcastClassFilter" class="form-select form-select-sm" style="max-width:260px;" onchange="buildBroadcastList()">
+                        <option value="">All my classes</option>
+                        {% for cls in my_classes %}
+                        <option value="{{ cls.id }}">{{ cls.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Message <span class="text-muted fw-normal">(editable)</span></label>
+                    <textarea id="broadcastMsg" class="form-control" rows="5"
+                              style="font-size:.82rem;font-family:monospace;"></textarea>
+                </div>
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                    <small class="text-muted"><span id="broadcastCount">0</span> parents with phone numbers</small>
+                    <button id="broadcastSendAllBtn" class="btn btn-sm fw-semibold"
+                            style="background:#25D366;color:#fff;border:none;border-radius:20px;"
+                            onclick="broadcastSendAll()">
+                        <i class="fab fa-whatsapp me-1"></i>Send to All
+                    </button>
+                </div>
+                <div id="broadcastProgress" style="display:none;" class="mb-2">
+                    <div class="progress" style="height:6px;">
+                        <div id="broadcastBar" class="progress-bar bg-success" style="width:0%;transition:width .3s;"></div>
+                    </div>
+                    <small id="broadcastStatus" class="text-muted"></small>
+                </div>
+                <div id="broadcastParentList" style="max-height:280px;overflow-y:auto;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -158,89 +208,101 @@ function highlight(cell, query) {
 }
 
 function filterTable() {
-    var q      = document.getElementById('liveSearch').value.trim().toLowerCase();
-    var clsId  = document.getElementById('classFilter').value;
+    var q     = document.getElementById('liveSearch').value.trim().toLowerCase();
+    var clsId = document.getElementById('classFilter').value;
     var visible = 0;
 
-    // Show/hide clear button
     document.getElementById('clearSearch').style.display = q ? 'block' : 'none';
 
     _allRows.forEach(function(row) {
-        var name    = row.getAttribute('data-name') || '';
-        var roll    = row.getAttribute('data-roll') || '';
-        var rowCls  = row.getAttribute('data-class-id') || '';
+        var name  = row.getAttribute('data-name') || '';
+        var roll  = row.getAttribute('data-roll') || '';
+        var cls   = row.getAttribute('data-class') || '';
+        var matchQ   = !q || name.includes(q) || roll.includes(q);
+        var matchCls = !clsId || cls === clsId;
 
-        var classOk = !clsId || rowCls === clsId;
-        var nameOk  = !q || name.includes(q) || roll.includes(q);
-
-        if (classOk && nameOk) {
+        if (matchQ && matchCls) {
             row.style.display = '';
-            // Highlight name cell
-            var nameCell = row.querySelector('.student-name-cell');
-            if (nameCell) highlight(nameCell, q);
             visible++;
+            if (q) {
+                row.querySelectorAll('.hl-name, .hl-roll').forEach(function(cell) { highlight(cell, q); });
+            } else {
+                row.querySelectorAll('[data-original]').forEach(function(cell) { cell.innerHTML = cell.getAttribute('data-original'); });
+            }
         } else {
             row.style.display = 'none';
         }
     });
 
-    // Update counters
-    document.getElementById('visibleCount').textContent = visible + ' student' + (visible !== 1 ? 's' : '');
-    document.getElementById('tableCount').textContent   = visible + ' of ' + _totalAll + ' shown';
-
-    // Hint text
-    var hint = document.getElementById('searchHint');
-    if (q.length === 1) {
-        hint.textContent = 'Showing students starting with "' + q.toUpperCase() + '"…';
-    } else if (q.length > 1) {
-        hint.textContent = visible + ' match' + (visible !== 1 ? 'es' : '') + ' for "' + q + '"';
-    } else {
-        hint.textContent = '';
-    }
-
-    // No results state
+    var badge = document.getElementById('visibleCount');
+    if (badge) badge.textContent = visible + ' student' + (visible !== 1 ? 's' : '');
     var noMsg = document.getElementById('noResultsMsg');
-    var tbody = document.getElementById('studentTbody');
-    if (visible === 0 && _totalAll > 0) {
-        noMsg.style.display = 'block';
-        tbody.style.display = 'none';
-        var txt = q ? 'No students match "' + q + '"' : 'No students in this class.';
-        document.getElementById('noResultsText').textContent = txt;
-    } else {
-        noMsg.style.display = 'none';
-        tbody.style.display = '';
+    if (noMsg) {
+        noMsg.style.display = visible === 0 ? 'block' : 'none';
+        var txt = document.getElementById('noResultsText');
+        if (txt) txt.textContent = q ? 'No students match "' + q + '".' : 'No students in this class.';
     }
 }
 
-function resetFilters() {
-    document.getElementById('liveSearch').value = '';
-    document.getElementById('classFilter').value = '';
-    document.getElementById('clearSearch').style.display = 'none';
-    document.getElementById('searchHint').textContent = '';
-    // Reset highlights
-    _allRows.forEach(function(row) {
-        var nameCell = row.querySelector('.student-name-cell');
-        if (nameCell) {
-            var orig = nameCell.getAttribute('data-original');
-            if (orig) nameCell.textContent = orig;
-        }
-        row.style.display = '';
-    });
-    document.getElementById('visibleCount').textContent = _totalAll + ' students';
-    document.getElementById('tableCount').textContent = '';
-    document.getElementById('noResultsMsg').style.display = 'none';
-    document.getElementById('studentTbody').style.display = '';
-}
-
-// Wire up events
-document.getElementById('liveSearch').addEventListener('input', filterTable);
-document.getElementById('classFilter').addEventListener('change', filterTable);
-document.getElementById('clearSearch').addEventListener('click', function() {
+document.getElementById('liveSearch')?.addEventListener('input', filterTable);
+document.getElementById('classFilter')?.addEventListener('change', filterTable);
+document.getElementById('clearSearch')?.addEventListener('click', function() {
     document.getElementById('liveSearch').value = '';
     filterTable();
-    document.getElementById('liveSearch').focus();
 });
 
-// Init count
-document.getElementById('tableCount').textContent = _totalAll + ' shown';
+// ── WhatsApp Broadcast ──
+var _parentMap = {{ parent_map_json | safe }};
+
+function openBroadcast() {
+    buildBroadcastList();
+    var today = new Date().toLocaleDateString('en-NP');
+    document.getElementById('broadcastMsg').value =
+        'Dear Parents,\n\nThis is an important message from Martyrs Memorial +2 School regarding your ward.\n\nPlease contact the school office or your class teacher for more details.\n\n— Martyrs Memorial +2 School\nDate: ' + today;
+    new bootstrap.Modal(document.getElementById('broadcastModal')).show();
+}
+
+function buildBroadcastList() {
+    var clsId = document.getElementById('broadcastClassFilter').value;
+    var filtered = clsId ? _parentMap.filter(function(p){ return String(p.class_id) === clsId; }) : _parentMap;
+    document.getElementById('broadcastCount').textContent = filtered.length;
+    var list = document.getElementById('broadcastParentList');
+    list.innerHTML = '';
+    filtered.forEach(function(p) {
+        var url = 'https://wa.me/' + p.phone + '?text=' + encodeURIComponent(document.getElementById('broadcastMsg').value);
+        list.innerHTML += '<div class="d-flex align-items-center gap-2 py-2 border-bottom">' +
+            '<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#3949ab,#1e88e5);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0;">' + p.parent[0].toUpperCase() + '</div>' +
+            '<div class="flex-grow-1"><div class="small fw-semibold">' + p.parent + '</div><div style="font-size:.72rem;color:#6c757d;">' + p.student + ' · ' + p.class_name + '</div></div>' +
+            '<a href="' + url + '" target="_blank" class="btn btn-sm" style="background:#25D366;color:#fff;border:none;border-radius:16px;font-size:.75rem;padding:3px 12px;white-space:nowrap;">' +
+            '<i class="fab fa-whatsapp me-1"></i>Send</a></div>';
+    });
+}
+
+function broadcastSendAll() {
+    var clsId = document.getElementById('broadcastClassFilter').value;
+    var filtered = clsId ? _parentMap.filter(function(p){ return String(p.class_id) === clsId; }) : _parentMap;
+    if (!filtered.length) return;
+    var btn = document.getElementById('broadcastSendAllBtn');
+    var prog = document.getElementById('broadcastProgress');
+    var bar  = document.getElementById('broadcastBar');
+    var status = document.getElementById('broadcastStatus');
+    btn.disabled = true;
+    prog.style.display = '';
+    var msg = document.getElementById('broadcastMsg').value;
+    filtered.forEach(function(p, i) {
+        setTimeout(function() {
+            window.open('https://wa.me/' + p.phone + '?text=' + encodeURIComponent(msg), '_blank');
+            var pct = Math.round((i + 1) / filtered.length * 100);
+            bar.style.width = pct + '%';
+            status.textContent = 'Sent ' + (i+1) + ' of ' + filtered.length + '…';
+            if (i + 1 === filtered.length) {
+                status.textContent = '✅ Broadcast complete — ' + filtered.length + ' parents notified!';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check me-1"></i>All Sent!';
+            }
+        }, i * 750);
+    });
+}
+
+document.getElementById('broadcastMsg')?.addEventListener('input', buildBroadcastList);
 {% endblock %}

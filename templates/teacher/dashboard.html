@@ -145,6 +145,75 @@
         </div>
     </div>
 
+    <!-- Birthday Widget -->
+    {% if birthday_people %}
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="info-card">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-birthday-cake me-2" style="color:#e91e63;"></i>Student Birthdays <span class="badge bg-danger ms-1" style="font-size:.65rem;">{{ birthday_people|length }}</span></h6>
+                    <span class="badge-date">Next 7 Days</span>
+                </div>
+                <div class="d-flex flex-wrap gap-3 pt-1">
+                    {% for p in birthday_people %}
+                    <div class="d-flex align-items-center gap-2 p-2 rounded-3"
+                         style="background:{% if p.days_until == 0 %}linear-gradient(135deg,#fce4ec,#f8bbd0){% else %}var(--hover-bg,#f8f9fa){% endif %};min-width:190px;flex:1 1 190px;border:1px solid {% if p.days_until == 0 %}#f48fb1{% else %}var(--border,#e0e0e0){% endif %};">
+                        <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#e91e63,#f06292);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;flex-shrink:0;position:relative;">
+                            {{ p.initial }}
+                            {% if p.days_until == 0 %}<span style="position:absolute;top:-4px;right:-4px;font-size:.9rem;">🎂</span>{% endif %}
+                        </div>
+                        <div>
+                            <div class="fw-semibold" style="font-size:.85rem;">{{ p.name }}</div>
+                            <div style="font-size:.72rem;color:#9e9e9e;">{{ p.date_str }}</div>
+                            <div style="font-size:.7rem;font-weight:700;color:{% if p.days_until == 0 %}#e91e63{% else %}#6c757d{% endif %};">
+                                {% if p.days_until == 0 %}🎉 Today!{% elif p.days_until == 1 %}Tomorrow{% else %}In {{ p.days_until }} days{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Event Calendar Widget -->
+    {% if upcoming_events %}
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="info-card">
+                <div class="card-head">
+                    <h6 class="card-head-title"><i class="fas fa-calendar-alt me-2 text-info"></i>Upcoming Events <span class="badge bg-info ms-1" style="font-size:.65rem;">Next 30 days</span></h6>
+                    <a href="{{ url_for('teacher.events') }}" class="view-all-link">View All</a>
+                </div>
+                <div class="d-flex flex-wrap gap-3 pt-1">
+                    {% for ev in upcoming_events %}
+                    {% set days = (ev.event_date - today).days %}
+                    {% set type_colors = {'holiday': '#dc2626', 'exam': '#7c3aed', 'sports': '#059669', 'cultural': '#d97706', 'meeting': '#0284c7', 'general': '#6b7280'} %}
+                    {% set color = type_colors.get(ev.event_type, '#6b7280') %}
+                    <div class="d-flex align-items-center gap-3 p-2 rounded-3 flex-grow-1"
+                         style="min-width:190px;max-width:300px;border:1px solid #e0e7ff;background:{% if days == 0 %}#eff6ff{% else %}var(--hover-bg,#f8f9fa){% endif %};">
+                        <div style="min-width:44px;text-align:center;background:{{ color }};border-radius:10px;padding:6px 4px;color:#fff;flex-shrink:0;">
+                            <div style="font-size:.65rem;font-weight:700;opacity:.85;text-transform:uppercase;">{{ ev.event_date.strftime('%b') }}</div>
+                            <div style="font-size:1.2rem;font-weight:800;line-height:1;">{{ ev.event_date.strftime('%d') }}</div>
+                        </div>
+                        <div class="flex-grow-1" style="min-width:0;">
+                            <div class="fw-semibold" style="font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ ev.title }}</div>
+                            <div style="font-size:.72rem;color:#9e9e9e;">
+                                <span class="badge" style="background:{{ color }}22;color:{{ color }};font-size:.62rem;">{{ ev.event_type|title }}</span>
+                                {% if days == 0 %}<span class="ms-1 fw-bold" style="color:{{ color }};">Today!</span>
+                                {% elif days == 1 %}<span class="ms-1" style="color:#6c757d;">Tomorrow</span>
+                                {% else %}<span class="ms-1" style="color:#6c757d;">in {{ days }} days</span>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Notices -->
     <div class="row g-4 mt-0">
         <div class="col-12">
@@ -181,3 +250,4 @@ document.getElementById('currentDate').textContent = new Date().toLocaleDateStri
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
 });
 {% endblock %}
+                               

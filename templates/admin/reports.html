@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block title %}Reports — Admin{% endblock %}
+{% block page_title %}Report System{% endblock %}
+{% block content %}
+<div class="dashboard-content">
+<div class="page-header-row mb-4">
+    <div>
+        <h5 class="page-sub-title">Report Card System</h5>
+        <p class="text-muted mb-0">Select a class to manage and publish report cards</p>
+    </div>
+    <a href="{{ url_for('admin.report_settings') }}" class="btn btn-outline-primary btn-sm">
+        <i class="fas fa-paint-brush me-1"></i>Report Designer
+    </a>
+</div>
+
+<!-- Filter by stream -->
+<div class="info-card mb-4">
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+        <span class="fw-semibold small text-muted">Filter by stream:</span>
+        <button class="btn btn-sm btn-primary stream-filter active" data-stream="all">All Classes</button>
+        {% for stream in streams %}
+        <button class="btn btn-sm btn-outline-secondary stream-filter" data-stream="{{ stream.id }}">{{ stream.name }}</button>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Class Cards -->
+<div class="row g-4" id="classGrid">
+{% for stat in class_stats %}
+<div class="col-md-6 col-xl-4 class-card" data-stream="{{ stat.cls.stream_id or '' }}">
+    <div class="info-card h-100" style="border-left:4px solid
+        {% if stat.ready %}#10b981{% elif stat.pct > 0 %}#f59e0b{% else %}#e5e7eb{% endif %};">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h6 class="fw-bold mb-0">{{ stat.cls.full_name }}</h6>
+                {% if stat.cls.stream %}
+                <span class="badge mt-1" style="background:{{ '#6366f1' if 'science' in stat.cls.stream.name.lower() else '#0284c7' if 'management' in stat.cls.stream.name.lower() else '#059669' }};font-size:.7rem;">
+                    {{ stat.cls.stream.name }}
+                </span>
+                {% endif %}
+            </div>
+            <span class="badge {% if stat.ready %}bg-success{% elif stat.pct > 0 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                {% if stat.ready %}✅ Ready{% elif stat.pct > 0 %}In Progress{% else %}Not Started{% endif %}
+            </span>
+        </div>
+
+        <div class="row g-2 mb-3 text-center">
+            <div class="col-4">
+                <div style="font-size:1.3rem;font-weight:800;color:#3730a3;">{{ stat.subjects }}</div>
+                <div style="font-size:.7rem;color:#888;">Subjects</div>
+            </div>
+            <div class="col-4">
+                <div style="font-size:1.3rem;font-weight:800;color:#0284c7;">{{ stat.students }}</div>
+                <div style="font-size:.7rem;color:#888;">Students</div>
+            </div>
+            <div class="col-4">
+                <div style="font-size:1.3rem;font-weight:800;color:{% if stat.pct==100 %}#10b981{% elif stat.pct>0 %}#f59e0b{% else %}#9ca3af{% endif %};">{{ stat.pct }}%</div>
+                <div style="font-size:.7rem;color:#888;">Marks Done</div>
+            </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="progress mb-3" style="height:6px;">
+            <div class="progress-bar {% if stat.pct==100 %}bg-success{% elif stat.pct>50 %}bg-info{% else %}bg-warning{% endif %}"
+                 style="width:{{ stat.pct }}%;transition:width .5s;"></div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin.report_class', cid=stat.cls.id) }}"
+               class="btn btn-primary btn-sm flex-grow-1">
+                <i class="fas fa-chart-bar me-1"></i>Manage Reports
+            </a>
+            {% if stat.students > 0 %}
+            <form method="POST" action="{{ url_for('admin.publish_reports', cid=stat.cls.id) }}"
+                  onsubmit="return confirm('Publish reports to all {{ stat.students }} students and their parents?')">
+                <button type="submit" class="btn btn-sm {% if stat.ready %}btn-success{% else %}btn-outline-secondary{% endif %}"
+                        title="{% if not stat.ready %}⚠️ Some marks not entered yet{% endif %}">
+                    <i class="fas fa-paper-plane me-1"></i>Publish
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="col-12 text-center py-5 text-muted">
+    <i class="fas fa-layer-group fa-3x mb-3 d-block"></i>
+    <p>No classes found. <a href="{{ url_for('admin.classes') }}">Add a class first.</a></p>
+</div>
+{% endfor %}
+</div>
+</div>
+
+{% block extra_js %}
+document.querySelectorAll('.stream-filter').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.stream-filter').forEach(b => {
+            b.classList.remove('active','btn-primary');
+            b.classList.add('btn-outline-secondary');
+        });
+        this.classList.add('active','btn-primary');
+        this.classList.remove('btn-outline-secondary');
+        var sid = this.dataset.stream;
+        document.querySelectorAll('.class-card').forEach(function(card) {
+            if (sid === 'all' || card.dataset.stream === sid) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+});
+{% endblock %}
+{% endblock %}

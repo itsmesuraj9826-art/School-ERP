@@ -1,0 +1,500 @@
+{% extends 'base.html' %}
+{% block title %}Report Card Settings{% endblock %}
+{% block page_title %}Report Card Designer{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+<div class="page-header-row mb-4">
+    <div>
+        <h5 class="page-sub-title">Report Card Designer</h5>
+        <p class="text-muted mb-0">Customize every aspect of the printed report card</p>
+    </div>
+    <a href="{{ url_for('admin.students') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i>Back to Students
+    </a>
+</div>
+
+<form method="POST" id="rcForm" enctype="multipart/form-data">
+<div class="row g-4">
+
+    <!-- LEFT: Settings panels -->
+    <div class="col-lg-6">
+
+        <!-- School Identity -->
+        <div class="info-card mb-4">
+            <h6 class="fw-bold mb-3"><i class="fas fa-school me-2 text-primary"></i>School Identity</h6>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">School Name</label>
+                <input type="text" name="school_name" class="form-control rc-input" value="{{ cfg.school_name }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Subtitle / Address</label>
+                <input type="text" name="school_subtitle" class="form-control rc-input" value="{{ cfg.school_subtitle }}">
+            </div>
+            <!-- Logo Upload -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">School Logo</label>
+                <div class="d-flex align-items-center gap-3">
+                    <div id="logoPreviewWrap" style="width:72px;height:72px;border:2px dashed #c5cae9;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f5f5ff;flex-shrink:0;">
+                        {% if cfg.logo_filename %}
+                        <img id="logoPreviewImg" src="/static/uploads/logos/{{ cfg.logo_filename }}" style="max-width:68px;max-height:68px;object-fit:contain;">
+                        {% else %}
+                        <img id="logoPreviewImg" src="/static/uploads/logos/school_logo.svg" style="max-width:68px;max-height:68px;object-fit:contain;">
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <input type="file" name="logo_file" id="logoFileInput" accept=".png,.jpg,.jpeg,.svg,.gif,.webp" class="form-control form-control-sm">
+                        <small class="text-muted">PNG, JPG, SVG recommended. Max 2MB. Current: {{ cfg.logo_filename or 'school_logo.svg (default)' }}</small>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-2">
+                <div class="col-4">
+                    <label class="form-label fw-semibold">Fallback Emoji</label>
+                    <input type="text" name="school_icon" class="form-control rc-input text-center" value="{{ cfg.school_icon }}" maxlength="4" style="font-size:1.4rem;" title="Used only if no logo is uploaded">
+                </div>
+                <div class="col-8">
+                    <label class="form-label fw-semibold">Report Title</label>
+                    <input type="text" name="report_title" class="form-control rc-input" value="{{ cfg.report_title }}">
+                </div>
+            </div>
+            <div class="mt-3">
+                <label class="form-label fw-semibold">Footer Text</label>
+                <input type="text" name="footer_text" class="form-control rc-input" value="{{ cfg.footer_text }}">
+            </div>
+        </div>
+
+        <!-- Colors -->
+        <div class="info-card mb-4">
+            <h6 class="fw-bold mb-3"><i class="fas fa-palette me-2 text-purple" style="color:#7c3aed;"></i>Colors</h6>
+            <div class="row g-3">
+                <div class="col-4 text-center">
+                    <label class="form-label fw-semibold d-block">Header Color</label>
+                    <input type="color" name="primary_color" class="form-control form-control-color mx-auto rc-color" value="{{ cfg.primary_color }}" style="width:56px;height:40px;cursor:pointer;">
+                    <small class="text-muted">{{ cfg.primary_color }}</small>
+                </div>
+                <div class="col-4 text-center">
+                    <label class="form-label fw-semibold d-block">Header Text</label>
+                    <input type="color" name="header_text_color" class="form-control form-control-color mx-auto rc-color" value="{{ cfg.header_text_color }}" style="width:56px;height:40px;cursor:pointer;">
+                    <small class="text-muted">{{ cfg.header_text_color }}</small>
+                </div>
+                <div class="col-4 text-center">
+                    <label class="form-label fw-semibold d-block">Accent / Row</label>
+                    <input type="color" name="accent_color" class="form-control form-control-color mx-auto rc-color" value="{{ cfg.accent_color }}" style="width:56px;height:40px;cursor:pointer;">
+                    <small class="text-muted">{{ cfg.accent_color }}</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sections toggle -->
+        <div class="info-card mb-4">
+            <h6 class="fw-bold mb-3"><i class="fas fa-toggle-on me-2 text-success"></i>Show / Hide Sections</h6>
+            <div class="row g-2">
+                {% set toggles = [
+                    ('show_attendance', 'Attendance Summary', cfg.show_attendance),
+                    ('show_summary',    'Academic Summary Box', cfg.show_summary),
+                    ('show_signatures', 'Signature Lines', cfg.show_signatures),
+                    ('show_gpa',        'GPA Column', cfg.show_gpa),
+                    ('show_grade',      'Grade Column', cfg.show_grade),
+                ] %}
+                {% for name, label, val in toggles %}
+                <div class="col-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input rc-toggle" type="checkbox" name="{{ name }}" id="{{ name }}"
+                               {% if val %}checked{% endif %}>
+                        <label class="form-check-label" for="{{ name }}">{{ label }}</label>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Signatures: Principal & Parent -->
+        <div class="info-card mb-4">
+            <h6 class="fw-bold mb-3"><i class="fas fa-pen-nib me-2" style="color:#0284c7;"></i>Signatures &amp; Labels</h6>
+            <p class="text-muted small mb-3">
+                Upload each signature — the white background is <b>automatically removed</b> so only the ink shows on the report.
+            </p>
+
+            {% set sigs = [
+                ('2', cfg.sig2_label, cfg.sig2_image, 'Principal'),
+                ('3', cfg.sig3_label, cfg.sig3_image, 'Parent / Guardian'),
+            ] %}
+            {% for num, label, img, placeholder in sigs %}
+            <div class="border rounded p-3 mb-3" style="background:#f9fafb;">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width:120px;height:58px;border:1px dashed #cbd5e1;border-radius:6px;overflow:hidden;background:repeating-conic-gradient(#e0e0e0 0% 25%,#fff 0% 50%) 0 0/12px 12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <img id="sigPreview{{ num }}"
+                             src="{% if img %}/static/uploads/signatures/{{ img }}{% endif %}"
+                             style="max-width:118px;max-height:56px;object-fit:contain;{% if not img %}display:none;{% endif %}">
+                        <span id="sigPH{{ num }}" class="text-muted" style="font-size:9px;text-align:center;padding:4px;{% if img %}display:none;{% endif %}">No signature</span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <label class="form-label small fw-semibold mb-1">Label</label>
+                        <input type="text" name="sig{{ num }}_label" class="form-control form-control-sm rc-input mb-2" value="{{ label }}" placeholder="{{ placeholder }}">
+                        <label class="form-label small fw-semibold mb-1">Signature Image <span class="text-success">(bg auto-removed)</span></label>
+                        <input type="file" name="sig{{ num }}_image" id="sigFile{{ num }}"
+                               accept="image/*" class="form-control form-control-sm"
+                               onchange="uploadSig('{{ num }}', this, 'sig{{ num }}_image_data', 'sigPreview{{ num }}', 'sigPH{{ num }}')">
+                        <input type="hidden" name="sig{{ num }}_image_data" id="sig{{ num }}_image_data">
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- HOD Signatures per Stream -->
+        <div class="info-card mb-4">
+            <h6 class="fw-bold mb-3"><i class="fas fa-user-tie me-2" style="color:#0284c7;"></i>HOD Signatures — Per Stream</h6>
+            <p class="text-muted small mb-3">Each faculty / stream can have its own HOD. The correct HOD signature is automatically picked based on the student's stream.</p>
+
+            {% if streams %}
+            {% for stream in streams %}
+            <div class="border rounded p-3 mb-3" style="background:#f9fafb;">
+                <div class="fw-semibold mb-2" style="font-size:.85rem;">
+                    <i class="fas fa-layer-group me-1 text-primary"></i>{{ stream.name }}
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width:120px;height:58px;border:1px dashed #cbd5e1;border-radius:6px;background:repeating-conic-gradient(#e0e0e0 0% 25%,#fff 0% 50%) 0 0/12px 12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <img id="hodPrev{{ stream.id }}"
+                             src="{% if stream.hod_signature %}/static/uploads/signatures/{{ stream.hod_signature }}{% endif %}"
+                             style="max-width:118px;max-height:56px;object-fit:contain;{% if not stream.hod_signature %}display:none;{% endif %}">
+                        <span id="hodPH{{ stream.id }}" class="text-muted" style="font-size:9px;text-align:center;padding:4px;{% if stream.hod_signature %}display:none;{% endif %}">No signature</span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <label class="form-label small fw-semibold mb-1">HOD Name</label>
+                        <input type="text" name="hod_name_{{ stream.id }}" class="form-control form-control-sm mb-2"
+                               value="{{ stream.hod_name or '' }}" placeholder="Full name of HOD">
+                        <label class="form-label small fw-semibold mb-1">HOD Signature <span class="text-success">(bg auto-removed)</span></label>
+                        <input type="file" name="hod_sig_{{ stream.id }}" id="hodFile{{ stream.id }}"
+                               accept="image/*" class="form-control form-control-sm"
+                               onchange="uploadSig('hod{{ stream.id }}', this, 'hod_sig_{{ stream.id }}_data', 'hodPrev{{ stream.id }}', 'hodPH{{ stream.id }}')">
+                        <input type="hidden" name="hod_sig_{{ stream.id }}_data" id="hod_sig_{{ stream.id }}_data">
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="text-muted small">No active streams found. Add streams first under the Streams section.</p>
+            {% endif %}
+        </div>
+
+        <!-- Grade Boundaries -->
+        <div class="info-card mb-4">
+            <h6 class="fw-bold mb-3"><i class="fas fa-ruler me-2 text-warning"></i>Grade Boundaries (minimum %)</h6>
+            <div class="row g-2">
+                {% set grades = [('gb_ap','A+',gb.get('A+',90)),('gb_a','A',gb.get('A',80)),
+                                 ('gb_bp','B+',gb.get('B+',70)),('gb_b','B',gb.get('B',60)),
+                                 ('gb_cp','C+',gb.get('C+',50)),('gb_c','C',gb.get('C',40)),
+                                 ('gb_d','D',gb.get('D',33))] %}
+                {% for fname, glabel, gval in grades %}
+                <div class="col-3">
+                    <label class="form-label small fw-bold">{{ glabel }}</label>
+                    <input type="number" name="{{ fname }}" class="form-control form-control-sm"
+                           value="{{ gval }}" min="0" max="100">
+                </div>
+                {% endfor %}
+            </div>
+            <small class="text-muted mt-2 d-block">Scores below D threshold are automatically graded F.</small>
+        </div>
+
+        <!-- Remarks -->
+        <div class="info-card mb-4">
+            <h6 class="fw-bold mb-3"><i class="fas fa-comment-dots me-2 text-info"></i>Auto Remarks by Grade</h6>
+            {% set rems = [('remarks_ap','A+',cfg.remarks_ap),('remarks_a','A',cfg.remarks_a),
+                           ('remarks_bp','B+',cfg.remarks_bp),('remarks_b','B',cfg.remarks_b),
+                           ('remarks_c','C',cfg.remarks_c),('remarks_d','D',cfg.remarks_d),
+                           ('remarks_f','F',cfg.remarks_f)] %}
+            {% for fname, glabel, rval in rems %}
+            <div class="mb-2 d-flex gap-2 align-items-center">
+                <span class="badge bg-secondary" style="min-width:28px;">{{ glabel }}</span>
+                <input type="text" name="{{ fname }}" class="form-control form-control-sm rc-input" value="{{ rval }}">
+            </div>
+            {% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg w-100">
+            <i class="fas fa-save me-2"></i>Save All Settings
+        </button>
+    </div>
+
+    <!-- RIGHT: Live Preview -->
+    <div class="col-lg-6">
+        <div class="info-card" style="position:sticky;top:80px;">
+            <h6 class="fw-bold mb-3"><i class="fas fa-eye me-2 text-primary"></i>Live Preview</h6>
+
+            <div id="rcPreview" style="border:2px solid #111;font-family:'Times New Roman',Times,serif;font-size:10px;background:#fff;color:#111;">
+            <div style="border:1px solid #555;margin:3px;padding:8px 10px;">
+
+                <!-- School Header -->
+                <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding-bottom:8px;border-bottom:2px solid #111;margin-bottom:5px;">
+                    <img id="prev-logo"
+                         src="{% if cfg.logo_filename %}/static/uploads/logos/{{ cfg.logo_filename }}{% else %}/static/uploads/logos/school_logo.svg{% endif %}"
+                         style="width:52px;height:52px;object-fit:contain;flex-shrink:0;">
+                    <div style="text-align:center;">
+                        <div id="prev-name" style="font-size:14px;font-weight:bold;text-transform:uppercase;letter-spacing:.5px;">{{ cfg.school_name }}</div>
+                        <div id="prev-subtitle" style="font-size:9px;color:#444;margin-top:2px;">{{ cfg.school_subtitle }}</div>
+                    </div>
+                </div>
+
+                <!-- Report Title -->
+                <div id="prev-title" style="text-align:center;font-size:10px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;border-top:1px solid #111;border-bottom:1px solid #111;padding:3px 0;margin-bottom:6px;">
+                    {{ cfg.report_title }}
+                </div>
+
+                <!-- Meta -->
+                <div style="display:flex;justify-content:space-between;font-size:9px;color:#333;margin-bottom:5px;">
+                    <span><b>Class:</b> Class XI — A (Science)</span>
+                    <span><b>Stream / Faculty:</b> Science</span>
+                    <span><b>Academic Year:</b> 2081–2082</span>
+                </div>
+
+                <!-- Student Info Table -->
+                <table style="width:100%;border-collapse:collapse;font-size:9px;margin-bottom:7px;">
+                    <tr>
+                        <td style="border:1px solid #888;padding:3px 6px;background:#f0f0f0;font-weight:bold;width:90px;">Student's Name</td>
+                        <td style="border:1px solid #888;padding:3px 6px;"><b>SAMPLE STUDENT</b></td>
+                        <td style="border:1px solid #888;padding:3px 6px;background:#f0f0f0;font-weight:bold;width:60px;">Roll No.</td>
+                        <td style="border:1px solid #888;padding:3px 6px;"><b>001</b></td>
+                    </tr>
+                    <tr>
+                        <td style="border:1px solid #888;padding:3px 6px;background:#f0f0f0;font-weight:bold;">Date of Birth</td>
+                        <td style="border:1px solid #888;padding:3px 6px;">2060/05/12</td>
+                        <td style="border:1px solid #888;padding:3px 6px;background:#f0f0f0;font-weight:bold;">Gender</td>
+                        <td style="border:1px solid #888;padding:3px 6px;">Male</td>
+                    </tr>
+                    <tr>
+                        <td style="border:1px solid #888;padding:3px 6px;background:#f0f0f0;font-weight:bold;">Institution</td>
+                        <td colspan="3" style="border:1px solid #888;padding:3px 6px;" id="prev-institution">{{ cfg.school_name | upper }}</td>
+                    </tr>
+                </table>
+
+                <!-- Section Head -->
+                <div style="background:#111;color:#fff;font-size:9px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;padding:3px 6px;margin-bottom:0;">Examination Results</div>
+
+                <!-- Marks Table -->
+                <table style="width:100%;border-collapse:collapse;font-size:9px;">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" style="border:1px solid #888;padding:3px 4px;background:#222;color:#fff;text-align:left;">Subjects</th>
+                            <th colspan="3" style="border:1px solid #888;padding:2px 4px;background:#222;color:#fff;">Full Marks</th>
+                            <th colspan="3" style="border:1px solid #888;padding:2px 4px;background:#222;color:#fff;">Pass Marks</th>
+                            <th colspan="3" style="border:1px solid #888;padding:2px 4px;background:#222;color:#fff;">Marks Obtained</th>
+                            <th rowspan="2" style="border:1px solid #888;padding:3px 4px;background:#222;color:#fff;">Result</th>
+                        </tr>
+                        <tr>
+                            <th style="border:1px solid #888;padding:2px 3px;background:#333;color:#fff;">TH</th>
+                            <th style="border:1px solid #888;padding:2px 3px;background:#333;color:#fff;">PR</th>
+                            <th style="border:1px solid #888;padding:2px 3px;background:#333;color:#fff;">Tot</th>
+                            <th style="border:1px solid #888;padding:2px 3px;background:#333;color:#fff;">TH</th>
+                            <th style="border:1px solid #888;padding:2px 3px;background:#333;color:#fff;">PR</th>
+                            <th style="border:1px solid #888;padding:2px 3px;background:#333;color:#fff;">Tot</th>
+                            <th style="border:1px solid #888;padding:2px 3px;background:#333;color:#fff;">TH</th>
+                            <th style="border:1px solid #888;padding:2px 3px;background:#333;color:#fff;">PR</th>
+                            <th style="border:1px solid #888;padding:2px 3px;background:#333;color:#fff;">Tot</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="11" style="border:1px solid #888;padding:2px 6px;background:#e8e8e8;font-weight:bold;font-size:9px;text-transform:uppercase;letter-spacing:.5px;border-top:2px solid #444;">Science — Compulsory Subjects</td></tr>
+                        <tr>
+                            <td style="border:1px solid #888;padding:2px 5px;text-transform:uppercase;">Mathematics</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;">75</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;">—</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;">75</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;">30</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;">—</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;">30</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;font-weight:bold;">62</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;">—</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;font-weight:bold;">62</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;font-weight:bold;">PASS</td>
+                        </tr>
+                        <tr>
+                            <td style="border:1px solid #888;padding:2px 5px;text-transform:uppercase;">Physics</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;">50</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;">25</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;">75</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;">20</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;">10</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;">30</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;font-weight:bold;">44</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;font-weight:bold;">21</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;font-weight:bold;">65</td>
+                            <td style="border:1px solid #888;padding:2px 3px;text-align:center;font-weight:bold;">PASS</td>
+                        </tr>
+                        <!-- Grand Total -->
+                        <tr style="background:#f0f0f0;font-weight:bold;border-top:2px solid #111;">
+                            <td colspan="6" style="border:1px solid #888;padding:3px 6px;text-align:right;">Grand Total</td>
+                            <td style="border:1px solid #888;padding:3px 4px;text-align:center;">150</td>
+                            <td style="border:1px solid #888;padding:3px 4px;text-align:center;">106</td>
+                            <td style="border:1px solid #888;padding:3px 4px;text-align:center;">21</td>
+                            <td style="border:1px solid #888;padding:3px 4px;text-align:center;"><b>127</b></td>
+                            <td style="border:1px solid #888;padding:3px 4px;"></td>
+                        </tr>
+                        <tr style="font-weight:bold;font-size:10px;">
+                            <td colspan="6" style="border:1px solid #888;padding:3px 6px;text-align:right;">Percentage: <b>84.7%</b> &nbsp;|&nbsp; GPA: <b>3.50</b></td>
+                            <td colspan="4" style="border:1px solid #888;padding:3px 6px;text-align:center;font-size:11px;">FINAL RESULT: &nbsp;<b>PASS</b></td>
+                            <td style="border:1px solid #888;"></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Attendance & Remarks -->
+                <div id="prev-att-section" style="display:flex;gap:6px;margin-top:7px;">
+                    <div style="flex:1;border:1px solid #888;">
+                        <div style="background:#111;color:#fff;font-size:9px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;padding:2px 6px;">Attendance</div>
+                        <div style="padding:5px 8px;display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                            <div><div style="font-size:14px;font-weight:bold;">92%</div><div style="font-size:8px;color:#555;">Attendance Rate</div></div>
+                            <div><div style="font-size:14px;font-weight:bold;">184</div><div style="font-size:8px;color:#555;">Days Present</div></div>
+                        </div>
+                    </div>
+                    <div style="flex:1;border:1px solid #888;">
+                        <div style="background:#111;color:#fff;font-size:9px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;padding:2px 6px;">Remarks &amp; Notes</div>
+                        <div style="padding:5px 8px;font-size:9px;">
+                            <div style="font-weight:bold;margin-bottom:8px;">Teacher's Remark:</div>
+                            <div style="border-bottom:1px solid #ccc;margin-bottom:6px;"></div>
+                            <div style="font-weight:bold;">Principal's Remark:</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Note -->
+                <div style="border:1px solid #aaa;padding:4px 8px;font-size:8.5px;color:#333;margin-top:7px;line-height:1.6;">
+                    <b>Note:</b> Underlined marks indicate failure in that component. A = Absent. Pass requires minimum marks in Theory AND (where applicable) 40% in Practical, separately. ✗ = Not qualified in component.
+                </div>
+
+                <!-- Signatures -->
+                <div id="prev-sig-section" style="display:flex;margin-top:10px;gap:0;">
+                    <div style="flex:1;text-align:center;padding:0 8px;border-right:1px dashed #bbb;">
+                        <div style="height:28px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:2px;">
+                            {% if cfg.sig1_image %}<img src="/static/uploads/signatures/{{ cfg.sig1_image }}" style="max-height:26px;max-width:80px;object-fit:contain;">{% endif %}
+                        </div>
+                        <div style="border-top:1px solid #111;padding-top:3px;font-size:9px;font-weight:bold;" id="prev-sig1">{{ cfg.sig1_label }}</div>
+                        <div style="font-size:8px;color:#555;">Head of Department</div>
+                    </div>
+                    <div style="flex:1;text-align:center;padding:0 8px;border-right:1px dashed #bbb;">
+                        <div style="height:28px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:2px;">
+                            {% if cfg.sig2_image %}<img src="/static/uploads/signatures/{{ cfg.sig2_image }}" style="max-height:26px;max-width:80px;object-fit:contain;">{% endif %}
+                        </div>
+                        <div style="border-top:1px solid #111;padding-top:3px;font-size:9px;font-weight:bold;" id="prev-sig2">{{ cfg.sig2_label }}</div>
+                        <div style="font-size:8px;color:#555;">Authorised Signatory</div>
+                    </div>
+                    <div style="flex:1;text-align:center;padding:0 8px;">
+                        <div style="height:28px;margin-bottom:2px;"></div>
+                        <div style="border-top:1px solid #111;padding-top:3px;font-size:9px;font-weight:bold;" id="prev-sig3">{{ cfg.sig3_label }}</div>
+                        <div style="font-size:8px;color:#555;">Guardian's Signature</div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div id="prev-footer" style="margin-top:8px;display:flex;justify-content:space-between;font-size:8px;color:#666;border-top:1px solid #bbb;padding-top:4px;">
+                    <span id="prev-footer-text">{{ cfg.footer_text }}</span>
+                    <span>This is a computer-generated document.</span>
+                </div>
+
+            </div><!-- /inner -->
+            </div><!-- /outer -->
+        </div>
+    </div>
+
+</div>
+</form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+/**
+ * uploadSig — load image, strip white/near-white background on canvas,
+ * store result as PNG data URL in a hidden field, and show preview.
+ */
+function uploadSig(id, input, hiddenName, previewId, placeholderId) {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+            var canvas = document.createElement('canvas');
+            canvas.width  = img.width;
+            canvas.height = img.height;
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            var px = imgData.data;
+            for (var i = 0; i < px.length; i += 4) {
+                var r = px[i], g = px[i+1], b = px[i+2];
+                /* Remove pixels that are near-white (background paper) */
+                if (r > 210 && g > 210 && b > 210) {
+                    px[i+3] = 0;  /* fully transparent */
+                } else if (r > 180 && g > 180 && b > 180) {
+                    /* Semi-transparent for anti-aliased edges */
+                    px[i+3] = Math.round(px[i+3] * ((255 - r) / 75));
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+            var dataUrl = canvas.toDataURL('image/png');
+
+            /* Store in hidden field so form submits the processed PNG */
+            var hidden = document.getElementById(hiddenName);
+            if (hidden) hidden.value = dataUrl;
+
+            /* Show preview on checkered background */
+            var prev = document.getElementById(previewId);
+            var ph   = document.getElementById(placeholderId);
+            if (prev) { prev.src = dataUrl; prev.style.display = ''; }
+            if (ph)   { ph.style.display = 'none'; }
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+(function() {
+    function val(n) { return document.querySelector('[name="'+n+'"]'); }
+    function $id(n)  { return document.getElementById(n); }
+
+    function update() {
+        // School name / subtitle / title / footer
+        var sname = val('school_name').value || 'School Name';
+        $id('prev-name').textContent        = sname;
+        $id('prev-subtitle').textContent    = val('school_subtitle').value || '';
+        $id('prev-title').textContent       = val('report_title').value   || 'ACADEMIC REPORT CARD';
+        $id('prev-footer-text').textContent = val('footer_text').value    || '';
+        if ($id('prev-institution')) $id('prev-institution').textContent = sname.toUpperCase();
+
+        // Signature labels
+        $id('prev-sig1').textContent = val('sig1_label').value || 'HOD';
+        $id('prev-sig2').textContent = val('sig2_label').value || 'Principal';
+        $id('prev-sig3').textContent = val('sig3_label').value || 'Parent / Guardian';
+
+        // Toggle sections
+        $id('prev-att-section').style.display = document.getElementById('show_attendance').checked ? '' : 'none';
+        $id('prev-sig-section').style.display = document.getElementById('show_signatures').checked ? '' : 'none';
+
+        // Update color hints
+        document.querySelectorAll('.rc-color').forEach(function(el) {
+            el.nextElementSibling.textContent = el.value;
+        });
+    }
+
+    document.querySelectorAll('.rc-input, .rc-color, .rc-toggle').forEach(function(el) {
+        el.addEventListener('input', update);
+        el.addEventListener('change', update);
+    });
+
+    // Logo file preview
+    var logoInput = document.getElementById('logoFileInput');
+    if (logoInput) {
+        logoInput.addEventListener('change', function() {
+            var file = this.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var src = e.target.result;
+                document.getElementById('logoPreviewImg').src = src;
+                document.getElementById('prev-logo').src = src;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+})();
+{% endblock %}

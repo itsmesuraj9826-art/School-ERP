@@ -4,8 +4,8 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from functools import wraps
 from werkzeug.utils import secure_filename
-from models import db, Teacher, Student, User, Class, Subject, Attendance, Assignment, Exam, Result, Notice, TimeTable, Parent, LeaveRequest, Event, Notification, Note
-from datetime import datetime, date
+from models import db, Teacher, Student, User, Class, Subject, Attendance, Assignment, Exam, Result, Notice, TimeTable, Parent, LeaveRequest, Event, Notification, Note, HomeworkDiary
+from datetime import datetime, date, timedelta
 from sqlalchemy import func
 from app import mail
 from utils.mail_helpers import send_attendance_notification, send_assignment_notification
@@ -74,6 +74,33 @@ def dashboard():
     class_ids = [c.id for c in my_classes]
     total_students = Student.query.filter(Student.class_id.in_(class_ids)).count() if class_ids else 0
 
+    # Birthday widget — students in teacher's classes with birthday in next 7 days
+    upcoming_days = [(today + timedelta(days=i)) for i in range(7)]
+    birthday_people = []
+    if class_ids:
+        for student, user in (db.session.query(Student, User).join(User, Student.user_id == User.id)
+                              .filter(Student.class_id.in_(class_ids), Student.date_of_birth != None).all()):
+            dob = student.date_of_birth
+            for d in upcoming_days:
+                if dob.month == d.month and dob.day == d.day:
+                    birthday_people.append({
+                        'name': user.full_name,
+                        'role': 'Student',
+                        'days_until': (d - today).days,
+                        'date_str': d.strftime('%b %d'),
+                        'initial': user.full_name[0].upper()
+                    })
+                    break
+    birthday_people.sort(key=lambda x: x['days_until'])
+
+    # Upcoming events — next 30 days
+    from models import Event
+    upcoming_events = Event.query.filter(
+        Event.event_date >= today,
+        Event.event_date <= today + timedelta(days=30),
+        Event.is_active == True
+    ).order_by(Event.event_date.asc()).limit(8).all()
+
     return render_template('teacher/dashboard.html',
         teacher=teacher,
         my_classes=my_classes,
@@ -83,7 +110,9 @@ def dashboard():
         upcoming_exams=upcoming_exams,
         recent_notices=recent_notices,
         total_students=total_students,
-        today=today
+        today=today,
+        birthday_people=birthday_people,
+        upcoming_events=upcoming_events
     )
 
 
@@ -329,6 +358,16 @@ def attendance():
                 'student_name': user.full_name,
             }
 
+    # Build per-student attendance % for the current academic year
+    att_pct = {}
+    for student, user in students:
+        total = Attendance.query.filter_by(student_id=student.id).count()
+        present = Attendance.query.filter(
+            Attendance.student_id == student.id,
+            Attendance.status.in_(['present', 'late'])
+        ).count()
+        att_pct[student.id] = round((present / total * 100), 1) if total > 0 else None
+
     return render_template('teacher/attendance.html',
         my_classes=my_classes,
         students=students,
@@ -340,6 +379,7 @@ def attendance():
         today=date.today().isoformat(),
         parent_phones=parent_phones,
         selected_class=db.session.get(Class, selected_class_id) if selected_class_id else None,
+        att_pct=att_pct,
     )
 
 # ------------------------------------------------------------
@@ -376,11 +416,33 @@ def students():
 
     students_data = query.order_by(Class.name, Student.roll_no).all()
 
+    # Build parent contact map for broadcast
+    import re as _re3, json as _json
+    parent_map = []
+    for student, user, cls in students_data:
+        phone = None; parent_name = None
+        if student.parents:
+            for p in student.parents:
+                pu = db.session.get(User, p.user_id)
+                if pu and pu.phone:
+                    phone = pu.phone; parent_name = pu.full_name; break
+        if not phone and student.guardian_phone:
+            phone = student.guardian_phone
+            parent_name = student.guardian_name or 'Guardian'
+        if phone:
+            clean = _re3.sub(r'[^\d]', '', phone)
+            if clean.startswith('0'): clean = '977' + clean[1:]
+            elif not clean.startswith('977'): clean = '977' + clean
+            parent_map.append({'phone': clean, 'parent': parent_name or 'Guardian',
+                                'student': user.full_name, 'class_id': student.class_id,
+                                'class_name': cls.full_name if cls else ''})
+
     return render_template('teacher/students.html',
         students_data=students_data,
         my_classes=my_classes,
         class_filter=class_filter,
-        search=search
+        search=search,
+        parent_map_json=_json.dumps(parent_map),
     )
 
 # ------------------------------------------------------------
@@ -590,7 +652,7 @@ def events():
 def leave_requests():
     my_requests = LeaveRequest.query.filter_by(user_id=current_user.id)\
         .order_by(LeaveRequest.created_at.desc()).all()
-    return render_template('teacher/leave_requests.html', leave_requests=my_requests)
+    return render_template('teacher/leave_requests.html', my_requests=my_requests)
 
 
 @teacher_bp.route('/leave-requests/add', methods=['POST'])
@@ -640,60 +702,46 @@ def notes():
     all_class_ids_q = db.session.query(TimeTable.class_id)\
         .filter(TimeTable.teacher_id == teacher.id).distinct().all()
     all_class_ids = list(set(
-        [c[0] for c in all_class_ids_q] +
-        [c.id for c in Class.query.filter_by(class_teacher_id=teacher.id).all()]
+        [c[0] for c in all_class_ids_q]
     ))
-    my_classes = Class.query.filter(Class.id.in_(all_class_ids))\
-        .order_by(Class.name, Class.section).all()
-    my_notes = Note.query.filter_by(teacher_id=teacher.id)\
-        .order_by(Note.created_at.desc()).all()
-    return render_template('teacher/notes.html', my_notes=my_notes, my_classes=my_classes)
 
+    my_classes_for_notes = Class.query.filter(Class.id.in_(all_class_ids)).all() if all_class_ids else []
 
-@teacher_bp.route('/notes/upload', methods=['POST'])
-@login_required
-@teacher_required
-def upload_note():
-    teacher = get_teacher()
-    title       = request.form.get('title', '').strip()
-    subject     = request.form.get('subject', '').strip()
-    description = request.form.get('description', '').strip()
-    class_id    = request.form.get('class_id') or None
+    if request.method == 'POST':
+        title   = request.form.get('title', '').strip()
+        subject = request.form.get('subject', '').strip()
+        cls_id  = request.form.get('class_id', type=int)
+        file    = request.files.get('file')
+        if not (title and subject and cls_id and file and file.filename):
+            flash('Please fill in all fields and select a file.', 'warning')
+        elif not allowed_note_file(file.filename):
+            flash('File type not allowed.', 'danger')
+        else:
+            os.makedirs(NOTES_UPLOAD_FOLDER, exist_ok=True)
+            ext      = secure_filename(file.filename).rsplit('.', 1)[-1].lower()
+            filename = f"{uuid.uuid4().hex}.{ext}"
+            filepath = os.path.join(NOTES_UPLOAD_FOLDER, filename)
+            file.save(filepath)
+            note = Note(
+                teacher_id=teacher.id,
+                class_id=cls_id,
+                subject=subject,
+                title=title,
+                filename=filename,
+                original_filename=secure_filename(file.filename),
+                file_type=ext
+            )
+            db.session.add(note)
+            db.session.commit()
+            flash('Note uploaded successfully!', 'success')
+            return redirect(url_for('teacher.notes'))
 
-    if not title:
-        flash('Title is required.', 'danger')
-        return redirect(url_for('teacher.notes'))
-
-    file = request.files.get('note_file')
-    if not file or file.filename == '':
-        flash('Please choose a file to upload.', 'danger')
-        return redirect(url_for('teacher.notes'))
-    if not allowed_note_file(file.filename):
-        flash('File type not allowed. Supported: PDF, Word, PPT, Excel, TXT, images, ZIP.', 'danger')
-        return redirect(url_for('teacher.notes'))
-
-    original_name = secure_filename(file.filename)
-    ext = original_name.rsplit('.', 1)[1].lower()
-    saved_name = f"{uuid.uuid4().hex}.{ext}"
-    os.makedirs(NOTES_UPLOAD_FOLDER, exist_ok=True)
-    file.save(os.path.join(NOTES_UPLOAD_FOLDER, saved_name))
-    file_size = os.path.getsize(os.path.join(NOTES_UPLOAD_FOLDER, saved_name))
-
-    note = Note(
-        teacher_id=teacher.id,
-        class_id=int(class_id) if class_id else None,
-        subject=subject,
-        title=title,
-        description=description,
-        filename=saved_name,
-        original_filename=original_name,
-        file_type=ext,
-        file_size=file_size,
+    my_notes = Note.query.filter_by(teacher_id=teacher.id).order_by(Note.created_at.desc()).all()
+    return render_template('teacher/notes.html',
+        teacher=teacher,
+        my_notes=my_notes,
+        my_classes=my_classes_for_notes
     )
-    db.session.add(note)
-    db.session.commit()
-    flash(f'"{title}" uploaded successfully!', 'success')
-    return redirect(url_for('teacher.notes'))
 
 
 @teacher_bp.route('/notes/<int:note_id>/delete', methods=['POST'])
@@ -702,10 +750,95 @@ def upload_note():
 def delete_note(note_id):
     teacher = get_teacher()
     note = Note.query.filter_by(id=note_id, teacher_id=teacher.id).first_or_404()
-    path = os.path.join(NOTES_UPLOAD_FOLDER, note.filename)
-    if os.path.exists(path):
-        os.remove(path)
+    filepath = os.path.join(NOTES_UPLOAD_FOLDER, note.filename)
+    if os.path.exists(filepath):
+        os.remove(filepath)
     db.session.delete(note)
     db.session.commit()
     flash('Note deleted.', 'success')
     return redirect(url_for('teacher.notes'))
+
+
+@teacher_bp.route('/notes/<int:note_id>/download')
+@login_required
+def download_note(note_id):
+    note = Note.query.get_or_404(note_id)
+    note.download_count = (note.download_count or 0) + 1
+    db.session.commit()
+    return send_from_directory(NOTES_UPLOAD_FOLDER, note.filename,
+                               as_attachment=True,
+                               download_name=note.original_filename)
+
+
+# ── HOMEWORK DIARY ─────────────────────────────────────────────────────────────
+
+@teacher_bp.route('/homework', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def homework():
+    teacher = get_teacher()
+    my_classes = Class.query.filter(
+        db.or_(
+            Class.class_teacher_id == teacher.id,
+            Class.id.in_(
+                db.session.query(TimeTable.class_id).filter_by(teacher_id=teacher.id)
+            )
+        )
+    ).all()
+
+    if request.method == 'POST':
+        subject     = request.form.get('subject', '').strip()
+        title       = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        class_id    = request.form.get('class_id', type=int)
+        hw_date     = request.form.get('date') or str(date.today())
+        due_date    = request.form.get('due_date') or None
+
+        if not (subject and title and class_id):
+            flash('Subject, title and class are required.', 'warning')
+        else:
+            from datetime import datetime as dt
+            hw = HomeworkDiary(
+                teacher_id=teacher.id,
+                class_id=class_id,
+                subject=subject,
+                title=title,
+                description=description,
+                date=dt.strptime(hw_date, '%Y-%m-%d').date(),
+                due_date=dt.strptime(due_date, '%Y-%m-%d').date() if due_date else None
+            )
+            db.session.add(hw)
+            db.session.commit()
+            flash('Homework added!', 'success')
+            return redirect(url_for('teacher.homework'))
+
+    entries = HomeworkDiary.query.filter_by(teacher_id=teacher.id)        .order_by(HomeworkDiary.date.desc(), HomeworkDiary.created_at.desc()).limit(50).all()
+
+    return render_template('teacher/homework.html',
+        teacher=teacher,
+        my_classes=my_classes,
+        entries=entries,
+        today=date.today()
+    )
+
+
+
+@teacher_bp.route('/homework/<int:hid>/delete', methods=['POST'])
+@login_required
+@teacher_required
+def delete_homework(hid):
+    teacher = get_teacher()
+    hw = HomeworkDiary.query.filter_by(id=hid, teacher_id=teacher.id).first_or_404()
+    db.session.delete(hw)
+    db.session.commit()
+    flash('Homework entry deleted.', 'success')
+    return redirect(url_for('teacher.homework'))
+
+
+@teacher_bp.route('/notif-count')
+@login_required
+@teacher_required
+def notif_count():
+    from flask import jsonify
+    count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
+    return jsonify({'count': count})

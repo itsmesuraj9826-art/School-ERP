@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <circle cx="60" cy="60" r="58" fill="#1a237e" stroke="#fff" stroke-width="2"/>
+  <circle cx="60" cy="60" r="50" fill="none" stroke="#ffd700" stroke-width="2"/>
+  <!-- Book -->
+  <rect x="32" y="48" width="56" height="36" rx="3" fill="#fff" opacity="0.15"/>
+  <rect x="32" y="48" width="28" height="36" rx="3" fill="#fff" opacity="0.9"/>
+  <rect x="60" y="48" width="28" height="36" rx="3" fill="#e8eaf6" opacity="0.9"/>
+  <line x1="60" y1="48" x2="60" y2="84" stroke="#1a237e" stroke-width="1.5"/>
+  <!-- Lines on book -->
+  <line x1="37" y1="58" x2="55" y2="58" stroke="#1a237e" stroke-width="1.5"/>
+  <line x1="37" y1="64" x2="55" y2="64" stroke="#1a237e" stroke-width="1.5"/>
+  <line x1="37" y1="70" x2="55" y2="70" stroke="#1a237e" stroke-width="1.5"/>
+  <line x1="65" y1="58" x2="83" y2="58" stroke="#3949ab" stroke-width="1.5"/>
+  <line x1="65" y1="64" x2="83" y2="64" stroke="#3949ab" stroke-width="1.5"/>
+  <line x1="65" y1="70" x2="83" y2="70" stroke="#3949ab" stroke-width="1.5"/>
+  <!-- Flame/Torch top -->
+  <ellipse cx="60" cy="35" rx="8" ry="11" fill="#ffd700"/>
+  <ellipse cx="60" cy="38" rx="5" ry="7" fill="#ff8f00"/>
+  <ellipse cx="60" cy="41" rx="3" ry="4" fill="#fff"/>
+  <!-- Stars -->
+  <text x="22" y="42" font-size="8" fill="#ffd700">★</text>
+  <text x="90" y="42" font-size="8" fill="#ffd700">★</text>
+  <!-- Text bottom -->
+  <text x="60" y="100" text-anchor="middle" font-size="7" font-weight="bold" fill="#ffd700" font-family="Arial">MARTYRS MEMORIAL</text>
+  <text x="60" y="109" text-anchor="middle" font-size="6" fill="#ffd700" font-family="Arial">+2 SCHOOL</text>
+</svg>

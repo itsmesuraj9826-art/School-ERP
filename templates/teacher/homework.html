@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block title %}Homework Diary — Teacher{% endblock %}
+{% block page_title %}Homework Diary{% endblock %}
+
+{% block extra_css %}
+<style>
+.hw-card { background:var(--card,#fff); border:1px solid #e0e7ff; border-radius:10px;
+           padding:14px 16px; margin-bottom:10px; transition:box-shadow .2s; }
+.hw-card:hover { box-shadow:0 4px 16px rgba(57,73,171,.12); }
+.hw-subject { font-size:.72rem; font-weight:700; padding:3px 10px; border-radius:12px;
+              background:#e0e7ff; color:#3730a3; }
+.hw-due { font-size:.72rem; color:#dc2626; font-weight:600; }
+.hw-meta { font-size:.72rem; color:#9e9e9e; }
+[data-theme="dark"] .hw-card { background:var(--card); border-color:var(--border); }
+[data-theme="dark"] .hw-subject { background:rgba(99,102,241,.2); color:#a5b4fc; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="page-header-row mb-4">
+        <div>
+            <h5 class="page-sub-title">Homework Diary</h5>
+            <p class="text-muted mb-0">Post and track daily homework for your classes</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Post new homework -->
+        <div class="col-lg-4">
+            <div class="info-card">
+                <h6 class="fw-bold mb-3"><i class="fas fa-plus-circle me-2 text-primary"></i>Post Homework</h6>
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Class</label>
+                        <select name="class_id" class="form-select form-select-sm" required>
+                            <option value="">Select class…</option>
+                            {% for cls in my_classes %}
+                            <option value="{{ cls.id }}">{{ cls.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Subject</label>
+                        <input type="text" name="subject" class="form-control form-control-sm" placeholder="e.g. Mathematics" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Date</label>
+                        <input type="date" name="date" class="form-control form-control-sm" value="{{ today }}" max="{{ today }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Homework Title</label>
+                        <input type="text" name="title" class="form-control form-control-sm" placeholder="e.g. Exercise 4.3 — Q1 to Q10" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Description <span class="text-muted fw-normal">(optional)</span></label>
+                        <textarea name="description" class="form-control form-control-sm" rows="3"
+                                  placeholder="Additional instructions…"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Due Date <span class="text-muted fw-normal">(optional)</span></label>
+                        <input type="date" name="due_date" class="form-control form-control-sm">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-paper-plane me-2"></i>Post Homework
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Homework list -->
+        <div class="col-lg-8">
+            <div class="info-card">
+                <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                    <h6 class="fw-bold mb-0"><i class="fas fa-book-open me-2 text-primary"></i>Recent Homework</h6>
+                    <form method="GET" class="d-flex gap-2 align-items-center flex-wrap">
+                        <select name="class_id" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+                            <option value="">All classes</option>
+                            {% for cls in my_classes %}
+                            <option value="{{ cls.id }}" {% if selected_class == cls.id %}selected{% endif %}>{{ cls.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </div>
+
+                {% if entries %}
+                {% set current_date = namespace(val='') %}
+                {% for hw in entries %}
+                {% set date_str = hw.date.strftime('%A, %d %B %Y') %}
+                {% if date_str != current_date.val %}
+                {% set current_date.val = date_str %}
+                <div class="text-muted small fw-semibold mb-2 mt-3" style="border-bottom:1px solid #e0e7ff;padding-bottom:4px;">
+                    <i class="fas fa-calendar-day me-1"></i>{{ date_str }}
+                </div>
+                {% endif %}
+                <div class="hw-card">
+                    <div class="d-flex align-items-start justify-content-between gap-2">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                                <span class="hw-subject">{{ hw.subject }}</span>
+                                <span class="small fw-semibold">{{ hw.class_ref.full_name if hw.class_ref else '' }}</span>
+                                {% if hw.due_date %}
+                                <span class="hw-due"><i class="fas fa-clock me-1"></i>Due: {{ hw.due_date.strftime('%d %b') }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="fw-semibold small">{{ hw.title }}</div>
+                            {% if hw.description %}
+                            <div class="text-muted small mt-1">{{ hw.description }}</div>
+                            {% endif %}
+                            <div class="hw-meta mt-1">Posted {{ hw.created_at.strftime('%I:%M %p') if hw.created_at else '' }}</div>
+                        </div>
+                        <form method="POST" action="{{ url_for('teacher.delete_homework', hid=hw.id) }}"
+                              onsubmit="return confirm('Delete this entry?')">
+                            <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-book fa-3x mb-3 d-block"></i>
+                    No homework posted yet. Use the form to add today's homework.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

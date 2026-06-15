@@ -42,6 +42,9 @@ class Stream(db.Model):
     description = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # HOD per stream
+    hod_name      = db.Column(db.String(120), default=None)
+    hod_signature = db.Column(db.String(200), default=None)
 
     classes = db.relationship('Class', backref='stream', lazy=True)
     subjects = db.relationship('Subject', backref='stream', lazy=True)
@@ -403,3 +406,61 @@ class Note(db.Model):
 
     teacher = db.relationship('Teacher', backref='notes')
     class_ref = db.relationship('Class', backref='notes')
+
+class HomeworkDiary(db.Model):
+    """Homework assignments posted by teachers."""
+    __tablename__ = 'homework_diary'
+    id         = db.Column(db.Integer, primary_key=True)
+    teacher_id = db.Column(db.Integer, db.ForeignKey('teachers.id'), nullable=False)
+    class_id   = db.Column(db.Integer, db.ForeignKey('classes.id'), nullable=True)
+    subject    = db.Column(db.String(100), nullable=False)
+    title      = db.Column(db.String(300), nullable=False)
+    description= db.Column(db.Text)
+    date       = db.Column(db.Date, nullable=False)
+    due_date   = db.Column(db.Date)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    teacher    = db.relationship('Teacher', backref='homework_entries')
+    class_ref  = db.relationship('Class',   backref='class_homework_entries')
+
+
+class SchoolConfig(db.Model):
+    """Single-row config for report card design & school branding."""
+    __tablename__ = 'school_config'
+    id               = db.Column(db.Integer, primary_key=True)
+    # School identity
+    school_name      = db.Column(db.String(200), default='Martyrs\' Memorial College')
+    school_subtitle  = db.Column(db.String(300), default='Biratnagar, Nepal | tbc.edu.np')
+    school_icon      = db.Column(db.String(10),  default='🎓')
+    report_title     = db.Column(db.String(100), default='ACADEMIC REPORT CARD')
+    footer_text      = db.Column(db.String(300), default='Martyrs\' Memorial College, Biratnagar, Nepal')
+    # Design
+    primary_color    = db.Column(db.String(20),  default='#1a237e')
+    header_text_color= db.Column(db.String(20),  default='#ffffff')
+    accent_color     = db.Column(db.String(20),  default='#e8eaf6')
+    # Logo
+    logo_filename    = db.Column(db.String(200), default=None)
+    # Signature labels & images
+    sig1_label       = db.Column(db.String(80),  default='HOD')
+    sig2_label       = db.Column(db.String(80),  default='Principal')
+    sig3_label       = db.Column(db.String(80),  default='Parent / Guardian')
+    sig1_image       = db.Column(db.String(200), default=None)
+    sig2_image       = db.Column(db.String(200), default=None)
+    sig3_image       = db.Column(db.String(200), default=None)
+    # Visibility toggles (1=show, 0=hide)
+    show_attendance  = db.Column(db.Boolean, default=True)
+    show_summary     = db.Column(db.Boolean, default=True)
+    show_signatures  = db.Column(db.Boolean, default=True)
+    show_gpa         = db.Column(db.Boolean, default=True)
+    show_grade       = db.Column(db.Boolean, default=True)
+    # Grade boundaries (JSON string: {"A+":90,"A":80,"B+":70,"B":60,"C+":50,"C":40,"D":33})
+    grade_boundaries = db.Column(db.Text, default='{"A+":90,"A":80,"B+":70,"B":60,"C+":50,"C":40,"D":33}')
+    # Auto remarks per grade
+    remarks_ap       = db.Column(db.String(200), default='Outstanding performance!')
+    remarks_a        = db.Column(db.String(200), default='Excellent work!')
+    remarks_bp       = db.Column(db.String(200), default='Very good performance.')
+    remarks_b        = db.Column(db.String(200), default='Good performance.')
+    remarks_c        = db.Column(db.String(200), default='Satisfactory. Keep improving.')
+    remarks_d        = db.Column(db.String(200), default='Needs improvement.')
+    remarks_f        = db.Column(db.String(200), default='Failed. Improvement required.')
+    updated_at       = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -17,6 +17,70 @@
         </form>
     </div>
 
+    <!-- Fee Collection Chart + Defaulter Quick View -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-4">
+            <div class="info-card h-100">
+                <h6 class="fw-bold mb-3"><i class="fas fa-chart-pie me-2 text-primary"></i>Collection Breakdown</h6>
+                <canvas id="feeChart" height="180"></canvas>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="info-card h-100">
+                <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                    <h6 class="fw-bold mb-0"><i class="fas fa-exclamation-triangle me-2 text-danger"></i>Fee Defaulters
+                        <span class="badge bg-danger ms-1">{{ defaulters|length }}</span>
+                    </h6>
+                    {% if defaulters and defaulters|selectattr('phone')|list %}
+                    <button onclick="feeBlastAll()" class="btn btn-sm fw-semibold"
+                            style="background:#25D366;color:#fff;border:none;border-radius:20px;font-size:.78rem;">
+                        <i class="fab fa-whatsapp me-1"></i>WhatsApp All
+                    </button>
+                    {% endif %}
+                </div>
+                {% if defaulters %}
+                <div id="feeBlastProgress" style="display:none;margin-bottom:8px;">
+                    <div class="progress" style="height:5px;">
+                        <div id="feeBlastBar" class="progress-bar bg-success" style="width:0%;transition:width .3s;"></div>
+                    </div>
+                    <small id="feeBlastStatus" class="text-muted"></small>
+                </div>
+                <div style="max-height:220px;overflow-y:auto;">
+                    <table class="table table-sm modern-table mb-0">
+                        <thead><tr><th>Student</th><th>Due (NPR)</th><th class="text-center">Notify Parent</th></tr></thead>
+                        <tbody>
+                        {% for d in defaulters %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold small">{{ d.user.full_name }}</div>
+                                <div class="text-muted" style="font-size:.72rem;">{{ d.student.roll_no }} · {{ d.parent_name or 'No parent' }}</div>
+                            </td>
+                            <td><span class="badge bg-danger">{{ "{:,.0f}".format(d.due_total) }}</span></td>
+                            <td class="text-center">
+                                {% if d.phone %}
+                                {% set wa_msg = "Dear " ~ (d.parent_name or "Parent") ~ ",\n\nThis is a reminder that your ward *" ~ d.user.full_name ~ "* has pending school fees of NPR *" ~ "{:,.0f}".format(d.due_total) ~ "*. Please clear the dues at the earliest.\n\n— Martyrs Memorial +2 School" %}
+                                <a href="https://wa.me/{{ d.phone }}?text={{ wa_msg|urlencode }}" target="_blank"
+                                   class="btn btn-sm fee-remind-btn" data-phone="{{ d.phone }}"
+                                   data-msg="{{ wa_msg }}"
+                                   style="background:#25D366;color:#fff;border:none;border-radius:16px;font-size:.75rem;padding:3px 12px;">
+                                    <i class="fab fa-whatsapp me-1"></i>Remind
+                                </a>
+                                {% else %}
+                                <span class="text-muted small">No phone</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4"><i class="fas fa-check-circle fa-2x text-success mb-2 d-block"></i>No defaulters!</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
     <!-- Fee Summary Cards -->
     <div class="row g-4 mb-4">
         <div class="col-md-4">
@@ -49,12 +113,19 @@
     </div>
 
     <!-- Filter + Table -->
+
+    <!-- Filter + Table -->
     <div class="info-card">
-        <div class="d-flex gap-2 mb-3">
-            <a href="{{ url_for('admin.fees') }}" class="btn btn-sm {{ 'btn-primary' if not status_filter else 'btn-outline-secondary' }}">All</a>
-            <a href="{{ url_for('admin.fees', status='pending') }}" class="btn btn-sm {{ 'btn-primary' if status_filter == 'pending' else 'btn-outline-secondary' }}">Pending</a>
-            <a href="{{ url_for('admin.fees', status='paid') }}" class="btn btn-sm {{ 'btn-primary' if status_filter == 'paid' else 'btn-outline-secondary' }}">Paid</a>
-            <a href="{{ url_for('admin.fees', status='overdue') }}" class="btn btn-sm {{ 'btn-primary' if status_filter == 'overdue' else 'btn-outline-secondary' }}">Overdue</a>
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+            <h6 class="fw-bold mb-0"><i class="fas fa-list me-2 text-primary"></i>All Fee Records</h6>
+            <form class="d-flex gap-2 align-items-center" method="GET">
+                <select name="status" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+                    <option value="">All Status</option>
+                    <option value="paid" {% if status_filter=='paid' %}selected{% endif %}>Paid</option>
+                    <option value="pending" {% if status_filter=='pending' %}selected{% endif %}>Pending</option>
+                    <option value="overdue" {% if status_filter=='overdue' %}selected{% endif %}>Overdue</option>
+                </select>
+            </form>
         </div>
         <div class="table-responsive">
             <table class="table table-hover modern-table">
@@ -62,58 +133,167 @@
                     <tr>
                         <th>Student</th>
                         <th>Fee Type</th>
-                        <th>Amount</th>
+                        <th>Amount (NPR)</th>
                         <th>Due Date</th>
                         <th>Paid Date</th>
-                        <th>Method</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for fee, student, user in fees_data.items %}
-                    <tr>
-                        <td>
-                            <div class="student-cell">
-                                <div class="student-avatar">{{ user.full_name[0] }}</div>
-                                <div>
-                                    <div class="fw-600">{{ user.full_name }}</div>
-                                    <small class="text-muted">{{ student.roll_no }}</small>
-                                </div>
-                            </div>
-                        </td>
-                        <td>{{ fee.fee_type }}</td>
-                        <td class="fw-600">NPR {{ "{:,.0f}".format(fee.amount) }}</td>
-                        <td>{{ fee.due_date.strftime('%b %d, %Y') if fee.due_date else '—' }}</td>
-                        <td>{{ fee.paid_date.strftime('%b %d, %Y') if fee.paid_date else '—' }}</td>
-                        <td>{{ fee.payment_method or '—' }}</td>
-                        <td><span class="badge fee-status-{{ fee.status }}">{{ fee.status | title }}</span></td>
-                        <td>
-                            {% if fee.status == 'paid' %}
-                            <a href="{{ url_for('admin.fee_receipt', fid=fee.id) }}" target="_blank"
-                               class="btn btn-xs btn-outline-success" style="font-size:11px;padding:3px 8px;">
-                                <i class="fas fa-receipt me-1"></i>Receipt
-                            </a>
-                            {% else %}
-                            <form action="{{ url_for('admin.mark_paid', fid=fee.id) }}" method="POST" class="d-inline">
-                                <select name="payment_method" class="form-select form-select-sm d-inline" style="width:90px;font-size:11px;">
-                                    <option value="cash">Cash</option>
-                                    <option value="cheque">Cheque</option>
-                                    <option value="online">Online</option>
-                                </select>
-                                <button type="submit" class="btn btn-xs btn-outline-primary" style="font-size:11px;padding:3px 8px;">
-                                    Mark Paid
+                {% for fee, student, user in fees_data.items %}
+                <tr>
+                    <td>
+                        <div class="fw-semibold small">{{ user.full_name }}</div>
+                        <div class="text-muted" style="font-size:.72rem;">{{ student.roll_no }}</div>
+                    </td>
+                    <td>{{ fee.fee_type }}</td>
+                    <td><strong>{{ "{:,.0f}".format(fee.amount) }}</strong></td>
+                    <td>{{ fee.due_date.strftime('%d %b %Y') if fee.due_date else '—' }}</td>
+                    <td>{{ fee.paid_date.strftime('%d %b %Y') if fee.paid_date else '—' }}</td>
+                    <td>
+                        <span class="badge {% if fee.status == 'paid' %}bg-success{% elif fee.status == 'overdue' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                            {{ fee.status|title }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1 flex-wrap">
+                            {% if fee.status != 'paid' %}
+                            <form method="POST" action="{{ url_for('admin.mark_fee_paid', fid=fee.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-xs btn-success"
+                                        style="font-size:.72rem;padding:2px 10px;border-radius:14px;">
+                                    <i class="fas fa-check me-1"></i>Mark Paid
                                 </button>
                             </form>
+                            {% else %}
+                            <a href="{{ url_for('admin.fee_receipt', fid=fee.id) }}" target="_blank"
+                               class="btn btn-xs btn-outline-primary"
+                               style="font-size:.72rem;padding:2px 10px;border-radius:14px;">
+                                <i class="fas fa-receipt me-1"></i>Receipt
+                            </a>
                             {% endif %}
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="8" class="text-center text-muted py-5">No fee records found</td></tr>
-                    {% endfor %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No fee records found.</td></tr>
+                {% endfor %}
                 </tbody>
             </table>
         </div>
+        <!-- Pagination -->
+        {% if fees_data.pages > 1 %}
+        <nav class="mt-3">
+            <ul class="pagination pagination-sm justify-content-center">
+                {% for p in fees_data.iter_pages() %}
+                    {% if p %}
+                    <li class="page-item {% if p == fees_data.page %}active{% endif %}">
+                        <a class="page-link" href="?page={{ p }}&status={{ status_filter }}">{{ p }}</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+
+    <!-- Add Fee Modal -->
+    <div class="modal fade" id="addFeeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Add Fee Record</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{{ url_for('admin.add_fee') }}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Student</label>
+                            <select name="student_id" class="form-select" required>
+                                <option value="">Select student…</option>
+                                {% for s, u in students %}
+                                <option value="{{ s.id }}">{{ u.full_name }} ({{ s.roll_no }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Fee Type</label>
+                            <input type="text" name="fee_type" class="form-control" placeholder="e.g. Tuition, Exam" required>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Amount (NPR)</label>
+                                <input type="number" name="amount" class="form-control" min="0" step="0.01" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Due Date</label>
+                                <input type="date" name="due_date" class="form-control">
+                            </div>
+                        </div>
+                        <div class="mb-3 mt-2">
+                            <label class="form-label fw-semibold">Academic Year</label>
+                            <input type="text" name="academic_year" class="form-control" value="2081-2082">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-sm">Add Fee</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+// Fee Collection Doughnut
+var feeTypeLabels = {{ fee_type_labels | tojson }};
+var feeTypeValues = {{ fee_type_values | tojson }};
+if (feeTypeLabels.length && document.getElementById('feeChart')) {
+    new Chart(document.getElementById('feeChart'), {
+        type: 'doughnut',
+        data: {
+            labels: feeTypeLabels,
+            datasets: [{
+                data: feeTypeValues,
+                backgroundColor: ['#0D47A1','#1565C0','#1976D2','#1E88E5','#42A5F5','#90CAF9'],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            cutout: '65%',
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } }
+            }
+        }
+    });
+}
+
+// WhatsApp blast all defaulters
+function feeBlastAll() {
+    var btns = Array.from(document.querySelectorAll('.fee-remind-btn'));
+    if (!btns.length) return;
+    var prog = document.getElementById('feeBlastProgress');
+    var bar  = document.getElementById('feeBlastBar');
+    var status = document.getElementById('feeBlastStatus');
+    prog.style.display = '';
+    btns.forEach(function(btn, i) {
+        setTimeout(function() {
+            var phone = btn.getAttribute('data-phone');
+            var msg   = btn.getAttribute('data-msg');
+            window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(msg), '_blank');
+            btn.style.opacity = '0.5';
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>Sent';
+            var pct = Math.round((i+1)/btns.length*100);
+            bar.style.width = pct + '%';
+            status.textContent = 'Sent ' + (i+1) + ' of ' + btns.length + '…';
+            if (i+1 === btns.length) {
+                status.textContent = '✅ All ' + btns.length + ' parents notified!';
+            }
+        }, i * 750);
+    });
+}
 {% endblock %}

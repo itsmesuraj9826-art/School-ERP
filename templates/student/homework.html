@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Homework Diary{% endblock %}
+{% block page_title %}Homework Diary{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="page-header-row mb-4">
+        <div>
+            <h5 class="page-sub-title">Homework Diary</h5>
+            <p class="text-muted mb-0">Your homework for the last 14 days</p>
+        </div>
+    </div>
+
+    {% if entries %}
+    {% set current_date = namespace(val='') %}
+    {% for hw in entries %}
+    {% set date_str = hw.date.strftime('%A, %d %B %Y') %}
+    {% if date_str != current_date.val %}
+    {% set current_date.val = date_str %}
+    <div class="d-flex align-items-center gap-2 mb-2 mt-4" style="color:#6c757d;font-size:.82rem;font-weight:600;border-bottom:1px solid #e0e7ff;padding-bottom:6px;">
+        <i class="fas fa-calendar-alt"></i> {{ date_str }}
+        {% if hw.date == today %}<span class="badge bg-primary ms-1" style="font-size:.65rem;">Today</span>{% endif %}
+    </div>
+    {% endif %}
+    <div class="info-card mb-2">
+        <div class="d-flex align-items-start gap-3">
+            <div style="width:38px;height:38px;border-radius:10px;background:#e0e7ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-book" style="color:#3730a3;font-size:.95rem;"></i>
+            </div>
+            <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                    <span style="font-size:.72rem;font-weight:700;padding:2px 10px;border-radius:12px;background:#e0e7ff;color:#3730a3;">
+                        {{ hw.subject }}
+                    </span>
+                    {% if hw.due_date %}
+                    <span style="font-size:.72rem;color:#dc2626;font-weight:600;">
+                        <i class="fas fa-clock me-1"></i>Due: {{ hw.due_date.strftime('%d %b %Y') }}
+                        {% if hw.due_date < today %}<span class="badge bg-danger ms-1" style="font-size:.6rem;">Overdue</span>{% endif %}
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="fw-semibold" style="font-size:.9rem;">{{ hw.title }}</div>
+                {% if hw.description %}
+                <div class="text-muted small mt-1">{{ hw.description }}</div>
+                {% endif %}
+                <div style="font-size:.7rem;color:#9e9e9e;margin-top:4px;">
+                    By {{ hw.teacher.user.full_name if hw.teacher and hw.teacher.user else 'Teacher' }}
+                    · Posted {{ hw.created_at.strftime('%I:%M %p') if hw.created_at else '' }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="info-card text-center py-5">
+        <i class="fas fa-check-circle fa-3x text-success mb-3 d-block"></i>
+        <h5 class="text-muted">No homework assigned in the last 14 days!</h5>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

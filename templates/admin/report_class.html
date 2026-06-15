@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% block title %}{{ cls.full_name }} — Reports{% endblock %}
+{% block page_title %}Report Management{% endblock %}
+{% block content %}
+<div class="dashboard-content">
+
+<!-- Header -->
+<div class="page-header-row mb-4">
+    <div>
+        <h5 class="page-sub-title">{{ cls.full_name }}</h5>
+        <p class="text-muted mb-0">
+            {% if cls.stream %}<span class="badge bg-primary me-2">{{ cls.stream.name }}</span>{% endif %}
+            {{ stu_status|length }} Students &nbsp;·&nbsp; {{ subj_stats|length }} Subjects
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('admin.reports') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i>All Classes
+        </a>
+        {% set all_done = stu_status|selectattr('complete')|list|length == stu_status|length and stu_status|length > 0 %}
+        <form method="POST" action="{{ url_for('admin.publish_reports', cid=cls.id) }}"
+              onsubmit="return confirm('Send report card notifications to all {{ stu_status|length }} students and their parents?')">
+            <button type="submit" class="btn btn-success btn-sm fw-bold">
+                <i class="fas fa-paper-plane me-2"></i>Publish to All Students & Parents
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Subject completion status -->
+<div class="info-card mb-4">
+    <h6 class="fw-bold mb-3"><i class="fas fa-book me-2 text-primary"></i>Subject Marks Status</h6>
+    <div class="row g-3">
+    {% for ss in subj_stats %}
+    <div class="col-sm-6 col-lg-4">
+        <div class="d-flex align-items-center gap-3 p-2 rounded"
+             style="background:{% if ss.complete %}#f0fdf4{% else %}#fffbeb{% endif %};border:1px solid {% if ss.complete %}#bbf7d0{% else %}#fde68a{% endif %};">
+            <div style="width:36px;height:36px;border-radius:50%;background:{% if ss.complete %}#10b981{% else %}#f59e0b{% endif %};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-{% if ss.complete %}check{% else %}clock{% endif %} text-white" style="font-size:.75rem;"></i>
+            </div>
+            <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold small text-truncate">{{ ss.subj.name }}</div>
+                <div style="font-size:.7rem;color:#666;">
+                    {% if ss.subj.practical_marks %}<span class="badge bg-light text-dark border me-1" style="font-size:.6rem;">TH+PR</span>{% endif %}
+                    {{ ss.entered }}/{{ ss.total }} marks entered
+                    {% if not ss.exam %}<span class="text-danger ms-1">(no exam)</span>{% endif %}
+                </div>
+            </div>
+            <div style="font-size:.75rem;font-weight:700;color:{% if ss.complete %}#10b981{% else %}#f59e0b{% endif %};">
+                {% if ss.total %}{{ ((ss.entered/ss.total)*100)|round|int }}%{% else %}—{% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    </div>
+</div>
+
+<!-- Overall progress -->
+{% set done_count = stu_status|selectattr('complete')|list|length %}
+{% set total_count = stu_status|length %}
+{% set overall_pct = ((done_count/total_count*100)|round|int) if total_count else 0 %}
+<div class="info-card mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="fw-bold mb-0"><i class="fas fa-tasks me-2 text-success"></i>Overall Completion</h6>
+        <span class="fw-bold" style="color:{% if overall_pct==100 %}#10b981{% else %}#f59e0b{% endif %};">
+            {{ done_count }}/{{ total_count }} students complete ({{ overall_pct }}%)
+        </span>
+    </div>
+    <div class="progress" style="height:10px;border-radius:6px;">
+        <div class="progress-bar {% if overall_pct==100 %}bg-success{% elif overall_pct>50 %}bg-info{% else %}bg-warning{% endif %}"
+             style="width:{{ overall_pct }}%;transition:width .5s;border-radius:6px;"></div>
+    </div>
+</div>
+
+<!-- Student roster with marks status -->
+<div class="info-card">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h6 class="fw-bold mb-0"><i class="fas fa-users me-2 text-primary"></i>Student Report Cards</h6>
+        <input type="text" id="stuSearch" class="form-control form-control-sm" placeholder="Search student…" style="width:200px;">
+    </div>
+    <div class="table-responsive">
+    <table class="table table-hover modern-table" id="stuTable">
+        <thead>
+            <tr>
+                <th>Roll</th>
+                <th>Student Name</th>
+                <th class="text-center">Marks Status</th>
+                <th class="text-center">Grand Total</th>
+                <th class="text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for ss in stu_status %}
+        <tr class="stu-row">
+            <td class="fw-semibold">{{ ss.student.roll_no }}</td>
+            <td>{{ ss.user.full_name }}</td>
+            <td class="text-center">
+                {% if ss.complete %}
+                <span class="badge bg-success"><i class="fas fa-check me-1"></i>Complete</span>
+                {% elif ss.entered > 0 %}
+                <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>{{ ss.entered }}/{{ ss.expected }}</span>
+                {% else %}
+                <span class="badge bg-secondary">Not Started</span>
+                {% endif %}
+            </td>
+            <td class="text-center fw-bold" style="color:{% if ss.grand > 0 %}#3730a3{% else %}#9ca3af{% endif %};">
+                {% if ss.grand > 0 %}{{ ss.grand | int }}{% else %}—{% endif %}
+            </td>
+            <td class="text-center">
+                <a href="{{ url_for('admin.student_report_card', sid=ss.student.id) }}"
+                   target="_blank"
+                   class="btn btn-sm btn-outline-primary" style="border-radius:16px;font-size:.75rem;">
+                    <i class="fas fa-file-alt me-1"></i>View Report
+                </a>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted py-4">No students in this class.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+
+</div>
+{% block extra_js %}
+document.getElementById('stuSearch').addEventListener('input', function() {
+    var q = this.value.toLowerCase();
+    document.querySelectorAll('.stu-row').forEach(function(row) {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+});
+{% endblock %}
+{% endblock %}

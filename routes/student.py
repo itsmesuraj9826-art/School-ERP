@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from functools import wraps
-from models import db, Student, User, Class, Subject, Attendance, Exam, Result, Fee, Notice, Assignment, TimeTable, LeaveRequest, Event, Notification, Note, Teacher
+from models import db, Student, User, Class, Subject, Attendance, Exam, Result, Fee, Notice, Assignment, TimeTable, LeaveRequest, Event, Notification, Note, Teacher, HomeworkDiary, SchoolConfig
 from datetime import datetime, date
 from sqlalchemy import func
 
@@ -308,6 +308,22 @@ def fees():
                            )
 
 
+@student_bp.route('/fees/<int:fid>/receipt')
+@login_required
+@student_required
+def fee_receipt(fid):
+    student = get_student()
+    if not student:
+        abort(403)
+    fee = Fee.query.filter_by(id=fid, student_id=student.id, status='paid').first_or_404()
+    cls = db.session.get(Class, student.class_id) if student.class_id else None
+    from datetime import datetime as _dt
+    return render_template('admin/fee_receipt.html',
+                           fee=fee, student=student,
+                           student_user=current_user, cls=cls,
+                           now=_dt.now())
+
+
 # ============================================================================
 # PROFILE
 # ============================================================================
@@ -399,27 +415,52 @@ def report_card():
     student_user = current_user
     cls = db.session.get(Class, student.class_id) if student.class_id else None
 
-    all_results = db.session.query(Result, Exam, Subject) \
-        .join(Exam, Result.exam_id == Exam.id) \
-        .outerjoin(Subject, Exam.subject_id == Subject.id) \
-        .filter(Result.student_id == student.id) \
-        .order_by(Exam.exam_date).all()
+    # Subject-first approach: list ALL subjects, attach best exam + result
+    subjects = Subject.query.filter_by(class_id=student.class_id)\
+        .order_by(Subject.is_optional, Subject.name).all() if student.class_id else []
+    TYPE_PRIO = {'final': 0, 'terminal': 1, 'mid_term': 2, 'unit': 3}
+    exams_raw = Exam.query.filter_by(class_id=student.class_id).all() if student.class_id else []
+    exam_by_subj = {}
+    for ex in exams_raw:
+        if not ex.subject_id:
+            continue
+        p = TYPE_PRIO.get(ex.exam_type, 5)
+        if ex.subject_id not in exam_by_subj or p < exam_by_subj[ex.subject_id][0]:
+            exam_by_subj[ex.subject_id] = (p, ex)
+    exam_by_subj = {sid: ex for sid, (_, ex) in exam_by_subj.items()}
+    result_by_exam = {r.exam_id: r for r in Result.query.filter_by(student_id=student.id).all()}
+    all_results = []
+    grand_total = 0
+    max_total = 0
+    for subj in subjects:
+        exam = exam_by_subj.get(subj.id)
+        result = result_by_exam.get(exam.id) if exam else None
+        all_results.append((subj, exam, result))
+        if result and not getattr(result, 'is_absent', False):
+            grand_total += (result.marks_obtained or 0) + (result.practical_marks or 0)
+        th_f = exam.max_marks if exam else (subj.max_marks or 100)
+        pr_f = subj.practical_marks or 0
+        max_total += th_f + pr_f
+    overall_pct = round(grand_total / max_total * 100, 1) if max_total else 0
 
     attendances = Attendance.query.filter_by(student_id=student.id).all()
     total_att = len(attendances)
     present_att = sum(1 for a in attendances if a.status == 'present')
     att_pct = round((present_att / total_att * 100), 1) if total_att else 0
 
-    avg_gpa = db.session.query(func.avg(Result.gpa)) \
+    avg_gpa = db.session.query(func.avg(Result.gpa))\
         .filter(Result.student_id == student.id, Result.gpa > 0).scalar()
     avg_gpa = round(float(avg_gpa), 2) if avg_gpa else 0.0
 
+    cfg = SchoolConfig.query.first()
     from datetime import datetime as _dt
     return render_template('student/report_card.html',
                            student=student, student_user=student_user, cls=cls,
                            all_results=all_results,
+                           grand_total=grand_total, max_total=max_total,
+                           overall_pct=overall_pct,
                            total_att=total_att, present_att=present_att, att_pct=att_pct,
-                           avg_gpa=avg_gpa, now=_dt.now())
+                           avg_gpa=avg_gpa, now=_dt.now(), cfg=cfg)
 
 
 # ------------------------------------------------------------
@@ -520,7 +561,7 @@ def notes():
         enriched = [(n, u) for n, u in enriched if n.subject and subject_filter.lower() in n.subject.lower()]
 
     # Unique subjects for filter
-    all_subjects = sorted(set(n.subject for n, _ in Note.query.filter(
+    all_subjects = sorted(set(n.subject for n in Note.query.filter(
         or_(Note.class_id == student.class_id, Note.class_id == None)
     ).all() if n.subject))
 
@@ -539,19 +580,46 @@ def download_note(note_id):
         abort(403)
 
     note = Note.query.get_or_404(note_id)
-    # Verify student has access (same class or open)
+    if not student.class_id:
+        abort(403)
+    # Note must belong to the student's class or be class-agnostic
     if note.class_id and note.class_id != student.class_id:
         abort(403)
 
-    path = os.path.join(NOTES_FOLDER, note.filename)
-    if not os.path.exists(path):
-        flash('File not found on server.', 'danger')
-        return redirect(url_for('student.notes'))
-
-    # Increment download count
+    import os
+    NOTES_UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'static', 'uploads', 'notes')
+    from flask import send_from_directory
     note.download_count = (note.download_count or 0) + 1
     db.session.commit()
-
-    return send_from_directory(NOTES_FOLDER, note.filename,
+    return send_from_directory(NOTES_UPLOAD_FOLDER, note.filename,
                                as_attachment=True,
                                download_name=note.original_filename)
+
+
+@student_bp.route('/homework')
+@login_required
+@student_required
+def student_homework():
+    from datetime import date, timedelta
+    student = _get_student()
+    if not student:
+        abort(403)
+    today = date.today()
+    two_weeks_ago = today - timedelta(days=14)
+    entries = []
+    if student.class_id:
+        entries = HomeworkDiary.query\
+            .filter(HomeworkDiary.class_id == student.class_id,
+                    HomeworkDiary.date >= two_weeks_ago)\
+            .order_by(HomeworkDiary.date.desc(), HomeworkDiary.created_at.desc())\
+            .all()
+    return render_template('student/homework.html', entries=entries, today=today)
+
+
+@student_bp.route('/notif-count')
+@login_required
+@student_required
+def notif_count():
+    from flask import jsonify
+    count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
+    return jsonify({'count': count})
